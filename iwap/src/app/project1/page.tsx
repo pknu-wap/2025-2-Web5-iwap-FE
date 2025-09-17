@@ -1,4 +1,4 @@
-import ImageLayers from '../components/ImageLayers'
+import ImageLayers from '@/components/ImageLayers'
 
 export default function Home() {
   return (
