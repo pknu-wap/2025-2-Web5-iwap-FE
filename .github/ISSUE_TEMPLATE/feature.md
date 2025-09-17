@@ -1,7 +1,7 @@
 ---
 name: Feature
 about: Suggest an idea for this project
-title: 'feat: '
+title: '[feat] '
 labels: 진행 중
 assignees: ''
 
