@@ -1,9 +1,9 @@
-import DrawingCanvas from '@/components/inside/DrawingCanvas_test'
+import ImageGridLayers from '@/components/inside/ImageGridLayers'
 
 export default function Home() {
   return (
     <main>
-      <DrawingCanvas />
+      <ImageGridLayers />
     </main>
   )
 }
