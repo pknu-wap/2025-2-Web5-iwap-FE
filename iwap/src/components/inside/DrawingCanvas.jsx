@@ -1,5 +1,5 @@
 /**
- * @file DrawingCanvas.jsx
+ * @file app/components/inside/DrawingCanvas.jsx
  * 사용자가 숫자를 그릴 수 있는 캔버스 UI를 제공하는 컴포넌트입니다.
  * 그리기, 되돌리기/다시 실행, 서버 전송 기능을 포함합니다.
  */

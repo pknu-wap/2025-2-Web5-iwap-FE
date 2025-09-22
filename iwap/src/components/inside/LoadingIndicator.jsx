@@ -1,5 +1,5 @@
 /**
- * @file LoadingIndicator.jsx
+ * @file app/components/inside/LoadingIndicator.jsx
  * 화면 중앙에 로딩 텍스트를 표시하는 간단한 UI 컴포넌트입니다.
  */
 
