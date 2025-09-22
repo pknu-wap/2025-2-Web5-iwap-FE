@@ -10,8 +10,16 @@ import os
 
 # --- 설정 변수 ---
 
-# 생성될 파일이 저장될 경로입니다. 'data' 폴더가 미리 생성되어 있어야 합니다.
-FILE_PATH = os.path.join("data", "layers.txt")
+# 스크립트 실행 위치와 상관없이 항상 올바른 경로를 찾도록 수정
+# 현재 이 스크립트 파일의 절대 경로를 가져옵니다.
+script_path = os.path.abspath(__file__)
+# 스크립트가 포함된 디렉토리('test')의 경로를 가져옵니다.
+script_dir = os.path.dirname(script_path)
+# 'test' 디렉토리의 부모 디렉토리('iwap') 경로를 가져옵니다.
+project_root = os.path.dirname(script_dir)
+# 최종적으로 목표 파일 경로('iwap/data/layers.txt')를 조합합니다.
+FILE_PATH = os.path.join(project_root, "data", "layers.txt")
+
 
 # 각 행렬(이미지)의 너비와 높이입니다.
 WIDTH = 28
@@ -33,13 +41,6 @@ def create_brightness_matrix(width, height):
     """
     지정된 너비와 높이를 가진 2차원 행렬을 생성하고,
     각 요소를 0-255 사이의 랜덤한 밝기 값으로 채웁니다.
-
-    Args:
-        width (int): 행렬의 너비.
-        height (int): 행렬의 높이.
-
-    Returns:
-        list[list[int]]: 랜덤 밝기 값으로 채워진 2차원 리스트(행렬).
     """
     matrix = []
     for _ in range(height):
@@ -55,27 +56,21 @@ def main():
     """
     print("테스트 데이터 생성을 시작합니다...")
 
-    # API 명세에 맞는 최종 데이터 구조를 초기화합니다.
-    # 최종 JSON 형태: { "layers": [ { "레이어이름": [[...]] }, ... ] }
     output_data = {
         "layers": []
     }
 
-    # 정의된 각 레이어 이름에 대해 행렬 데이터를 생성하고 리스트에 추가합니다.
     for name in LAYER_NAMES:
         layer_object = {
             name: create_brightness_matrix(WIDTH, HEIGHT)
         }
         output_data["layers"].append(layer_object)
 
-    # json 모듈을 사용하여 딕셔너리를 JSON 파일로 저장합니다.
-    # str() 대신 json.dump()를 사용하여 웹에서 파싱 가능한 유효한 JSON 파일을 생성합니다.
     try:
         # 파일 경로의 디렉터리가 없으면 생성합니다.
         os.makedirs(os.path.dirname(FILE_PATH), exist_ok=True)
 
         with open(FILE_PATH, 'w', encoding='utf-8') as file:
-            # indent=4 옵션은 JSON 파일을 사람이 읽기 쉽게 들여쓰기합니다.
             json.dump(output_data, file, indent=4)
 
         print(f"✅ '{FILE_PATH}' 테스트 파일이 생성되었습니다.")
@@ -85,6 +80,5 @@ def main():
         print(f"❌ 파일 쓰기 오류: {e}")
         print("   - 파일 경로 또는 권한을 확인해주세요.")
 
-# 이 스크립트가 직접 실행될 때만 main() 함수를 호출합니다.
 if __name__ == "__main__":
     main()
