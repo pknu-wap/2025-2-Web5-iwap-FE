@@ -1,8 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { Swiper, SwiperSlide } from "swiper/react";
 
 import "swiper/css";
@@ -10,7 +9,7 @@ import "swiper/css";
 const images = [
   { src: "/slides/slide1.jpg", link: "/!nside", text: "!nside" },
   { src: "/slides/slide2.jpg", link: "/String", text: "String" },
-  { src: "/slides/slide3.jpg", link: "/P!ano", text: "P!ano" },
+  { src: "/slides/slide3.jpg", link: "/Piano", text: "Piano" },
   { src: "/slides/slide4.jpg", link: "/Th!s!s4U", text: "Th!s !s 4 U" },
   { src: "/slides/slide5.jpg", link: "/!nstrument", text: "!nstrument" },
   { src: "/slides/slide6.jpg", link: "/slides/6", text: "작품 설명 6" },
@@ -21,15 +20,24 @@ const images = [
 ];
 
 export default function SlidesPage() {
-  // 현재 확장된 슬라이드 인덱스
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [isDesktop, setIsDesktop] = useState(false);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setIsDesktop(window.innerWidth >= 768); // Tailwind's md breakpoint is 768px
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // MODIFIED: Simplified click handler for both mobile and desktop
   const handleClick = (idx: number, link: string) => {
     if (activeIndex === idx) {
-      // 이미 활성화된 상태 -> 실제로 이동
       window.location.href = link;
     } else {
-      // 아직 활성화 안됨 -> 활성화만
       setActiveIndex(idx);
     }
   };
@@ -47,16 +55,26 @@ export default function SlidesPage() {
         <Swiper
           loop={true}
           centeredSlides={true}
-          className="w-full h-[500px]"
-          slidesPerView={"auto"}
-          spaceBetween={15}
+          className="w-full h-[300px] md:h-[500px]"
+          slidesPerView={3.5} // Base slides per view for mobile
+          spaceBetween={10}
+          breakpoints={{
+            768: {
+              slidesPerView: 6, // On desktop, use 'auto' for custom widths
+              spaceBetween: 15,
+            },
+          }}
         >
           {images.map((item, idx) => (
             <SwiperSlide
               key={idx}
               onClick={() => handleClick(idx, item.link)}
               style={{
-                width: activeIndex === idx ? "900px" : "300px",
+                width: isDesktop
+                  ? activeIndex === idx
+                    ? "900px"
+                    : "300px"
+                  : undefined,
                 transition: "width 0.4s ease-in-out",
                 cursor: "pointer",
               }}
@@ -69,9 +87,13 @@ export default function SlidesPage() {
                   fill
                   className="object-cover transition-transform duration-500 group-hover:scale-105"
                 />
-                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 
-                                transition-opacity duration-500 flex items-center justify-center p-4">
-                  <p className="text-white text-[64px] font-Pretendard text-center">
+                {/* MODIFIED: Overlay class for mobile touch effect */}
+                <div
+                  className={`absolute inset-0 bg-black/40 transition-opacity duration-500 flex items-center justify-center p-4
+                             opacity-0 group-hover:opacity-100 
+                             ${activeIndex === idx ? "!opacity-100" : ""}`}
+                >
+                  <p className="text-white text-4xl md:text-[64px] font-Pretendard text-center">
                     {item.text}
                   </p>
                 </div>
@@ -81,15 +103,36 @@ export default function SlidesPage() {
         </Swiper>
       </div>
 
-      {/* 타원 배경 */}
-      <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[43%] w-[2810px] h-[685px] bg-white z-20 pointer-events-none"
-        style={{ clipPath: "ellipse(50% 40% at 50% 50%)" }}
-      />
-      <div
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[43%] w-[2810px] h-[685px] bg-white z-20 pointer-events-none"
-        style={{ clipPath: "ellipse(50% 40% at 50% 50%)" }}
-      />
+{/* 위쪽 타원 */}
+<div
+  className="
+    absolute top-0 left-1/2 -translate-x-1/2 
+    -translate-y-[15%] md:-translate-y-[43%]   // 모바일은 30%, 데스크톱은 43%
+    w-[250vw] h-[550px] md:w-[2810px] md:h-[685px] 
+    bg-white z-20 pointer-events-none
+  "
+  style={{
+    clipPath: isDesktop
+      ? "ellipse(50% 40% at 50% 50%)"
+      : "ellipse(50% 30% at 50% 50%)",
+  }}
+/>
+
+{/* 아래쪽 타원 */}
+<div
+  className="
+    absolute bottom-0 left-1/2 -translate-x-1/2 
+    translate-y-[15%] md:translate-y-[43%]    // 모바일은 30%, 데스크톱은 43%
+    w-[250vw] h-[550px] md:w-[2810px] md:h-[685px] 
+    bg-white z-20 pointer-events-none
+  "
+  style={{
+    clipPath: isDesktop
+      ? "ellipse(50% 40% at 50% 50%)"
+      : "ellipse(50% 30% at 50% 50%)",
+  }}
+/>
+
     </main>
   );
 }
