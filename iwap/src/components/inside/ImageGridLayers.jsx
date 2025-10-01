@@ -39,7 +39,7 @@ function PlaneMesh({ brightnessArray, position }) {
   const geometry = useMemo(() => {
     const height = brightnessArray?.length || 1;
     const width = brightnessArray?.[0]?.length || 1;
-    const scale = 0.5;
+    const scale = 1;
     return new PlaneGeometry(width * scale, height * scale);
   }, [brightnessArray]);
 
@@ -53,6 +53,8 @@ function PlaneMesh({ brightnessArray, position }) {
 function ImageGrid({ allImageData, gridConfig, rotation }) {
   const { columns, rows, layoutCellSize, layerSpacing } = gridConfig;
   const itemsPerLayer = columns * rows;
+  const totalLayers = Math.ceil(allImageData.length / itemsPerLayer);
+  const middleLayerIndex = Math.floor((totalLayers - 1) / 2);
 
   return (
     <animated.group rotation={rotation}>
@@ -63,7 +65,7 @@ function ImageGrid({ allImageData, gridConfig, rotation }) {
         // [수정됨] 고정된 셀 크기를 기준으로 위치를 계산하여 이미지 겹침을 방지합니다.
         const x = (indexInLayer % columns - (columns - 1) / 2) * layoutCellSize;
         const y = (Math.floor(indexInLayer / columns) - (rows - 1) / 2) * layoutCellSize;
-        const z = -layerIndex * layerSpacing;
+        const z = (middleLayerIndex - layerIndex) * layerSpacing;
 
         return (
           <PlaneMesh
@@ -106,8 +108,8 @@ export default function ImageGridLayers({ layersData }) {
   const gridConfig = {
     columns: 1,
     rows: 1,
-    layoutCellSize: 100, // 각 이미지가 배치될 가상의 셀 크기
-    layerSpacing: 15,
+    layoutCellSize: 200, // 각 이미지가 배치될 가상의 셀 크기
+    layerSpacing: 2.5,
   };
 
   const [spring, api] = useSpring(() => ({
@@ -128,7 +130,7 @@ export default function ImageGridLayers({ layersData }) {
 
   return (
     <div style={{ width: '100vw', height: '100vh', background: '#111827' }}>
-      <Canvas camera={{ position: [-500, -100, 80], fov: 75 }}>
+      <Canvas camera={{ position: [-75, -25, 0], fov: 75 }}>
         <ambientLight intensity={1.5} />
         <pointLight position={[15, 15, 15]} intensity={1} />
         <ImageGrid allImageData={allImageData} gridConfig={gridConfig} rotation={spring.rotation} />
