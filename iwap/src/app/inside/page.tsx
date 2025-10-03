@@ -1,40 +1,16 @@
-/**
- * @file /inside 경로의 메인 페이지 컴포넌트입니다.
- * 이 컴포넌트는 UI의 상태(그림판, 로딩, 3D 뷰어)를 관리하고,
- * 사용자의 상호작용에 따른 데이터 흐름을 총괄하는 컨트롤러 역할을 합니다.
- */
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import DrawingCanvas from '@/components/inside/DrawingCanvas';
 import ImageGridLayers from '@/components/inside/ImageGridLayers';
 import LoadingIndicator from '@/components/inside/LoadingIndicator';
 
-// 전체 페이지의 기본 레이아웃 스타일입니다.
-const containerStyle = {
-  width: '100vw',
-  height: '100vh',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  background: '#111827',
-  fontFamily: 'sans-serif',
-};
+export default function InsidePage() {
+  const [view, setView] = useState('draw');
+  const [layersData, setLayersData] = useState(null);
+  const [error, setError] = useState < string | null > (null);
 
-/**
- * /inside 경로에 대한 메인 페이지 컴포넌트입니다.
- * @returns {JSX.Element} 현재 UI 상태에 맞는 뷰를 렌더링합니다.
- */
-export default function Home() {
-  // --- 상태 관리 (State Management) ---
-  const [view, setView] = useState('draw'); 
-  const [layersData, setLayersData] = useState(null); // 초기값을 null로 변경
-  const [error, setError] = useState<string | null>(null);
-
-  /**
-   * DrawingCanvas에서 이미지 업로드(POST)가 성공했을 때 호출되는 콜백 함수입니다.
-   * 서버에 행렬 데이터(GET)를 요청하여 3D 시각화를 준비합니다.
-   */
   const handleUploadSuccess = async () => {
     setView('loading');
     setError(null);
@@ -44,15 +20,9 @@ export default function Home() {
       if (!response.ok) {
         throw new Error(`행렬 데이터 요청 실패 (HTTP Status: ${response.status})`);
       }
-      
       const data = await response.json();
-      
-      // [핵심 수정]
-      // API가 이제 'layers' 객체를 직접 반환하므로, 'data.layers'가 아닌 'data'를 사용합니다.
       setLayersData(data);
-      
       setView('visualize');
-
     } catch (err) {
       console.error(err);
       if (err instanceof Error) {
@@ -60,13 +30,10 @@ export default function Home() {
       } else {
         setError('알 수 없는 오류가 발생했습니다.');
       }
-      setView('draw'); 
+      setView('draw');
     }
   };
 
-  /**
-   * 현재 'view' 상태에 따라 적절한 컴포넌트를 렌더링하는 함수입니다.
-   */
   const renderContent = () => {
     switch (view) {
       case 'draw':
@@ -74,17 +41,56 @@ export default function Home() {
       case 'loading':
         return <LoadingIndicator text="행렬 데이터 분석 중..." />;
       case 'visualize':
-        // layersData가 유효할 때만 ImageGridLayers를 렌더링합니다.
         return layersData ? <ImageGridLayers layersData={layersData} /> : <LoadingIndicator text="데이터 준비 중..." />;
       default:
         return <DrawingCanvas onUploadSuccess={handleUploadSuccess} />;
     }
   };
 
+  // 이 페이지의 고유한 배경 스타일을 정의합니다.
+  const pageBackgroundStyle = {
+    backgroundImage: `
+      linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113),
+      url('/images/inside_background.jpg')
+    `,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed',
+  };
+
   return (
-    <main style={containerStyle}>
-      {error && <p style={{ color: 'red', position: 'absolute', top: 20 }}>에러: {error}</p>}
-      {renderContent()}
-    </main>
+    <div
+      style={pageBackgroundStyle}
+      className="w-full min-h-[calc(100vh-96px)] flex items-center justify-center p-4"
+    >
+      {error && <p className="absolute top-32 text-red-500">에러: {error}</p>}
+      
+      <div className="flex flex-col items-center w-[640px] gap-y-10">
+
+        {/* --- 페이지 제목 및 닫기 버튼 (박스 외부) --- */}
+        <div className="w-116 flex justify-between items-end">
+          <div className="flex items-baseline gap-x-3">
+            <h2 className="text-5xl font-bold text-white">!nside.</h2>
+            <p className="text-sm font-light text-white">인공지능이 숫자를 인식하는 과정</p>
+          </div>
+          <button className="text-white">
+            <CloseIcon />
+          </button>
+        </div>
+
+        {/* --- 그림판을 담는 반투명 박스 --- */}
+        <div className="w-116 h-120 bg-white/40 border border-white backdrop-blur-[2px] p-10 flex flex-col justify-center">
+          <div className="w-full">
+            <h3 className="text-2xl font-semibold text-white mb-2">숫자를 그려주세요</h3>
+            {renderContent()}
+          </div>
+        </div>
+        
+      </div>
+    </div>
   );
 }
+
+const CloseIcon = () => (
+  <Image src="/icons/close.svg" alt="Close" width={24} height={24} />
+);
