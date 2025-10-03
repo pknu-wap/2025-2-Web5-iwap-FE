@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "next dev",
     "build": "next build --turbopack",
     "start": "next start",
     "lint": "eslint"
@@ -12,8 +12,11 @@
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.3.0",
     "next": "^15.5.3",
+    "plotly.js": "^2.35.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-plotly.js": "^2.6.0",
+    "react-resize-detector": "^12.3.0",
     "three": "^0.180.0"
   },
   "devDependencies": {
