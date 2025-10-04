@@ -1,210 +1,225 @@
-/**
- * @file app/components/inside/ImageGridLayers.jsx
- * @description 3D 데이터 시각화를 위한 메인 컴포넌트입니다.
- */
 'use client';
 
-import { useState, useMemo } from 'react';
-import { Canvas, useThree, useFrame } from '@react-three/fiber';
+import { useState, useMemo, useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated } from '@react-spring/three';
 import * as THREE from 'three';
 import { DataTexture, RGBAFormat, UnsignedByteType, DoubleSide, PlaneGeometry, NearestFilter } from 'three';
 
-// #region 내부 3D 컴포넌트
+// --- 상수 정의 ---
+const RENDER_WINDOW_SIZE = 50;
+const MAX_VERTICAL_ROTATION = Math.PI / 4;
 
-function CameraControl({ cameraZ }) {
-  const { camera } = useThree();
+// --- [수정됨] 내부 3D 컴포넌트 ---
+function AnimatedPlane({ texture, position, width, height, opacity }) {
+  const geometry = useMemo(() => new PlaneGeometry(width, height), [width, height]);
+
+  return (
+    <animated.mesh position={position} geometry={geometry}>
+      <animated.meshStandardMaterial 
+        map={texture} 
+        side={DoubleSide} 
+        transparent
+        // 부모 컴포넌트에서 애니메이션 처리된 opacity 값을 직접 전달받아 사용합니다.
+        opacity={opacity} 
+      />
+    </animated.mesh>
+  );
+}
+
+
+function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
+  const [visibleLayers, setVisibleLayers] = useState([]);
 
   useFrame(() => {
-    camera.position.z = THREE.MathUtils.lerp(camera.position.z, cameraZ, 0.1);
-    // 카메라는 항상 월드 좌표의 원점(0,0,0)을 바라봄
-    // 포커싱된 레이어가 항상 원점에 오도록 장면이 움직이므로, lookAt은 고정됨
-    camera.lookAt(0, 0, 0);
+    if (!layers || layers.length === 0) return;
+    const currentFocus = animatedFocusIndex.get();
+    const virtualStartIndex = Math.max(0, Math.floor(currentFocus) - RENDER_WINDOW_SIZE);
+    const virtualEndIndex = Math.min(layers.length, Math.ceil(currentFocus) + RENDER_WINDOW_SIZE + 1);
+    
+    if (visibleLayers.length === 0 || visibleLayers[0]?.originalIndex !== virtualStartIndex || visibleLayers[visibleLayers.length - 1]?.originalIndex !== virtualEndIndex - 1) {
+      setVisibleLayers(layers.slice(virtualStartIndex, virtualEndIndex));
+    }
   });
 
-  return null;
-}
-
-function PlaneMesh({ brightnessArray, position }) {
-  const texture = useMemo(() => {
-    if (!brightnessArray || brightnessArray.length === 0 || !brightnessArray[0] || brightnessArray[0].length === 0) return null;
-
-    const height = brightnessArray.length;
-    const width = brightnessArray[0].length;
-    const flatArray = brightnessArray.flat();
-
-    const data = new Uint8Array(width * height * 4);
-    for (let i = 0; i < flatArray.length; i++) {
-      const brightness = flatArray[i];
-      const offset = i * 4;
-      data[offset] = data[offset + 1] = data[offset + 2] = brightness;
-      data[offset + 3] = 255;
-    }
-    
-    const dataTexture = new DataTexture(data, width, height, RGBAFormat, UnsignedByteType);
-    dataTexture.needsUpdate = true;
-    dataTexture.generateMipmaps = false;
-    dataTexture.minFilter = NearestFilter;
-    dataTexture.magFilter = NearestFilter;
-    return dataTexture;
-  }, [brightnessArray]);
-
-  const geometry = useMemo(() => {
-    const height = brightnessArray?.length || 1;
-    const width = brightnessArray?.[0]?.length || 1;
-    const scale = 1;
-    return new PlaneGeometry(width * scale, height * scale);
-  }, [brightnessArray]);
-
   return (
-    <mesh position={position} geometry={geometry}>
-      <meshStandardMaterial map={texture} side={DoubleSide} />
-    </mesh>
+    <>
+      <ambientLight intensity={1.5} />
+      <pointLight position={[0, 50, 50]} intensity={1} />
+      <animated.group rotation={rotation}>
+        {visibleLayers.map((layer) => {
+          const position = animatedFocusIndex.to(fi => {
+            const distance = layer.originalIndex - fi;
+            const x = -50 + distance * 30;
+            const z = -Math.abs(distance) * 10;
+            return [x, 0, z];
+          });
+          
+          return (
+            <AnimatedPlane
+              key={layer.id}
+              texture={layer.texture}
+              width={layer.width}
+              height={layer.height}
+              position={position}
+              opacity={opacity}
+            />
+          );
+        })}
+      </animated.group>
+    </>
   );
 }
 
-// [수정] 그룹의 z위치를 외부에서 받아 중심 레이어를 동적으로 변경
-function ImageGrid({ allImageData, gridConfig, rotation, groupZ }) {
-  const { columns, rows, layoutCellSize, layerSpacing } = gridConfig;
-  const itemsPerLayer = columns * rows;
-
-  return (
-    // [핵심] 그룹 전체를 z축으로 이동시켜 선택된 레이어가 (0,0,0)에 오도록 함
-    <animated.group rotation={rotation} position={[0, 0, groupZ]}>
-      {allImageData.map((item, index) => {
-        const layerIndex = Math.floor(index / itemsPerLayer);
-        const indexInLayer = index % itemsPerLayer;
-        
-        const x = (indexInLayer % columns - (columns - 1) / 2) * layoutCellSize;
-        const y = (Math.floor(indexInLayer / columns) - (rows - 1) / 2) * layoutCellSize;
-        // [수정] 각 Plane의 z위치는 단순하게 계산 (첫 레이어가 z=0, 두번째가 z=-15...)
-        const z = -layerIndex * layerSpacing;
-
-        return (
-          <PlaneMesh
-            key={item.id}
-            brightnessArray={item.brightnessArray}
-            position={[x, y, z]}
-          />
-        );
-      })}
-    </animated.group>
-  );
-}
-
-// #endregion
-
+// --- 메인 컴포넌트 ---
 export default function ImageGridLayers({ layersData }) {
-  const allImageData = useMemo(() => {
-    if (!layersData || Object.keys(layersData).length === 0) return [];
-    
-    const extract2DArrays = (data) => {
-      if (Array.isArray(data) && Array.isArray(data[0]) && (typeof data[0][0] === 'number')) {
-        return [data];
-      }
-      if (Array.isArray(data)) {
-        return data.flatMap(item => extract2DArrays(item));
-      }
-      return [];
-    };
-
-    return Object.entries(layersData).flatMap(([key, value]) => {
-      const extractedArrays = extract2DArrays(value);
-      return extractedArrays.map((arr, index) => ({
-        id: `${key}_${index}`,
-        brightnessArray: arr,
-      }));
-    });
-  }, [layersData]);
-  
-  const gridConfig = {
-    columns: 1,
-    rows: 1,
-    layoutCellSize: 100,
-    layerSpacing: 15,
-  };
-
-  // [추가] 전체 레이어 수 계산
-  const totalLayers = useMemo(() => {
-    if (allImageData.length === 0) return 0;
-    const itemsPerLayer = gridConfig.columns * gridConfig.rows;
-    return Math.ceil(allImageData.length / itemsPerLayer);
-  }, [allImageData, gridConfig]);
-
-  const [spring, api] = useSpring(() => ({
-    rotation: [0, 0, 0],
-    config: { friction: 40, mass: 1, tension: 400 },
-  }));
-  
-  const [cameraZ, setCameraZ] = useState(300);
-  
-  // [추가] 현재 포커싱된 레이어의 인덱스를 관리 (초기값 0 = 첫 번째 레이어)
   const [focusLayerIndex, setFocusLayerIndex] = useState(0);
 
-  // [핵심] 선택된 레이어가 (0,0,0)에 오도록 전체 그룹이 이동해야 할 Z축 거리 계산
-  const groupZ = focusLayerIndex * gridConfig.layerSpacing;
+  const [{ rotation, opacity }, api] = useSpring(() => ({
+    rotation: [-0.125, 0.6, 0],
+    opacity: 1,
+    config: { mass: 1, tension: 210, friction: 30 },
+  }));
 
-  const bind = useDrag(({ first, movement: [mx, my], memo }) => {
-    if (first) memo = spring.rotation.get();
-    api.start({ rotation: [memo[0] + my / 100, memo[1] + mx / 100, 0] });
-    return memo;
+  const { animatedFocusIndex } = useSpring({
+    animatedFocusIndex: focusLayerIndex,
+    config: { mass: 1, tension: 150, friction: 30, clamp: true },
+    onStart: () => {
+      // 애니메이션 '시작 시' 투명도 즉시 감소
+      api.start({ opacity: 0.5, immediate: true });
+    },
+    onRest: () => {
+      // 애니메이션 '종료 시' 투명도 복원
+      api.start({ opacity: 1 });
+    },
   });
 
-  const handleRightClick = (event) => {
-    event.nativeEvent.preventDefault();
-    api.start({ rotation: [0, 0, 0] });
+  const layers = useMemo(() => {
+    // ... (데이터 가공 로직은 변경 없음)
+    try {
+      if (!layersData || typeof layersData !== 'object' || Object.keys(layersData).length === 0) return [];
+      const extract2DArrays = (data) => {
+        if (Array.isArray(data) && Array.isArray(data[0]) && typeof data[0][0] === 'number') return [data];
+        if (Array.isArray(data)) return data.flatMap(item => extract2DArrays(item));
+        return [];
+      };
+      const allImageData = Object.entries(layersData).flatMap(([key, value]) => {
+        const extractedArrays = extract2DArrays(value);
+        return extractedArrays.map((arr, index) => ({ id: `${key}_${index}`, brightnessArray: arr }));
+      });
+      if (allImageData.length === 0) return [];
+      return allImageData.map((item, i) => {
+        const { brightnessArray } = item;
+        if (!Array.isArray(brightnessArray) || brightnessArray.length === 0 || !Array.isArray(brightnessArray[0])) return null;
+        const height = brightnessArray.length;
+        const width = brightnessArray[0].length;
+        const flatArray = brightnessArray.flat();
+        const data = new Uint8Array(width * height * 4);
+        for (let j = 0; j < flatArray.length; j++) {
+          const brightness = flatArray[j];
+          data.set([brightness, brightness, brightness, 255], j * 4);
+        }
+        const texture = new DataTexture(data, width, height, RGBAFormat, UnsignedByteType);
+        texture.needsUpdate = true;
+        texture.flipY = true; 
+        texture.minFilter = NearestFilter;
+        texture.magFilter = NearestFilter;
+        return { ...item, texture, width, height, originalIndex: i };
+      }).filter(Boolean);
+    } catch (error) {
+      console.error('Error memoizing layers:', error);
+      return [];
+    }
+  }, [layersData]);
+
+  const startRotation = useRef([0,0,0]);
+  const dragModeRef = useRef('none');
+  const startFocusIndex = useRef(0);
+
+  const bind = useDrag(({ first, last, active, movement: [mx, my] }) => {
+    // ... (useDrag 로직은 변경 없음)
+    const deadzone = 10;
+    if (first) {
+      startRotation.current = rotation.get();
+      startFocusIndex.current = animatedFocusIndex.get();
+      dragModeRef.current = 'none';
+    }
+    if (active) {
+      api.start({ opacity: 0.5, immediate: true });
+    }
+    if (dragModeRef.current === 'none' && (Math.abs(mx) > deadzone || Math.abs(my) > deadzone)) {
+      dragModeRef.current = Math.abs(my) > Math.abs(mx) * 2 ? 'vertical' : 'horizontal';
+    }
+    if (dragModeRef.current === 'horizontal') {
+      const indexSensitivity = 15;
+      const newIndex = - (mx / indexSensitivity) + startFocusIndex.current;
+      const clampedIndex = Math.max(0, Math.min(layers.length - 1, newIndex));
+      animatedFocusIndex.set(clampedIndex);
+      if (last) {
+        setFocusLayerIndex(Math.round(clampedIndex));
+      }
+    } else if (dragModeRef.current === 'vertical') {
+      const rotSensitivity = 200;
+      const newRotationX = startRotation.current[0] - my / rotSensitivity;
+      const clampedRotationX = Math.max(-MAX_VERTICAL_ROTATION, Math.min(MAX_VERTICAL_ROTATION, newRotationX));
+      api.start({ rotation: [clampedRotationX, startRotation.current[1], startRotation.current[2]], immediate: true });
+    }
+    if (last) {
+      if (Math.round(animatedFocusIndex.get()) === focusLayerIndex) {
+        api.start({ opacity: 1 });
+      }
+      if (dragModeRef.current !== 'horizontal') {
+        api.start({ rotation: [startRotation.current[0], startRotation.current[1], startRotation.current[2]] });
+      }
+    }
+  });
+
+  const handleNavClick = (targetIndex) => {
+    setFocusLayerIndex(targetIndex);
+  };
+  
+  const navButtonStyle = {
+    position: 'absolute', bottom: '45px', background: 'rgba(255, 255, 255, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.2)', color: 'white',
+    width: '45px', height: '45px', borderRadius: '50%', display: 'flex',
+    alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+    backdropFilter: 'blur(5px)', zIndex: 10, fontSize: '20px', lineHeight: '1',
   };
 
+  if (!layers || layers.length === 0) {
+    return null;
+  }
+
   return (
-    <div style={{ position: 'relative', width: '100vw', height: '100vh', background: '#111827' }}>
-      {/* 초기 카메라 위치는 고정값으로 설정 */}
-      <Canvas camera={{ position: [100, 100, 200], fov: 75 }}>
-        <ambientLight intensity={1.5} />
-        <pointLight position={[15, 15, 15]} intensity={1} />
-        {/* [수정] ImageGrid에 계산된 groupZ 값을 전달 */}
-        <ImageGrid allImageData={allImageData} gridConfig={gridConfig} rotation={spring.rotation} groupZ={groupZ} />
-        {/* 드래그 영역은 항상 (0,0,0)에 위치 */}
-        <mesh {...bind()} onContextMenu={handleRightClick} position={[0, 0, 0]}>
-          <planeGeometry args={[200, 200]} />
-          <meshBasicMaterial transparent opacity={0} />
-        </mesh>
-        <CameraControl cameraZ={cameraZ} />
+    <div 
+      style={{ position: 'absolute', width: '100%', height: '100%', cursor: 'grab' }} 
+      {...bind()}
+      onMouseDown={(e) => { e.currentTarget.style.cursor = 'grabbing'; }}
+      onMouseUp={(e) => { e.currentTarget.style.cursor = 'grab'; }}
+    >
+      <Canvas
+        gl={{ alpha: true }}
+        style={{ background: 'transparent' }}
+        camera={{ position: [0, 20, 150], fov: 60 }}
+        onCreated={({ scene }) => { scene.background = null; }}
+      >
+        <Scene layers={layers} animatedFocusIndex={animatedFocusIndex} rotation={rotation} opacity={opacity}/>
       </Canvas>
-      {/* [수정] 레이어 선택 및 줌을 위한 새로운 컨트롤러 UI */}
-      <div style={{
-        position: 'absolute',
-        bottom: '20px',
-        left: '50%',
-        transform: 'translateX(-50%)',
-        width: '500px',
-        background: 'rgba(255, 255, 255, 0.2)',
-        padding: '10px 20px',
-        borderRadius: '8px',
-        zIndex: 10,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px'
-      }}>
-        {/* Layer Focus Slider */}
-        <div style={{display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center'}}>
-          <p style={{ color: 'white', margin: 0 }}>레이어 선택: {focusLayerIndex + 1}</p>
-          <input 
-            type="range" 
-            min="0" 
-            max={totalLayers > 0 ? totalLayers - 1 : 0} 
-            step="1"
-            value={focusLayerIndex} 
-            onChange={(e) => setFocusLayerIndex(Number(e.target.value))} 
-            style={{ width: '100%' }} 
-          />
-        </div>
-        {/* Camera Z Slider */}
-        <div style={{display: 'grid', gridTemplateColumns: '120px 1fr', alignItems: 'center'}}>
-          <p style={{ color: 'white', margin: 0 }}>카메라 Z축: {cameraZ}</p>
-          <input type="range" min="-200" max="1000" value={cameraZ} onChange={(e) => setCameraZ(Number(e.target.value))} style={{ width: '100%' }} />
-        </div>
-      </div>
+      <button 
+        style={{...navButtonStyle, left: '200px', bottom: '47%' }}
+        onClick={(e) => { e.stopPropagation(); handleNavClick(0); }}
+        title="첫 번째 레이어로 이동"
+      >
+        {'«'}
+      </button>
+      <button 
+        style={{...navButtonStyle, right: '200px', bottom: '47%' }}
+        onClick={(e) => { e.stopPropagation(); handleNavClick(layers.length - 1); }}
+        title="마지막 레이어로 이동"
+      >
+        {'»'}
+      </button>
     </div>
   );
 }

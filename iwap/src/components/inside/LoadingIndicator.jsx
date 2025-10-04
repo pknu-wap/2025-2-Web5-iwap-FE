@@ -1,33 +1,38 @@
-/**
- * @file app/components/inside/LoadingIndicator.jsx
- * 화면 중앙에 로딩 텍스트를 표시하는 간단한 UI 컴포넌트입니다.
- */
+// components/inside/LoadingIndicator.jsx
 
-/**
- * 로딩 상태를 나타내는 텍스트 메시지를 화면 중앙에 렌더링합니다.
- * @param {object} props - 컴포넌트 프롭스.
- * @param {string} props.text - 화면에 표시할 로딩 메시지 문자열.
- * @returns {JSX.Element} 로딩 인디케이터 UI.
- */
-const LoadingIndicator = ({ text }) => {
-  // 컴포넌트에 적용될 인라인 스타일 객체입니다.
-  const containerStyle = {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: 'translate(-50%, -50%)',
-    color: 'white',
-    fontSize: '1.2rem',
-    fontFamily: 'sans-serif',
-    textAlign: 'center',
-    zIndex: 10, // 다른 UI 요소들 위에 표시되도록 z-index 설정
-  };
+'use client';
 
+// 간단한 SVG 스피너 아이콘
+const SpinnerIcon = () => (
+  <svg
+    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+    xmlns="http://www.w3.org/2000/svg"
+    fill="none"
+    viewBox="0 0 24 24"
+  >
+    <circle
+      className="opacity-25"
+      cx="12"
+      cy="12"
+      r="10"
+      stroke="currentColor"
+      strokeWidth="4"
+    ></circle>
+    <path
+      className="opacity-75"
+      fill="currentColor"
+      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+    ></path>
+  </svg>
+);
+
+export default function LoadingIndicator({ text }) {
   return (
-    <div style={containerStyle}>
-      <p>{text}</p>
+    <div className="flex flex-col items-center justify-center w-full h-full text-white">
+      <div className="flex items-center">
+        <SpinnerIcon />
+        <span className="text-lg">{text}</span>
+      </div>
     </div>
   );
-};
-
-export default LoadingIndicator;
+}

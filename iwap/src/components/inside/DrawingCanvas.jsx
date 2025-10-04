@@ -4,8 +4,8 @@ import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Image from 'next/image';
 
 // --- 컴포넌트 상수 정의 ---
-const CANVAS_DISPLAY_SIZE = 384; // w-96 -> 384px
-const CANVAS_HEIGHT = 320; // h-80 -> 320px
+const CANVAS_INTERNAL_WIDTH = 384;
+const CANVAS_INTERNAL_HEIGHT = 320;
 const CANVAS_EXPORT_SIZE = 28;
 const LINE_WIDTH = 10;
 
@@ -17,11 +17,14 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
-  // --- 캔버스 초기 설정 ---
+  // --- 1. 캔버스 초기 설정 useEffect ---
+  // 이 useEffect는 컴포넌트가 처음 마운트될 때 *단 한 번만* 실행됩니다. (의존성 배열: [])
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    canvas.width = CANVAS_INTERNAL_WIDTH;
+    canvas.height = CANVAS_INTERNAL_HEIGHT;
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -34,41 +37,108 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
     const initialImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     setHistory([initialImageData]);
     setHistoryIndex(0);
-  }, []);
+  }, []); // 의존성 배열이 비어있어, 리렌더링 시 다시 실행되지 않습니다.
 
-  // --- 그리기 및 히스토리 관리 함수 ---
+  // --- 실제 드로잉 좌표 계산 함수 ---
+  const getCoordinates = (event) => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+    const touch = event.touches ? event.touches[0] : event;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return {
+      x: (touch.clientX - rect.left) * scaleX,
+      y: (touch.clientY - rect.top) * scaleY,
+    };
+  };
+
+  // --- 그리기 함수들 ---
+  const startDrawing = useCallback((x, y) => {
+    if (!context) return;
+    setIsDrawing(true);
+    context.beginPath();
+    context.moveTo(x, y);
+  }, [context]);
+
+  const draw = useCallback((x, y) => {
+    if (!isDrawing || !context) return;
+    context.lineTo(x, y);
+    context.stroke();
+  }, [isDrawing, context]);
+
+  const stopDrawing = useCallback(() => {
+    if (!isDrawing) return;
+    setIsDrawing(false);
+    context?.closePath();
+
+    const newHistory = history.slice(0, historyIndex + 1);
+    const newImageData = context?.getImageData(0, 0, context.canvas.width, context.canvas.height);
+    if (newImageData) {
+      setHistory([...newHistory, newImageData]);
+      setHistoryIndex(newHistory.length);
+    }
+  }, [isDrawing, context, history, historyIndex]);
+
+  // --- 네이티브 이벤트 핸들러들 ---
+  const handleNativeMouseDown = useCallback((e) => {
+    const { x, y } = getCoordinates(e);
+    startDrawing(x, y);
+  }, [startDrawing]);
+
+  const handleNativeMouseMove = useCallback((e) => {
+    const { x, y } = getCoordinates(e);
+    draw(x, y);
+  }, [draw]);
+  
+  const handleNativeTouchStart = useCallback((e) => {
+    e.preventDefault();
+    const { x, y } = getCoordinates(e);
+    startDrawing(x, y);
+  }, [startDrawing]);
+  
+  const handleNativeTouchMove = useCallback((e) => {
+    e.preventDefault();
+    const { x, y } = getCoordinates(e);
+    draw(x, y);
+  }, [draw]);
+  
+  // --- 2. 네이티브 이벤트 리스너 등록/해제 useEffect ---
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    // 마우스 이벤트
+    canvas.addEventListener('mousedown', handleNativeMouseDown);
+    canvas.addEventListener('mousemove', handleNativeMouseMove);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseleave', stopDrawing);
+
+    // 터치 이벤트 (passive: false로 스크롤 방지)
+    canvas.addEventListener('touchstart', handleNativeTouchStart, { passive: false });
+    canvas.addEventListener('touchmove', handleNativeTouchMove, { passive: false });
+    canvas.addEventListener('touchend', stopDrawing);
+
+    return () => {
+      // 클린업 함수: 컴포넌트 언마운트 시 모든 이벤트 리스너 제거
+      canvas.removeEventListener('mousedown', handleNativeMouseDown);
+      canvas.removeEventListener('mousemove', handleNativeMouseMove);
+      canvas.removeEventListener('mouseup', stopDrawing);
+      canvas.removeEventListener('mouseleave', stopDrawing);
+      canvas.removeEventListener('touchstart', handleNativeTouchStart);
+      canvas.removeEventListener('touchmove', handleNativeTouchMove);
+      canvas.removeEventListener('touchend', stopDrawing);
+    };
+  }, [handleNativeMouseDown, handleNativeMouseMove, handleNativeTouchStart, handleNativeTouchMove, stopDrawing]);
+
+  
+  // --- 기능 함수들 (Undo, Redo, Clear, Post) ---
   const restoreCanvasState = useCallback((state) => {
     if (context && state) {
       context.putImageData(state, 0, 0);
     }
   }, [context]);
 
-  const startDrawing = (x, y) => {
-    if (!context) return;
-    setIsDrawing(true);
-    context.beginPath();
-    context.moveTo(x, y);
-  };
-
-  const draw = (x, y) => {
-    if (!isDrawing || !context) return;
-    context.lineTo(x, y);
-    context.stroke();
-  };
-
-  const stopDrawing = () => {
-    if (!isDrawing) return;
-    setIsDrawing(false);
-    context.closePath();
-
-    const newHistory = history.slice(0, historyIndex + 1);
-    const newImageData = context.getImageData(0, 0, context.canvas.width, context.canvas.height);
-
-    setHistory([...newHistory, newImageData]);
-    setHistoryIndex(newHistory.length);
-  };
-    
-  // --- 기능 함수들 ---
   const clearCanvas = () => {
     if (!context) return;
     context.fillStyle = 'white';
@@ -93,82 +163,52 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
       restoreCanvasState(history[newIndex]);
     }
   }, [history, historyIndex, restoreCanvasState]);
-    
+
   const handlePost = () => {
+    // ... (이전과 동일)
     const canvas = canvasRef.current;
     if (!canvas) return;
-
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = CANVAS_EXPORT_SIZE;
     tempCanvas.height = CANVAS_EXPORT_SIZE;
     const tempCtx = tempCanvas.getContext('2d');
     tempCtx.drawImage(canvas, 0, 0, CANVAS_EXPORT_SIZE, CANVAS_EXPORT_SIZE);
-
     tempCanvas.toBlob(async (blob) => {
-      if (!blob) {
-        alert('이미지 파일 변환에 실패했습니다.');
-        return;
-      }
+      if (!blob) return;
       const formData = new FormData();
       formData.append('image', blob, 'drawing.png');
       try {
         const response = await fetch('/api/inside', { method: 'POST', body: formData });
-        if (response.status === 204) {
-          if (onUploadSuccess) onUploadSuccess();
-        } else {
-          throw new Error(`서버 응답 에러: ${response.status}`);
-        }
+        if (response.status === 204 && onUploadSuccess) onUploadSuccess();
+        else throw new Error(`Server response error: ${response.status}`);
       } catch (error) {
-        console.error('업로드 중 오류 발생:', error);
-        alert('이미지 업로드에 실패했습니다.');
+        console.error('Upload error:', error);
+        alert('Image upload failed.');
       }
     }, 'image/png');
   };
 
-  // --- 이벤트 핸들러 ---
-  const handleMouseDown = ({ nativeEvent }) => startDrawing(nativeEvent.offsetX, nativeEvent.offsetY);
-  const handleMouseMove = ({ nativeEvent }) => draw(nativeEvent.offsetX, nativeEvent.offsetY);
-  const handleTouchStart = (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const { left, top } = canvasRef.current.getBoundingClientRect();
-    startDrawing(touch.clientX - left, touch.clientY - top);
-  };
-  const handleTouchMove = (e) => {
-    e.preventDefault();
-    const touch = e.touches[0];
-    const { left, top } = canvasRef.current.getBoundingClientRect();
-    draw(touch.clientX - left, touch.clientY - top);
-  };
-
   // --- 렌더링 ---
   return (
-    <>
-      <div className="w-96 h-9 bg-stone-300 flex justify-between items-center px-3 mb-[-1px]">
-        <div className="flex gap-3">
+    <div className="absolute inset-0 flex flex-col">
+      <div className="w-full h-9 bg-stone-300 flex justify-between items-center mb-[-1px] flex-shrink-0">
+        <div className="flex gap-3 pl-3">
           <button onClick={handleUndo} disabled={historyIndex <= 0} className="disabled:opacity-40"><UndoIcon /></button>
           <button onClick={handleRedo} disabled={historyIndex >= history.length - 1} className="disabled:opacity-40"><RedoIcon /></button>
         </div>
-        <div className="flex gap-3">
+        <div className="flex gap-3 pr-3">
           <button onClick={clearCanvas}><TrashIcon /></button>
           <button onClick={handlePost}><SubmitIcon /></button>
         </div>
       </div>
-
-      <canvas
-        ref={canvasRef}
-        width={CANVAS_DISPLAY_SIZE}
-        height={CANVAS_HEIGHT}
-        className="bg-white"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={stopDrawing}
-        onMouseLeave={stopDrawing}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={stopDrawing}
-      />
-    </>
+      <div className="w-full flex-grow relative">
+        {/* JSX에서 모든 on... 이벤트 핸들러를 제거하고 useEffect에서 관리합니다. */}
+        <canvas
+          ref={canvasRef}
+          className="bg-white touch-action-none absolute top-0 left-0 w-full h-full"
+        />
+      </div>
+    </div>
   );
 };
 
