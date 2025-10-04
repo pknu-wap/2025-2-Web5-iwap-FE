@@ -217,16 +217,24 @@ export default function FunctionsPage() {
             layout={{
               width: width,
               height: index === 2 ? height - 80 : height,
-              title: selectedPlot.title,
-              paper_bgcolor: "rgba(0,0,0,0)",
-              plot_bgcolor: "rgba(0,0,0,0)",
-              xaxis: { title: "X" },
-              yaxis: {
-                title: "Y",
-                scaleanchor: "x",
-                scaleratio: 1,
-              },
-            }}
+              title: {
+              text: selectedPlot.title,
+              font: { size: 18, color: "black" },
+              x: 0.5,
+              xanchor: "center",
+              yanchor: "top"
+            },
+            margin: { t: 40, l: 40, r: 20, b: 40 },
+            paper_bgcolor: "rgba(0,0,0,0)",
+            plot_bgcolor: "rgba(0,0,0,0)",
+            xaxis: { title: "X", font: { family: "Pretendard, sans-serif" } },
+            yaxis: {
+            title: "Y",
+            scaleanchor: "x",
+            scaleratio: 1,
+            font: { family: "Pretendard, sans-serif" }
+          },
+          }}
             config={{ responsive: true }}
             style={{ width: '100%' }}
           />
@@ -241,18 +249,18 @@ export default function FunctionsPage() {
               step="0.1"
               value={a}
               onChange={(e) => setA(parseFloat(e.target.value))}
-              className="w-full accent-pink-600"
+              className="w-full accent-red-500"
             />
             <p className="text-black text-center mt-2">a = {a.toFixed(2)}</p>
           </div>
         )}
       </div>
 
-      <button onClick={handlePrev} className="absolute left-0 inset-y-0 flex items-center z-30 p-4">
-        <Image src="/left.svg" alt="prev" width={50} height={50} />
+      <button onClick={handlePrev} className="absolute left-0 inset-y-0 flex items-center z-30 p-4 rotate-180">
+        <Image src="/right.svg" alt="prev" width={50} height={50} />
       </button>
-      <button onClick={handleNext} className="absolute right-0 inset-y-0 flex items-center z-30 p-4 rotate-180">
-        <Image src="/left.svg" alt="next" width={50} height={50} />
+      <button onClick={handleNext} className="absolute right-0 inset-y-0 flex items-center z-30 p-4">
+        <Image src="/right.svg" alt="next" width={50} height={50} />
       </button>
     </div>
   );
