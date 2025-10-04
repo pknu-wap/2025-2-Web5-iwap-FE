@@ -80,12 +80,12 @@ export default function InsidePage() {
                   인공지능이 숫자를 인식하는 과정
                 </p>
               </div>
-              <button className="text-white flex-shrink-0 relative top-0.5">
+              <button className="text-white flex-shrink-0 relative top-2">
                 <CloseIcon />
               </button>
             </div>
-            <div className="w-full flex-grow min-h-0 p-[5%] pt-[2%]">
-              <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[5%] flex flex-col">
+            <div className="w-full flex-grow min-h-0 p-[5%] pt-[4%]">
+              <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[10%] flex flex-col">
                 <h3 className="font-semibold text-white flex-shrink-0" style={{
                   fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)',
                   marginBottom: 'clamp(0.25rem, 2vmin, 0.5rem)'
