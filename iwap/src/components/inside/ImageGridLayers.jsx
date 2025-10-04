@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated } from '@react-spring/three';
 import * as THREE from 'three';
@@ -11,7 +11,7 @@ import { DataTexture, RGBAFormat, UnsignedByteType, DoubleSide, PlaneGeometry, N
 const RENDER_WINDOW_SIZE = 50;
 const MAX_VERTICAL_ROTATION = Math.PI / 4;
 
-// --- [수정됨] 내부 3D 컴포넌트 ---
+// --- 내부 3D 컴포넌트 ---
 function AnimatedPlane({ texture, position, width, height, opacity }) {
   const geometry = useMemo(() => new PlaneGeometry(width, height), [width, height]);
 
@@ -21,16 +21,15 @@ function AnimatedPlane({ texture, position, width, height, opacity }) {
         map={texture} 
         side={DoubleSide} 
         transparent
-        // 부모 컴포넌트에서 애니메이션 처리된 opacity 값을 직접 전달받아 사용합니다.
         opacity={opacity} 
       />
     </animated.mesh>
   );
 }
 
-
 function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
   const [visibleLayers, setVisibleLayers] = useState([]);
+  const { viewport } = useThree();
 
   useFrame(() => {
     if (!layers || layers.length === 0) return;
@@ -51,7 +50,14 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
         {visibleLayers.map((layer) => {
           const position = animatedFocusIndex.to(fi => {
             const distance = layer.originalIndex - fi;
-            const x = -50 + distance * 30;
+            
+            // ✨ 수정된 부분: 간격을 최소/최대 범위 내로 제한
+            const minSpacing = 30;
+            const maxSpacing = 50;
+            const preferredSpacing = viewport.width / 2.5;
+            const spacing = Math.max(minSpacing, Math.min(preferredSpacing, maxSpacing));
+            
+            const x = distance * spacing;
             const z = -Math.abs(distance) * 10;
             return [x, 0, z];
           });
@@ -86,17 +92,14 @@ export default function ImageGridLayers({ layersData }) {
     animatedFocusIndex: focusLayerIndex,
     config: { mass: 1, tension: 150, friction: 30, clamp: true },
     onStart: () => {
-      // 애니메이션 '시작 시' 투명도 즉시 감소
       api.start({ opacity: 0.5, immediate: true });
     },
     onRest: () => {
-      // 애니메이션 '종료 시' 투명도 복원
       api.start({ opacity: 1 });
     },
   });
 
   const layers = useMemo(() => {
-    // ... (데이터 가공 로직은 변경 없음)
     try {
       if (!layersData || typeof layersData !== 'object' || Object.keys(layersData).length === 0) return [];
       const extract2DArrays = (data) => {
@@ -138,7 +141,6 @@ export default function ImageGridLayers({ layersData }) {
   const startFocusIndex = useRef(0);
 
   const bind = useDrag(({ first, last, active, movement: [mx, my] }) => {
-    // ... (useDrag 로직은 변경 없음)
     const deadzone = 10;
     if (first) {
       startRotation.current = rotation.get();
@@ -184,7 +186,7 @@ export default function ImageGridLayers({ layersData }) {
     border: '1px solid rgba(255, 255, 255, 0.2)', color: 'white',
     width: '45px', height: '45px', borderRadius: '50%', display: 'flex',
     alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-    backdropFilter: 'blur(5px)', zIndex: 10, fontSize: '20px', lineHeight: '1',
+    backdropFilter: 'blur(5px)', zIndex: 10, fontSize: '20px',
   };
 
   if (!layers || layers.length === 0) {
@@ -193,7 +195,13 @@ export default function ImageGridLayers({ layersData }) {
 
   return (
     <div 
-      style={{ position: 'absolute', width: '100%', height: '100%', cursor: 'grab' }} 
+      style={{ 
+        position: 'absolute', 
+        width: '100%', 
+        height: '100%', 
+        cursor: 'grab',
+        touchAction: 'none'
+      }} 
       {...bind()}
       onMouseDown={(e) => { e.currentTarget.style.cursor = 'grabbing'; }}
       onMouseUp={(e) => { e.currentTarget.style.cursor = 'grab'; }}
@@ -207,14 +215,14 @@ export default function ImageGridLayers({ layersData }) {
         <Scene layers={layers} animatedFocusIndex={animatedFocusIndex} rotation={rotation} opacity={opacity}/>
       </Canvas>
       <button 
-        style={{...navButtonStyle, left: '200px', bottom: '47%' }}
+        style={{...navButtonStyle, left: '7%', bottom: '47%' }}
         onClick={(e) => { e.stopPropagation(); handleNavClick(0); }}
         title="첫 번째 레이어로 이동"
       >
         {'«'}
       </button>
       <button 
-        style={{...navButtonStyle, right: '200px', bottom: '47%' }}
+        style={{...navButtonStyle, right: '7%', bottom: '47%' }}
         onClick={(e) => { e.stopPropagation(); handleNavClick(layers.length - 1); }}
         title="마지막 레이어로 이동"
       >
