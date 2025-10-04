@@ -4,7 +4,7 @@ declare module "react-plotly.js" {
 
   export interface PlotParams {
     data: Data[];
-    layout?: Partial<Layout>;
+    layout?: any;
     config?: Partial<Config>;
     frames?: any;
     revision?: number;
