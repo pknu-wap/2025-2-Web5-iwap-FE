@@ -1,38 +1,29 @@
-import { Geist, Geist_Mono } from "next/font/google";
+// "use client"; // 1. "use client" 삭제
+// import { useState, useEffect } from "react"; // 2. useState, useEffect import 삭제
 import "./globals.css";
+import localFont from "next/font/local";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const Pretendard = localFont({
+  src: "../../fonts/PretendardVariable.woff2",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // 2. useState, useEffect 로직 전체 삭제
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
   return (
     <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {/* 상단 고정 헤더 */}
-        <header className="w-full bg-white h-[110px] flex flex-col items-center justify-center shadow z-50">
-          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">
-            iWAP
+      <body className={`relative ${Pretendard.className} text-black`}>
+        <header className="w-full h-[96px] bg-white flex flex-col items-center justify-center shadow-md fixed top-0 left-0 z-50">
+          <h1 className="justify-start text-black text-3xl font-semibold font-['Pretendard']">
+            !WAP
           </h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600">
+          <p className="justify-start text-black text-base font-extralight font-['Pretendard']">
             !nteractive Web Art Project
           </p>
         </header>
-
         {/* 본문은 헤더 높이만큼 패딩 */}
-        <main>{children}</main>
+        <main className="pt-[96px]">{children}</main>
       </body>
     </html>
   );
