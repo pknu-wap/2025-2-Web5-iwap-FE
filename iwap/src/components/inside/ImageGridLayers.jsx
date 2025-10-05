@@ -4,6 +4,7 @@ import { useState, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated } from '@react-spring/three';
+import { Text } from '@react-three/drei'; // [추가] 텍스트 렌더링을 위해 import
 import { DataTexture, RGBAFormat, UnsignedByteType, DoubleSide, PlaneGeometry, NearestFilter } from 'three';
 import Image from 'next/image';
 
@@ -61,6 +62,27 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
             return [x, 0, z];
           });
           
+          // [수정] isTextLayer 플래그에 따라 다른 컴포넌트를 렌더링
+          if (layer.isTextLayer) {
+            return (
+              <animated.group position={position} key={layer.id}>
+                <Text
+                  fontSize={100}
+                  color="white"
+                  anchorX="center"
+                  anchorY="middle"
+                >
+                  {layer.text}
+                  <animated.meshStandardMaterial 
+                    color="white" 
+                    opacity={opacity} 
+                    transparent 
+                  />
+                </Text>
+              </animated.group>
+            );
+          }
+          
           return (
             <AnimatedPlane
               key={layer.id}
@@ -112,12 +134,19 @@ export default function ImageGridLayers({ layersData, onClose }) {
         if (Array.isArray(data)) return data.flatMap(item => extract2DArrays(item));
         return [];
       };
-      const allImageData = Object.entries(layersData).flatMap(([key, value]) => {
-        const extractedArrays = extract2DArrays(value);
-        return extractedArrays.map((arr, index) => ({ id: `${key}_${index}`, brightnessArray: arr }));
-      });
-      if (allImageData.length === 0) return [];
-      return allImageData.map((item, i) => {
+
+      // 1. 'fc' 키를 제외하고 이미지 데이터만 먼저 추출
+      const allImageData = Object.entries(layersData)
+        .filter(([key]) => key !== 'fc')
+        .flatMap(([key, value]) => {
+          const extractedArrays = extract2DArrays(value);
+          return extractedArrays.map((arr, index) => ({ id: `${key}_${index}`, brightnessArray: arr }));
+        });
+
+      if (allImageData.length === 0 && !layersData.fc) return [];
+
+      // 2. 이미지 데이터들을 텍스처로 변환
+      const processedLayers = allImageData.map((item, i) => {
         const { brightnessArray } = item;
         if (!Array.isArray(brightnessArray) || brightnessArray.length === 0 || !Array.isArray(brightnessArray[0])) return null;
         const height = brightnessArray.length;
@@ -135,6 +164,24 @@ export default function ImageGridLayers({ layersData, onClose }) {
         texture.magFilter = NearestFilter;
         return { ...item, texture, width, height, originalIndex: i };
       }).filter(Boolean);
+
+      // 3. 'fc' 데이터가 있다면 텍스트 레이어를 생성하여 배열 마지막에 추가
+      if (layersData.fc && Array.isArray(layersData.fc) && layersData.fc.length > 0) {
+        const fcData = layersData.fc[0];
+        const maxValue = Math.max(...fcData);
+        const predictedIndex = fcData.indexOf(maxValue);
+
+        const textLayer = {
+          id: 'final-prediction-text',
+          isTextLayer: true,
+          text: predictedIndex.toString(),
+          originalIndex: processedLayers.length,
+        };
+        processedLayers.push(textLayer);
+      }
+
+      return processedLayers;
+
     } catch (error) {
       console.error('Error memoizing layers:', error);
       return [];
