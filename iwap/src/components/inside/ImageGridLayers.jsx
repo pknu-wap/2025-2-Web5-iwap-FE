@@ -1,13 +1,17 @@
+// components/inside/ImageGridLayers.jsx
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated } from '@react-spring/three';
-import { Text } from '@react-three/drei'; // [추가] 텍스트 렌더링을 위해 import
+import { Text } from '@react-three/drei';
 import { DataTexture, RGBAFormat, UnsignedByteType, DoubleSide, PlaneGeometry, NearestFilter } from 'three';
-import Image from 'next/image';
+// [수정] SideNavButton만 가져오도록 변경
+import SideNavButton from '@/components/ui/SideNavButton';
 
+
+// --- (내부 3D 컴포넌트인 Scene, AnimatedPlane은 변경 사항 없음) ---
 // --- 상수 정의 ---
 const RENDER_WINDOW_SIZE = 50;
 const MAX_VERTICAL_ROTATION = Math.PI / 4;
@@ -62,7 +66,6 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
             return [x, 0, z];
           });
           
-          // [수정] isTextLayer 플래그에 따라 다른 컴포넌트를 렌더링
           if (layer.isTextLayer) {
             return (
               <animated.group position={position} key={layer.id}>
@@ -99,11 +102,10 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
   );
 }
 
-// --- 메인 컴포넌트 ---
-export default function ImageGridLayers({ layersData, onClose }) {
-  const [focusLayerIndex, setFocusLayerIndex] = useState(0);
 
-  // ✨ 1. 애니메이션 설정을 위한 state 추가 (기본은 빠른 설정)
+// --- 메인 컴포넌트 ---
+export default function ImageGridLayers({ layersData }) { // [수정] onClose prop 제거
+  const [focusLayerIndex, setFocusLayerIndex] = useState(0);
   const [focusAnimationConfig, setFocusAnimationConfig] = useState(
     { mass: 1, tension: 90, friction: 30, clamp: true }
   );
@@ -114,19 +116,15 @@ export default function ImageGridLayers({ layersData, onClose }) {
     config: { mass: 1, tension: 120, friction: 30 },
   }));
 
-  // ✨ 2. useSpring 훅을 원래 형태로 되돌리고, config state를 연결
   const { animatedFocusIndex } = useSpring({
     animatedFocusIndex: focusLayerIndex,
-    config: focusAnimationConfig, // state를 사용
-    onStart: () => {
-      api.start({ opacity: 0.5, immediate: true });
-    },
-    onRest: () => {
-      api.start({ opacity: 1 });
-    },
+    config: focusAnimationConfig,
+    onStart: () => { api.start({ opacity: 0.5, immediate: true }); },
+    onRest: () => { api.start({ opacity: 1 }); },
   });
 
   const layers = useMemo(() => {
+    // ... (데이터 처리 로직 변경 없음)
     try {
       if (!layersData || typeof layersData !== 'object' || Object.keys(layersData).length === 0) return [];
       const extract2DArrays = (data) => {
@@ -135,7 +133,6 @@ export default function ImageGridLayers({ layersData, onClose }) {
         return [];
       };
 
-      // 1. 'fc' 키를 제외하고 이미지 데이터만 먼저 추출
       const allImageData = Object.entries(layersData)
         .filter(([key]) => key !== 'fc')
         .flatMap(([key, value]) => {
@@ -145,7 +142,6 @@ export default function ImageGridLayers({ layersData, onClose }) {
 
       if (allImageData.length === 0 && !layersData.fc) return [];
 
-      // 2. 이미지 데이터들을 텍스처로 변환
       const processedLayers = allImageData.map((item, i) => {
         const { brightnessArray } = item;
         if (!Array.isArray(brightnessArray) || brightnessArray.length === 0 || !Array.isArray(brightnessArray[0])) return null;
@@ -165,7 +161,6 @@ export default function ImageGridLayers({ layersData, onClose }) {
         return { ...item, texture, width, height, originalIndex: i };
       }).filter(Boolean);
 
-      // 3. 'fc' 데이터가 있다면 텍스트 레이어를 생성하여 배열 마지막에 추가
       if (layersData.fc && Array.isArray(layersData.fc) && layersData.fc.length > 0) {
         const fcData = layersData.fc[0];
         const maxValue = Math.max(...fcData);
@@ -193,6 +188,7 @@ export default function ImageGridLayers({ layersData, onClose }) {
   const startFocusIndex = useRef(0);
 
   const bind = useDrag(({ first, last, active, movement: [mx, my] }) => {
+    // ... (useDrag 로직 변경 없음)
     const deadzone = 10;
     if (first) {
       startRotation.current = rotation.get();
@@ -211,7 +207,6 @@ export default function ImageGridLayers({ layersData, onClose }) {
       const clampedIndex = Math.max(0, Math.min(layers.length - 1, newIndex));
       animatedFocusIndex.set(clampedIndex);
       if (last) {
-        // ✨ 3. '빠른' 설정으로 변경 후, focus index 업데이트
         setFocusAnimationConfig({ mass: 1, tension: 90, friction: 15, clamp: true });
         setFocusLayerIndex(Math.round(clampedIndex));
       }
@@ -232,36 +227,16 @@ export default function ImageGridLayers({ layersData, onClose }) {
   });
 
   const handleNavClick = (targetIndex) => {
-    // ✨ 4. '느린' 설정으로 변경 후, focus index 업데이트
     setFocusAnimationConfig({ mass: 1, tension: 30, friction: 26 });
     setFocusLayerIndex(targetIndex);
   };
   
-  const navButtonStyle = {
-    position: 'absolute', bottom: '45px', background: 'rgba(255, 255, 255, 0.1)',
-    border: '1px solid rgba(255, 255, 255, 0.2)', color: 'white',
-    width: '45px', height: '45px', borderRadius: '50%', display: 'flex',
-    alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
-    backdropFilter: 'blur(5px)', zIndex: 10, fontSize: '20px',
-  };
+  if (!layers || layers.length === 0) return null;
 
-  if (!layers || layers.length === 0) {
-    return null;
-  }
-
-  const CloseIcon = () => (
-    <Image src="/icons/close.svg" alt="Close" width={24} height={24} style={{ width: 'clamp(1rem, 3vmin, 1.5rem)', height: 'auto' }}/>
-  );
-
+  // [수정] FullScreenView를 제거하고 원래의 div 구조로 복귀
   return (
     <div 
-      style={{ 
-        position: 'absolute', 
-        width: '100%', 
-        height: '100%', 
-        cursor: 'grab',
-        touchAction: 'none'
-      }} 
+      className="w-full h-full cursor-grab touch-none"
       {...bind()}
       onMouseDown={(e) => { e.currentTarget.style.cursor = 'grabbing'; }}
       onMouseUp={(e) => { e.currentTarget.style.cursor = 'grab'; }}
@@ -275,47 +250,15 @@ export default function ImageGridLayers({ layersData, onClose }) {
         <Scene layers={layers} animatedFocusIndex={animatedFocusIndex} rotation={rotation} opacity={opacity}/>
       </Canvas>
 
-      <div 
-          className="w-full flex justify-between items-baseline pt-[2%] px-[5%] pb-[1%]"
-          style={{ 
-              position: 'absolute', 
-              top: 0, 
-              left: 0, 
-              zIndex: 10,
-              pointerEvents: 'none' // 전체 영역의 마우스 이벤트를 막음
-          }} 
-      >
-          <div className="flex items-baseline gap-x-2 flex-wrap">
-              <h2 className="font-bold text-white" style={{ fontSize: 'clamp(1.75rem, 5vmin, 3rem)' }}>
-                  !nside.
-              </h2>
-              <p className="font-light text-white" style={{ fontSize: 'clamp(0.75rem, 1.8vmin, 0.875rem)' }}>
-                  인공지능이 숫자를 인식하는 과정
-              </p>
-          </div>
-          <button 
-              className="text-white flex-shrink-0 relative top-2"
-              style={{ pointerEvents: 'auto' }} // 버튼만 다시 마우스 이벤트를 허용
-              onClick={() => onClose && onClose()}
-          >
-              <CloseIcon />
-          </button>
-      </div>
-
-      <button 
-        style={{...navButtonStyle, left: '7%', bottom: '47%' }}
+      {/* [수정] SideNavButton 컴포넌트를 직접 사용 */}
+      <SideNavButton 
+        direction="left"
         onClick={(e) => { e.stopPropagation(); handleNavClick(0); }}
-        title="첫 번째 레이어로 이동"
-      >
-        {'«'}
-      </button>
-      <button 
-        style={{...navButtonStyle, right: '7%', bottom: '47%' }}
+      />
+      <SideNavButton 
+        direction="right"
         onClick={(e) => { e.stopPropagation(); handleNavClick(layers.length - 1); }}
-        title="마지막 레이어로 이동"
-      >
-        {'»'}
-      </button>
+      />
     </div>
   );
 }

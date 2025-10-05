@@ -1,7 +1,11 @@
 'use client';
 
 import React, { useRef, useState, useEffect, useCallback } from 'react';
-import Image from 'next/image';
+// [수정] 아이콘들을 별도 컴포넌트로 import 합니다.
+import UndoIcon from '@/components/ui/icons/UndoIcon';
+import RedoIcon from '@/components/ui/icons/RedoIcon';
+import TrashIcon from '@/components/ui/icons/TrashIcon';
+import SubmitIcon from '@/components/ui/icons/SubmitIcon';
 
 // --- 컴포넌트 상수 정의 ---
 const CANVAS_INTERNAL_WIDTH = 384;
@@ -18,7 +22,6 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
   const [historyIndex, setHistoryIndex] = useState(-1);
 
   // --- 1. 캔버스 초기 설정 useEffect ---
-  // 이 useEffect는 컴포넌트가 처음 마운트될 때 *단 한 번만* 실행됩니다. (의존성 배열: [])
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -37,7 +40,7 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
     const initialImageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     setHistory([initialImageData]);
     setHistoryIndex(0);
-  }, []); // 의존성 배열이 비어있어, 리렌더링 시 다시 실행되지 않습니다.
+  }, []);
 
   // --- 실제 드로잉 좌표 계산 함수 ---
   const getCoordinates = (event) => {
@@ -108,19 +111,15 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
-    // 마우스 이벤트
     canvas.addEventListener('mousedown', handleNativeMouseDown);
     canvas.addEventListener('mousemove', handleNativeMouseMove);
     canvas.addEventListener('mouseup', stopDrawing);
     canvas.addEventListener('mouseleave', stopDrawing);
-
-    // 터치 이벤트 (passive: false로 스크롤 방지)
     canvas.addEventListener('touchstart', handleNativeTouchStart, { passive: false });
     canvas.addEventListener('touchmove', handleNativeTouchMove, { passive: false });
     canvas.addEventListener('touchend', stopDrawing);
 
     return () => {
-      // 클린업 함수: 컴포넌트 언마운트 시 모든 이벤트 리스너 제거
       canvas.removeEventListener('mousedown', handleNativeMouseDown);
       canvas.removeEventListener('mousemove', handleNativeMouseMove);
       canvas.removeEventListener('mouseup', stopDrawing);
@@ -165,7 +164,6 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
   }, [history, historyIndex, restoreCanvasState]);
 
   const handlePost = () => {
-    // ... (이전과 동일)
     const canvas = canvasRef.current;
     if (!canvas) return;
     const tempCanvas = document.createElement('canvas');
@@ -202,7 +200,6 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
         </div>
       </div>
       <div className="w-full flex-grow relative">
-        {/* JSX에서 모든 on... 이벤트 핸들러를 제거하고 useEffect에서 관리합니다. */}
         <canvas
           ref={canvasRef}
           className="bg-white touch-action-none absolute top-0 left-0 w-full h-full"
@@ -214,8 +211,4 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
 
 export default DrawingCanvas;
 
-// --- 아이콘 컴포넌트들 ---
-const UndoIcon = () => <Image src="/icons/undo.svg" alt="Undo" width={20} height={20} />;
-const RedoIcon = () => <Image src="/icons/redo.svg" alt="Redo" width={20} height={20} />;
-const TrashIcon = () => <Image src="/icons/trash.svg" alt="Clear" width={20} height={20} />;
-const SubmitIcon = () => <Image src="/icons/submit.svg" alt="Submit" width={24} height={24} />;
+// --- [수정] 아이콘 컴포넌트들은 별도 파일로 분리되었으므로 여기서 삭제합니다. ---
