@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
 import { useResizeDetector } from "react-resize-detector";
+import { type Data } from "plotly.js";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -14,7 +15,7 @@ export default function FunctionsPage() {
 
   const { width, height, ref } = useResizeDetector();
 
-  // ---- 공통 데이터 (생략) ----
+  // ---- 공통 데이터 ----
   const kVals = useMemo(() => Array.from({ length: 2500 }, (_, i) => i + 1), []);
   const aVals = kVals.map(
     (k) =>
@@ -27,9 +28,8 @@ export default function FunctionsPage() {
       0.25 * Math.pow(Math.sin((2 * Math.PI * k) / 1875 + Math.PI / 6), 3)
   );
   const cVals = kVals.map((k) => 2 / 15 - (1 / 8) * Math.cos((Math.PI * k) / 625));
-  const dVals = kVals.map((k) => 49 / 50 - (1 / 7) * Math.pow(Math.sin((4 * Math.PI * k) / 2500), 4));
 
-  // ---- 1번 (생략) ----
+  // ---- 1번 ----
   const l1 = kVals.map((k, i) => {
     const theta = (68 * Math.PI * k) / 2500;
     return { re: aVals[i] + cVals[i] * Math.cos(theta), im: bVals[i] + cVals[i] * Math.sin(theta) };
@@ -39,7 +39,7 @@ export default function FunctionsPage() {
     return { re: aVals[i] - cVals[i] * Math.cos(theta), im: bVals[i] - cVals[i] * Math.sin(theta) };
   });
   const n = kVals.length;
-  const lineSegments1: any[] = [];
+  const lineSegments1: Data[] = [];
   for (let i = 0; i < n - 1; i++) {
     lineSegments1.push({
       x: [l1[i].re, l1[i + 1].re], y: [l1[i].im, l1[i + 1].im],
@@ -55,29 +55,29 @@ export default function FunctionsPage() {
     });
   }
 
-  // ---- 2번 (생략) ----
+  // ---- 2번 ----
   const xVals = useMemo(
     () => Array.from({ length: 200 }, (_, i) => -Math.sqrt(Math.PI) + (2 * Math.sqrt(Math.PI) * i) / 200),
     []
   );
   const fVals = xVals.map((x) => {
-    const part1 = Math.pow(Math.abs(x), 2/3);
+    const part1 = Math.pow(Math.abs(x), 2 / 3);
     const part2 = Math.sqrt(Math.max(0, Math.PI - x * x));
     return part1 + part2 * Math.sin(a * Math.PI * x);
   });
 
-  // ---- 3번 (생략) ----
+  // ---- 3번 ----
   const xRange = Array.from({ length: 50 }, (_, i) => -1 + (2 * i) / 49);
   const yRange = Array.from({ length: 60 }, (_, j) => -1 + (2.5 * j) / 59);
-  const zGrid: number[][] = yRange.map((y) =>
+  const zGrid: (number | null)[][] = yRange.map((y) =>
     xRange.map((x) => {
       const inside = 1 - x * x - Math.pow(y - Math.abs(x), 2);
-      if (inside < 0) return NaN;
+      if (inside < 0) return null;
       return 5 - Math.sqrt(inside) * Math.cos(30 * inside);
     })
   );
 
-  // ---- 4번 (생략) ----
+  // ---- 4번 ----
   const uRange = Array.from({ length: 50 }, (_, i) => (2 * Math.PI * i) / 49);
   const vRange = Array.from({ length: 50 }, (_, j) => (Math.PI * j) / 49);
   const surfX: number[][] = vRange.map((v) =>
@@ -88,7 +88,7 @@ export default function FunctionsPage() {
     uRange.map((u) => Math.sin(v) * (15 * Math.cos(u) - 6 * Math.cos(2 * u) - 2 * Math.cos(3 * u)))
   );
 
-  // ---- 5번 (생략) ----
+  // ---- 5번 ----
   const tVals = Array.from({ length: 2000 }, (_, i) => (Math.PI * i) / 1999);
   const xHeart = tVals.map(
     (t) =>
@@ -104,20 +104,20 @@ export default function FunctionsPage() {
   );
   const heartColors = tVals.map((t) => `hsl(${(t / Math.PI) * 360}, 70%, 55%)`);
 
-  // ---- 6번 (생략) ----
+  // ---- 6번 ----
   const nLines = 601;
   const iVals = Array.from({ length: nLines }, (_, i) => i + 1);
   const xStart = iVals.map((i) => Math.sin((10 * Math.PI * (i + 699)) / 2000));
   const yStart = iVals.map((i) => Math.cos((8 * Math.PI * (i + 699)) / 2000));
   const xEnd = iVals.map((i) => Math.sin((12 * Math.PI * (i + 699)) / 2000));
   const yEnd = iVals.map((i) => Math.cos((10 * Math.PI * (i + 699)) / 2000));
-  const lineSegments = iVals.map((_, idx) => ({
+  const lineSegments: Data[] = iVals.map((_, idx) => ({
     x: [xStart[idx], xEnd[idx]], y: [yStart[idx], yEnd[idx]],
     mode: "lines", type: "scatter", line: { color: `#000000`, width: 0.3 }, showlegend: false,
   }));
 
-  // ---- 7번 (생략) ----
-  const pattern7 = Array.from({ length: 2000 }, (_, i) => {
+  // ---- 7번 ----
+  const pattern7: Data[] = Array.from({ length: 2000 }, (_, i) => {
     const idx = i + 1;
     const x1 = Math.sin((10 * Math.PI * idx) / 2000);
     const y1 = 0.5 * Math.cos((2 * Math.PI * idx) / 2000);
@@ -133,8 +133,8 @@ export default function FunctionsPage() {
     };
   });
 
-  // ---- plots (생략) ----
-  const plots: Record<string, { data: any[]; title: string }> = {
+  // ---- plots ----
+  const plots: Record<string, { data: Data[]; title: string }> = {
     "1": { data: lineSegments1, title: "1. Line Segment Pattern" },
     "2": {
       data: [{ x: xVals, y: fVals, type: "scatter", mode: "lines", line: { color: 'red' } }],
@@ -165,7 +165,7 @@ export default function FunctionsPage() {
         x: xHeart,
         y: yHeart,
         mode: "lines+markers",
-        marker: { color: 'red', size: 3 },
+        marker: { color: heartColors, size: 3 },
         line: { color: 'red', width: 1 }
       }],
       title: "5. Parametric Heart Curve"
@@ -208,8 +208,8 @@ export default function FunctionsPage() {
       <div
         ref={ref}
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2
-                   w-[90vw] max-w-[1501px] h-[65vh] max-h-[700px] bg-white
-                   flex flex-col items-center justify-center z-10"
+                 w-[90vw] max-w-[1501px] h-[65vh] max-h-[700px] bg-white
+                 flex flex-col items-center justify-center z-10"
       >
         {width && height && (
           <Plot
@@ -218,23 +218,30 @@ export default function FunctionsPage() {
               width: width,
               height: index === 2 ? height - 80 : height,
               title: {
-              text: selectedPlot.title,
-              font: { size: 18, color: "black" },
-              x: 0.5,
-              xanchor: "center",
-              yanchor: "top"
-            },
-            margin: { t: 40, l: 40, r: 20, b: 40 },
-            paper_bgcolor: "rgba(0,0,0,0)",
-            plot_bgcolor: "rgba(0,0,0,0)",
-            xaxis: { title: "X", font: { family: "Pretendard, sans-serif" } },
-            yaxis: {
-            title: "Y",
-            scaleanchor: "x",
-            scaleratio: 1,
-            font: { family: "Pretendard, sans-serif" }
-          },
-          }}
+                text: selectedPlot.title,
+                font: { size: 18, color: "black" },
+                x: 0.5,
+                xanchor: "center",
+                yanchor: "top"
+              },
+              margin: { t: 40, l: 40, r: 20, b: 40 },
+              paper_bgcolor: "rgba(0,0,0,0)",
+              plot_bgcolor: "rgba(0,0,0,0)",
+              xaxis: {
+                title: {
+                  text: "X",
+                  font: { family: "Pretendard, sans-serif" },
+                },
+              },
+              yaxis: {
+                title: {
+                  text: "Y",
+                  font: { family: "Pretendard, sans-serif" },
+                },
+                scaleanchor: "x",
+                scaleratio: 1,
+              },
+            }}
             config={{ responsive: true }}
             style={{ width: '100%' }}
           />
