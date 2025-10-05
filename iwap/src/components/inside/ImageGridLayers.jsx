@@ -51,7 +51,6 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
           const position = animatedFocusIndex.to(fi => {
             const distance = layer.originalIndex - fi;
             
-            // ✨ 수정된 부분: 간격을 최소/최대 범위 내로 제한
             const minSpacing = 30;
             const maxSpacing = 50;
             const preferredSpacing = viewport.width / 2.5;
@@ -82,15 +81,21 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
 export default function ImageGridLayers({ layersData, onClose }) {
   const [focusLayerIndex, setFocusLayerIndex] = useState(0);
 
+  // ✨ 1. 애니메이션 설정을 위한 state 추가 (기본은 빠른 설정)
+  const [focusAnimationConfig, setFocusAnimationConfig] = useState(
+    { mass: 1, tension: 90, friction: 30, clamp: true }
+  );
+
   const [{ rotation, opacity }, api] = useSpring(() => ({
     rotation: [-0.125, 0.6, 0],
     opacity: 1,
-    config: { mass: 1, tension: 210, friction: 30 },
+    config: { mass: 1, tension: 120, friction: 30 },
   }));
 
+  // ✨ 2. useSpring 훅을 원래 형태로 되돌리고, config state를 연결
   const { animatedFocusIndex } = useSpring({
     animatedFocusIndex: focusLayerIndex,
-    config: { mass: 1, tension: 150, friction: 30, clamp: true },
+    config: focusAnimationConfig, // state를 사용
     onStart: () => {
       api.start({ opacity: 0.5, immediate: true });
     },
@@ -159,6 +164,8 @@ export default function ImageGridLayers({ layersData, onClose }) {
       const clampedIndex = Math.max(0, Math.min(layers.length - 1, newIndex));
       animatedFocusIndex.set(clampedIndex);
       if (last) {
+        // ✨ 3. '빠른' 설정으로 변경 후, focus index 업데이트
+        setFocusAnimationConfig({ mass: 1, tension: 90, friction: 15, clamp: true });
         setFocusLayerIndex(Math.round(clampedIndex));
       }
     } else if (dragModeRef.current === 'vertical') {
@@ -178,6 +185,8 @@ export default function ImageGridLayers({ layersData, onClose }) {
   });
 
   const handleNavClick = (targetIndex) => {
+    // ✨ 4. '느린' 설정으로 변경 후, focus index 업데이트
+    setFocusAnimationConfig({ mass: 1, tension: 30, friction: 26 });
     setFocusLayerIndex(targetIndex);
   };
   
