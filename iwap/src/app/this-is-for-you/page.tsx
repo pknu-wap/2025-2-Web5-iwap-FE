@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, type CSSProperties } from "react"; // CSSProperties 타입을 import
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import Link from "next/link";
@@ -174,6 +174,25 @@ export default function FunctionsPage() {
     "7": { data: pattern7, title: "7. 2000 Line Segments Pattern" },
   };
 
+  // navButtonStyle 객체에 CSSProperties 타입을 명시
+  const navButtonStyle: CSSProperties = {
+    position: 'absolute',
+    bottom: '45px',
+    background: 'rgba(255, 255, 255, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    color: 'white',
+    width: '45px',
+    height: '45px',
+    borderRadius: '50%',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    cursor: 'pointer',
+    backdropFilter: 'blur(5px)',
+    zIndex: 10,
+    fontSize: '20px',
+  };
+
   const selectedPlot = plots[index.toString()];
   const handlePrev = () => setIndex((prev) => (prev === 1 ? 7 : prev - 1));
   const handleNext = () => setIndex((prev) => (prev === 7 ? 1 : prev + 1));
@@ -182,7 +201,7 @@ export default function FunctionsPage() {
     <div
       className="relative flex flex-col items-center justify-center min-h-screen"
       style={{
-        backgroundImage: "url('/TIFY_black.jpg')",
+        backgroundImage: "url('/images/this-is-for-you_background.jpg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
       }}
@@ -196,7 +215,7 @@ export default function FunctionsPage() {
           </h1>
           <Link href="/Slides" className="flex-shrink-0">
             <button className="p-2">
-              <Image src="/X.svg" alt="close" width={24} height={24} />
+              <Image src="/close.svg" alt="close" width={24} height={24} />
             </button>
           </Link>
         </div>
@@ -263,11 +282,20 @@ export default function FunctionsPage() {
         )}
       </div>
 
-      <button onClick={handlePrev} className="absolute left-0 inset-y-0 flex items-center z-30 p-4 rotate-180">
-        <Image src="/right.svg" alt="prev" width={50} height={50} />
+      {/* onClick 핸들러 구문 수정 */}
+      <button
+        style={{ ...navButtonStyle, left: '7%', bottom: '47%' }}
+        onClick={handlePrev}
+        title="다음 함수로 이동"
+      >
+        {'«'}
       </button>
-      <button onClick={handleNext} className="absolute right-0 inset-y-0 flex items-center z-30 p-4">
-        <Image src="/right.svg" alt="next" width={50} height={50} />
+      <button
+        style={{ ...navButtonStyle, right: '7%', bottom: '47%' }}
+        onClick={handleNext}
+        title="이전 함수로 이동"
+      >
+        {'»'}
       </button>
     </div>
   );

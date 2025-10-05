@@ -1,5 +1,3 @@
-// "use client"; // 1. "use client" 삭제
-// import { useState, useEffect } from "react"; // 2. useState, useEffect import 삭제
 import "./globals.css";
 import localFont from "next/font/local";
 
