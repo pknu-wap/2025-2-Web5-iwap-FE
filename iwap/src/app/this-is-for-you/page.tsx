@@ -215,7 +215,7 @@ export default function FunctionsPage() {
           </h1>
           <Link href="/Slides" className="flex-shrink-0">
             <button className="p-2">
-              <Image src="/close.svg" alt="close" width={24} height={24} />
+              <Image src="/icons/close.svg" alt="close" width={24} height={24} />
             </button>
           </Link>
         </div>
