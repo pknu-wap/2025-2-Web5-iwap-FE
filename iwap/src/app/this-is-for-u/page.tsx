@@ -159,7 +159,7 @@ export default function FunctionsPage() {
         goBack={true}
         onPrev={handlePrev}
         onNext={handleNext}
-        backgroundUrl="/images/this-is-for-you_background.jpg"
+        backgroundUrl="/images/this-is-for-u_background.jpg"
       >
         {/* 흰색 배경을 가진 그래프 컨테이너 */}
         <div
