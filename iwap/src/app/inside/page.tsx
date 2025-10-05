@@ -87,18 +87,16 @@ export default function InsidePage() {
   };
 
   return (
-    <div
-      className="relative w-full h-[calc(100dvh-96px)] overflow-hidden"
+    <div 
+      className="relative w-full h-dvh md:h-[calc(100dvh-96px)]"
       style={pageBackgroundStyle}
     >
-      {/* 에러가 있을 경우, 화면 상단에 메시지를 표시. */}
       {error && (
         <p className="absolute top-4 left-1/2 -translate-x-1/2 text-red-500 bg-black/50 p-2 rounded z-30 text-center">
           에러: {error}
         </p>
       )}
 
-      {/* 'visualize' 뷰 상태이고 레이어 데이터가 존재할 경우, 3D 시각화 컴포넌트를 렌더링. */}
       {view === 'visualize' && layersData ? (
         <FullScreenView
           title="!nside."
@@ -109,29 +107,31 @@ export default function InsidePage() {
           <ImageGridLayers layersData={layersData} />
         </FullScreenView>
       ) : (
-        // 'draw' 또는 'loading' 뷰 상태일 경우의 레이아웃.
         <div className="w-full h-full flex items-center justify-center p-4 sm:p-8">
-          <div className="flex flex-col w-full max-w-lg max-h-full aspect-[500/580] relative">
-            <div className="w-full flex-grow min-h-0 pt-[100px]">
+          {/* [핵심 1] max-h-full과 aspect-square를 통해
+            컨테이너가 뷰포트 크기에 맞춰 자연스럽게 줄어드는 정사각형이 되도록 합니다. (가로 모드 대응)
+          */}
+          <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
+            <div className="w-full h-full pt-[100px]">
               <PageHeader
-                  title="!nside."
-                  subtitle="인공지능이 숫자를 인식하는 과정"
-                  goBack={true}
-                  padding='p-0'
-                />
-              {/* 그리기 영역의 흰색 반투명 프레임 */}
-              <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] pt-[7%] p-[10%] flex flex-col">
+                title="!nside."
+                subtitle="인공지능이 숫자를 인식하는 과정"
+                goBack={true}
+                padding='p-0'
+              />
+              {/* [핵심 2] Grid 레이아웃과 미세 조정한 padding을 통해
+                그리기 영역이 더 큰 공간을 차지하도록 만듭니다. (세로 모드 대응)
+              */}
+              <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 
                   className="font-semibold text-white flex-shrink-0" 
                   style={{
                     fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)',
-                    marginBottom: 'clamp(0.25rem, 2vmin, 0.5rem)'
                   }}
                 >
                   숫자를 그려주세요
                 </h3>
-                {/* DrawingCanvas 또는 LoadingIndicator가 렌더링될 내부 컨테이너 */}
-                <div className="relative flex-grow min-h-0">
+                <div className="relative min-h-0">
                   {renderContent()}
                 </div>
               </div>
