@@ -171,28 +171,33 @@ export default function ImageGridLayers({ layersData }) {
       startFocusIndex.current = animatedFocusIndex.get();
       dragModeRef.current = 'none';
     }
-    
-    // 드래그 방향(가로/세로)을 한 번만 결정.
+    if (active) {
+      api.start({ opacity: 0.5, immediate: true });
+    }
     if (dragModeRef.current === 'none' && (Math.abs(mx) > deadzone || Math.abs(my) > deadzone)) {
       dragModeRef.current = Math.abs(my) > Math.abs(mx) * 2 ? 'vertical' : 'horizontal';
     }
-
-    if (dragModeRef.current === 'horizontal') { // 가로 드래그: 레이어 탐색
-      const newIndex = - (mx / 15) + startFocusIndex.current;
-      const clampedIndex = Math.max(0, Math.min(layers.length - 1, newIndex)); // 인덱스 범위 제한
-      animatedFocusIndex.set(clampedIndex); // 실시간으로 포커스 인덱스 업데이트
-      if (last) setFocusLayerIndex(Math.round(clampedIndex)); // 드래그 종료 시 최종 위치로 상태 업데이트
-    
-    } else if (dragModeRef.current === 'vertical') { // 세로 드래그: 씬 회전
-      const newRotationX = startRotation.current[0] - my / 200;
+    if (dragModeRef.current === 'horizontal') {
+      const indexSensitivity = 15;
+      const newIndex = - (mx / indexSensitivity) + startFocusIndex.current;
+      const clampedIndex = Math.max(0, Math.min(layers.length - 1, newIndex));
+      animatedFocusIndex.set(clampedIndex);
+      if (last) {
+        setFocusAnimationConfig({ mass: 1, tension: 90, friction: 15, clamp: true });
+        setFocusLayerIndex(Math.round(clampedIndex));
+      }
+    } else if (dragModeRef.current === 'vertical') {
+      const rotSensitivity = 200;
+      const newRotationX = startRotation.current[0] - my / rotSensitivity;
       const clampedRotationX = Math.max(-MAX_VERTICAL_ROTATION, Math.min(MAX_VERTICAL_ROTATION, newRotationX));
       api.start({ rotation: [clampedRotationX, startRotation.current[1], startRotation.current[2]], immediate: true });
     }
-
-    if (last) { // 드래그 종료 시
+    if (last) {
+      if (Math.round(animatedFocusIndex.get()) === focusLayerIndex) {
+        api.start({ opacity: 1 });
+      }
       if (dragModeRef.current !== 'horizontal') {
-        // 세로 드래그 후에는 원래 각도로 부드럽게 복귀.
-        api.start({ rotation: startRotation.current });
+        api.start({ rotation: [startRotation.current[0], startRotation.current[1], startRotation.current[2]] });
       }
     }
   });
