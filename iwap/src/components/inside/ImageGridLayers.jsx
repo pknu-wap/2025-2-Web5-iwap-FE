@@ -4,8 +4,8 @@ import { useState, useMemo, useRef } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { useDrag } from '@use-gesture/react';
 import { useSpring, animated } from '@react-spring/three';
-import * as THREE from 'three';
 import { DataTexture, RGBAFormat, UnsignedByteType, DoubleSide, PlaneGeometry, NearestFilter } from 'three';
+import Image from 'next/image';
 
 // --- 상수 정의 ---
 const RENDER_WINDOW_SIZE = 50;
@@ -79,7 +79,7 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
 }
 
 // --- 메인 컴포넌트 ---
-export default function ImageGridLayers({ layersData }) {
+export default function ImageGridLayers({ layersData, onClose }) {
   const [focusLayerIndex, setFocusLayerIndex] = useState(0);
 
   const [{ rotation, opacity }, api] = useSpring(() => ({
@@ -193,6 +193,10 @@ export default function ImageGridLayers({ layersData }) {
     return null;
   }
 
+  const CloseIcon = () => (
+    <Image src="/icons/close.svg" alt="Close" width={24} height={24} style={{ width: 'clamp(1rem, 3vmin, 1.5rem)', height: 'auto' }}/>
+  );
+
   return (
     <div 
       style={{ 
@@ -214,6 +218,34 @@ export default function ImageGridLayers({ layersData }) {
       >
         <Scene layers={layers} animatedFocusIndex={animatedFocusIndex} rotation={rotation} opacity={opacity}/>
       </Canvas>
+
+      <div 
+          className="w-full flex justify-between items-baseline pt-[2%] px-[5%] pb-[1%]"
+          style={{ 
+              position: 'absolute', 
+              top: 0, 
+              left: 0, 
+              zIndex: 10,
+              pointerEvents: 'none' // 전체 영역의 마우스 이벤트를 막음
+          }} 
+      >
+          <div className="flex items-baseline gap-x-2 flex-wrap">
+              <h2 className="font-bold text-white" style={{ fontSize: 'clamp(1.75rem, 5vmin, 3rem)' }}>
+                  !nside.
+              </h2>
+              <p className="font-light text-white" style={{ fontSize: 'clamp(0.75rem, 1.8vmin, 0.875rem)' }}>
+                  인공지능이 숫자를 인식하는 과정
+              </p>
+          </div>
+          <button 
+              className="text-white flex-shrink-0 relative top-2"
+              style={{ pointerEvents: 'auto' }} // 버튼만 다시 마우스 이벤트를 허용
+              onClick={() => onClose && onClose()}
+          >
+              <CloseIcon />
+          </button>
+      </div>
+
       <button 
         style={{...navButtonStyle, left: '7%', bottom: '47%' }}
         onClick={(e) => { e.stopPropagation(); handleNavClick(0); }}

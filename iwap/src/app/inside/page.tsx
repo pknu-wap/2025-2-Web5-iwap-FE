@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation'; 
 import DrawingCanvas from '@/components/inside/DrawingCanvas';
 import ImageGridLayers from '@/components/inside/ImageGridLayers';
 import LoadingIndicator from '@/components/inside/LoadingIndicator';
@@ -10,6 +11,7 @@ export default function InsidePage() {
   const [view, setView] = useState('draw');
   const [layersData, setLayersData] = useState(null);
   const [error, setError] = useState < string | null > (null);
+  const router = useRouter();
 
   const handleUploadSuccess = async () => {
     setView('loading');
@@ -27,6 +29,17 @@ export default function InsidePage() {
       else setError('알 수 없는 오류가 발생했습니다.');
       setView('draw');
     }
+  };
+
+  // [추가] 1. DrawingCanvas 뷰로 돌아가는 함수
+  const handleReturnToDraw = () => {
+    setLayersData(null); // 이전 데이터 정리 (선택 사항)
+    setView('draw');
+  };
+
+  // [추가] 2. 브라우저의 이전 페이지로 이동하는 함수
+  const handleGoBack = () => {
+    router.back();
   };
 
   const renderContent = () => {
@@ -65,7 +78,7 @@ export default function InsidePage() {
       {view === 'visualize' && layersData ? (
         // Visualize 뷰: 여백 없이 전체 공간을 차지
         <div className="w-full h-full relative">
-          <ImageGridLayers layersData={layersData} />
+          <ImageGridLayers layersData={layersData} onClose={handleReturnToDraw} />
         </div>
       ) : (
         // Draw/Loading 뷰: 중앙 정렬과 padding을 위한 래퍼(wrapper) 추가
@@ -80,7 +93,10 @@ export default function InsidePage() {
                   인공지능이 숫자를 인식하는 과정
                 </p>
               </div>
-              <button className="text-white flex-shrink-0 relative top-2">
+              <button 
+                className="text-white flex-shrink-0 relative top-2"
+                onClick={handleGoBack}
+              >
                 <CloseIcon />
               </button>
             </div>
