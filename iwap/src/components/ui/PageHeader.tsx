@@ -29,7 +29,7 @@ export default function PageHeader({
   onClose, 
   goBack, 
   // padding prop이 외부에서 주입되지 않은 경우, 기본 패딩 값을 사용함.
-  padding = 'py-15 px-5 sm:px-10 lg:px-70' 
+  padding = 'py-5 px-5 sm:px-5 sm:py-5 md:py-15 lg:px-70' 
 }: PageHeaderProps) {
   return (
     // 최상위 <header> 요소. 외부에서 주입된 padding 클래스를 동적으로 적용.
