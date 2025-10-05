@@ -1,8 +1,7 @@
 // components/inside/LoadingIndicator.jsx
-
 'use client';
 
-// 간단한 SVG 스피너 아이콘
+/** 간단한 SVG 스피너 아이콘 */
 const SpinnerIcon = () => (
   <svg
     className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
@@ -26,6 +25,10 @@ const SpinnerIcon = () => (
   </svg>
 );
 
+/**
+ * 로딩 중임을 나타내는 인디케이터 컴포넌트
+ * @param {{ text: string }} props - 표시할 텍스트
+ */
 export default function LoadingIndicator({ text }) {
   return (
     <div className="flex flex-col items-center justify-center w-full h-full text-white">
