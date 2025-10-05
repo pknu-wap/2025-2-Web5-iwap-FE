@@ -1,5 +1,3 @@
-// "use client"; // 1. "use client" 삭제
-// import { useState, useEffect } from "react"; // 2. useState, useEffect import 삭제
 import "./globals.css";
 import localFont from "next/font/local";
 
@@ -22,7 +20,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             !nteractive Web Art Project
           </p>
         </header>
-
+        {/* 본문은 헤더 높이만큼 패딩 */}
         <main className="pt-[96px]">{children}</main>
       </body>
     </html>
