@@ -170,25 +170,29 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
     const tempCtx = tempCanvas.getContext('2d');
     tempCtx.drawImage(canvas, 0, 0, CANVAS_EXPORT_SIZE, CANVAS_EXPORT_SIZE);
 
-    // 2. 리사이징된 이미지를 PNG 형식의 Blob 데이터로 변환.
+    // 2. 리사이징된 이미지를 표준 JPG 형식('image/jpeg')의 Blob 데이터로 변환.
     tempCanvas.toBlob(async (blob) => {
       if (!blob) return;
       // 3. Blob 데이터를 FormData에 담아 서버로 전송 준비.
       const formData = new FormData();
-      formData.append('image', blob, 'drawing.png');
+      // 파일명도 .jpeg로 통일하여 명확성을 높입니다.
+      formData.append('image', blob, 'image.jpeg');
+      
       try {
         // 4. API 라우트로 POST 요청 전송.
         const response = await fetch('/api/inside', { method: 'POST', body: formData });
         if (response.status === 204 && onUploadSuccess) {
           onUploadSuccess(); // 성공 시 부모 컴포넌트의 콜백 함수 실행
         } else {
-          throw new Error(`Server response error: ${response.status}`);
+          // 서버로부터 받은 오류 응답을 좀 더 자세히 확인
+          const errorText = await response.text();
+          throw new Error(`Server response error: ${response.status} - ${errorText}`);
         }
       } catch (error) {
         console.error('Upload error:', error);
         alert('이미지 업로드에 실패했습니다.');
       }
-    }, 'image/png');
+    }, 'image/jpeg'); // 'image/jpg' 대신 표준인 'image/jpeg'를 사용해야 합니다.
   };
 
   return (
