@@ -50,7 +50,6 @@ export async function GET(request) {
   try {
     const response = await fetch(`${BACKEND_URL}/api/inside/`);
     
-    // 백엔드 응답을 복제하여 내용을 읽어도 스트림이 닫히지 않도록 함
     const clonedResponse = response.clone();
     const responseBody = await clonedResponse.text();
     
@@ -60,14 +59,11 @@ export async function GET(request) {
     }
     await logToFile(logMessage);
 
-    // 성공적인 응답일 경우에만 파일로 저장
     if (response.ok) {
         const fileName = `${Date.now()}_response.json`;
-        // JSON 형식으로 예쁘게 포맷팅하여 저장
         await saveDebugFile('get', fileName, JSON.stringify(JSON.parse(responseBody), null, 2));
     }
 
-    // 클라이언트에게 원본 응답과 동일하게 전달
     return new NextResponse(responseBody, {
       status: response.status,
       headers: { 'Content-Type': response.headers.get('Content-Type') || 'application/json' },
@@ -87,7 +83,7 @@ export async function POST(request) {
 
   try {
     const formData = await request.formData();
-    const file = formData.get('image');
+    const file = formData.get('num_image');
 
     if (file && file instanceof File) {
       logMessage += `\n  - FILENAME: "${file.name}"\n  - TYPE: "${file.type}"\n  - SIZE: ${file.size} bytes`;
@@ -104,7 +100,6 @@ export async function POST(request) {
       body: formData,
     });
     
-    // 백엔드의 모든 응답 내용을 텍스트로 읽어옴
     const responseBody = await response.text();
 
     logMessage += `\n  -> BACKEND RESPONSE: ${response.status} ${response.statusText}`;
@@ -113,7 +108,6 @@ export async function POST(request) {
     }
     await logToFile(logMessage);
 
-    // 클라이언트에게 백엔드 응답을 그대로 전달
     return new NextResponse(responseBody, { 
         status: response.status,
         headers: { 'Content-Type': response.headers.get('Content-Type') || 'text/plain' }
