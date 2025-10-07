@@ -142,7 +142,7 @@ export default function ImageGridLayers({ layersData }) {
       }
       return processedLayers;
     } catch (error) {
-      console.error('Error memoizing layers:', error);
+      console.error('[ImageGridLayers] Error: Failed to process and memoize layers:', error);
       return [];
     }
   }, [layersData]);
