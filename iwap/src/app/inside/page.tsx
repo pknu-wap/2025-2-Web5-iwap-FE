@@ -23,13 +23,18 @@ export default function InsidePage() {
   const [error, setError] = useState<string | null>(null);
 
   /**
-   * DrawingCanvas로부터 직접 데이터를 받아 처리하는 핸들러.
+   * 업로드가 시작될 때 호출되어 로딩 UI를 표시합니다.
+   */
+  const handleUploadStart = () => {
+    setView('loading');
+    setError(null);
+  };
+
+  /**
+   * 업로드 및 데이터 처리 성공 시 호출됩니다.
    * @param data - 백엔드에서 POST 응답으로 전달된 AI 레이어 데이터.
    */
   const handleUploadSuccess = (data: LayersData) => {
-    setView('loading');
-    setError(null);
-
     try {
       if (!data || !data.layers || typeof data.layers !== 'object' || Object.keys(data.layers).length === 0) {
         throw new Error("서버로부터 유효한 데이터를 받지 못했습니다.");
@@ -41,9 +46,18 @@ export default function InsidePage() {
     } catch (err) {
       console.error('An error occurred during data processing:', err);
       const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-      setError(`데이터 처리 오류: ${errorMessage}`);
-      setView('draw'); 
+      // 데이터 처리 실패 시 에러 핸들러 호출
+      handleUploadFail(`데이터 처리 오류: ${errorMessage}`);
     }
+  };
+
+  /**
+   * 업로드 실패 시 호출되어 에러 메시지를 표시하고 UI를 되돌립니다.
+   * @param errorMessage - 표시할 에러 메시지
+   */
+  const handleUploadFail = (errorMessage: string) => {
+    setError(errorMessage);
+    setView('draw');
   };
 
   const handleReturnToDraw = () => {
@@ -54,10 +68,15 @@ export default function InsidePage() {
   const renderContent = () => {
     switch (view) {
       case 'draw':
-        // 타입 단언을 통해 TypeScript 오류를 해결합니다.
-        return <DrawingCanvas onUploadSuccess={handleUploadSuccess as (data: object) => void} />;
+        return (
+          <DrawingCanvas 
+            onUploadStart={handleUploadStart}
+            onUploadSuccess={handleUploadSuccess as (data: object) => void} 
+            onUploadFail={handleUploadFail}
+          />
+        );
       case 'loading':
-        return <LoadingIndicator text="로딩 중..." />;
+        return <LoadingIndicator text="분석 중..." />;
       default:
         return null;
     }

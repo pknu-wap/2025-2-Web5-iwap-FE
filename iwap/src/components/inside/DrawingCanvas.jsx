@@ -14,9 +14,13 @@ const PEN_COLOR = 'black';
 const BACKGROUND_COLOR = 'white';
 
 /**
- * @param {{ onUploadSuccess: (data: object) => void }} props - 이미지 업로드 성공 시 AI 레이어 데이터를 인자로 전달하며 호출될 콜백 함수
+ * @param {{ 
+ *   onUploadSuccess: (data: object) => void,
+ *   onUploadStart: () => void,
+ *   onUploadFail: (error: string) => void
+ * }} props
  */
-const DrawingCanvas = ({ onUploadSuccess }) => {
+const DrawingCanvas = ({ onUploadSuccess, onUploadStart, onUploadFail }) => {
   const canvasRef = useRef(null);
   const [context, setContext] = useState(null);
   const [isDrawing, setIsDrawing] = useState(false);
@@ -145,6 +149,9 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
     const canvas = canvasRef.current;
     if (!canvas) return;
 
+    // 1. 부모 컴포넌트에 업로드 시작을 알림
+    onUploadStart?.();
+
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = CANVAS_EXPORT_SIZE;
     tempCanvas.height = CANVAS_EXPORT_SIZE;
@@ -152,23 +159,27 @@ const DrawingCanvas = ({ onUploadSuccess }) => {
     tempCtx.drawImage(canvas, 0, 0, CANVAS_EXPORT_SIZE, CANVAS_EXPORT_SIZE);
 
     tempCanvas.toBlob(async (blob) => {
-      if (!blob) return;
+      if (!blob) {
+        onUploadFail?.('캔버스 이미지를 처리할 수 없습니다.');
+        return;
+      }
       const formData = new FormData();
       formData.append('num_image', blob, 'image.jpeg');
       
       try {
         const response = await fetch('/api/inside', { method: 'POST', body: formData });
         
-        if (response.ok && onUploadSuccess) {
+        if (response.ok) {
           const data = await response.json();
-          onUploadSuccess(data);
+          onUploadSuccess?.(data);
         } else {
           const errorText = await response.text();
-          throw new Error(`Server response error: ${response.status} - ${errorText}`);
+          throw new Error(`서버 오류: ${response.status} - ${errorText || '응답 없음'}`);
         }
       } catch (error) {
         console.error('Upload error:', error);
-        alert('이미지 업로드에 실패했습니다.');
+        // 2. 부모 컴포넌트에 업로드 실패를 알림
+        onUploadFail?.(error.message || '이미지 업로드에 실패했습니다.');
       }
     }, 'image/jpeg');
   };
