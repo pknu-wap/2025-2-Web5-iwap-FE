@@ -17,16 +17,11 @@
         <br />
         <a href="https://github.com/kitewatermelon" title="Code"><b>kitewatermelon</b></a>
     </td>
-    <td align="center">
-       <img src="https://avatars.githubusercontent.com/u/95416903?v=4" width="120px;"/>   
+        <td align="center">
+       <img src="https://avatars.githubusercontent.com/u/202237930?v=4" width="120px;"/>   
         <br />
-        <a href="https://github.com/androcom" title="Code"><b>androcom</b></a>
+        <a href="https://github.com/MinseoKim01" title="Code"><b>MinseoKim01</b></a>
     </td>
-    <td align="center">
-        <img src="https://avatars.githubusercontent.com/u/171122875?v=4" width="120px;"/> 
-        <br />
-        <a href="https://github.com/doranayoung" title="Code"><b>doranayoung</b></a>
-    </td> 
     <td align="center">
        <img src="https://avatars.githubusercontent.com/u/140076739?v=44" width="120px;"/>   
         <br />
@@ -38,6 +33,16 @@
         <a href="https://github.com/tlsdnjs31" title="Code"><b>tlsdnjs31</b></a>
     </td>
     <td align="center">
+       <img src="https://avatars.githubusercontent.com/u/95416903?v=4" width="120px;"/>   
+        <br />
+        <a href="https://github.com/androcom" title="Code"><b>androcom</b></a>
+    </td>
+    <td align="center">
+        <img src="https://avatars.githubusercontent.com/u/171122875?v=4" width="120px;"/> 
+        <br />
+        <a href="https://github.com/doranayoung" title="Code"><b>doranayoung</b></a>
+    </td> 
+    <td align="center">
         <img src="https://avatars.githubusercontent.com/u/202603803?v=4" width="120px;"/> 
         <br />
         <a href="https://github.com/eunseo7878" title="Code"><b>eunseo7878</b></a>    
@@ -45,18 +50,20 @@
   </tr>
   <tr>
     <td align="center"><b>박연수</b></td>
-    <td align="center"><b>김경록</b></td>
-    <td align="center"><b>김나영</b></td>
+    <td align="center"><b>김민서</b></td>
     <td align="center"><b>윤회성</b></td>
     <td align="center"><b>최신원</b></td>
+    <td align="center"><b>김경록</b></td>
+    <td align="center"><b>김나영</b></td>
     <td align="center"><b>이은서</b></td>
   </tr>
   <tr>
-    <td align="center"><b>PM, AI</b></td>
-    <td align="center"><b>FE</b></td>
-    <td align="center"><b>FE</b></td>
+    <td align="center"><b>TM, AI</b></td>
+    <td align="center"><b>PM</b></td>
     <td align="center"><b>BE</b></td>
     <td align="center"><b>BE</b></td>
+    <td align="center"><b>FE</b></td>
+    <td align="center"><b>FE</b></td>
     <td align="center"><b>DE</b></td>
   </tr>
 </table>
