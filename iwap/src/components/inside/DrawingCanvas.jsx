@@ -156,8 +156,24 @@ const DrawingCanvas = ({ onUploadSuccess, onUploadStart, onUploadFail }) => {
     tempCanvas.width = CANVAS_EXPORT_SIZE;
     tempCanvas.height = CANVAS_EXPORT_SIZE;
     const tempCtx = tempCanvas.getContext('2d');
+    
+    // 1. 원본 이미지를 28x28 임시 캔버스에 그립니다.
     tempCtx.drawImage(canvas, 0, 0, CANVAS_EXPORT_SIZE, CANVAS_EXPORT_SIZE);
 
+    // 2. 픽셀 데이터를 가져와 색상을 반전시킵니다. (흰배경/검은글씨 -> 검은배경/흰글씨)
+    const imageData = tempCtx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      data[i] = 255 - data[i]; // Red
+      data[i + 1] = 255 - data[i + 1]; // Green
+      data[i + 2] = 255 - data[i + 2]; // Blue
+      // Alpha 채널 (data[i + 3])은 변경하지 않습니다.
+    }
+
+    // 3. 색상이 반전된 픽셀 데이터를 다시 임시 캔버스에 적용합니다.
+    tempCtx.putImageData(imageData, 0, 0);
+
+    // 4. 색상이 반전된 이미지를 Blob으로 변환하여 서버에 전송합니다.
     tempCanvas.toBlob(async (blob) => {
       if (!blob) {
         onUploadFail?.('캔버스 이미지를 처리할 수 없습니다.');
