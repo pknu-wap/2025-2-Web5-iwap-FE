@@ -101,7 +101,7 @@ export async function POST(request) {
 
     logMessage += `\n  -> BACKEND RESPONSE: ${response.status} ${response.statusText}`;
     if(responseBody) {
-      logMessage += `\n  -> RESPONSE BODY (first 200 chars):\n${responseBody.substring(0, 200)}...`;
+      logMessage += `\n  -> RESPONSE BODY (last 50 chars):\n...${responseBody.slice(-50)}`;
     }
     // 2. 프록시 활동 로그 저장
     await logToFile(logMessage);
