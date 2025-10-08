@@ -135,11 +135,11 @@ export default function FunctionsPage() {
   // 각 인덱스에 해당하는 그래프 데이터와 제목을 객체로 묶어 관리합니다.
   const plots: Record<string, { data: Data[]; title: string }> = {
     "1": { data: lineSegments1, title: "1. Line Segment Pattern" },
-    "2": { data: [{ x: xVals, y: fVals, type: "scatter", mode: "lines", line: { color: 'red' } }], title: `2. f(x), a=${a.toFixed(2)}` },
-    "3": { data: [{ x: xRange, y: yRange, z: zGrid, type: "surface", colorscale: [[0, '#444444'], [1, '#C35858']] }], title: "3. z(x, y)" },
-    "4": { data: [{ x: surfX, y: surfY, z: surfZ, type: "surface", colorscale: [[0, 'pink'], [1, 'red']] }], title: "4. 3D Surface" },
-    "5": { data: [{ x: xHeart, y: yHeart, mode: "lines+markers", marker: { color: heartColors, size: 3 }, line: { color: 'red', width: 1 } }], title: "5. Parametric Heart Curve" },
-    "6": { data: lineSegments, title: "6. Line Segment Heart (601 segments)" },
+    "2": { data: [{ x: xVals, y: fVals, type: "scatter", mode: "lines", line: { color: 'red' } }], title: `2. f(x), Parametric Line Heart Pattern` },
+    "3": { data: [{ x: xRange, y: yRange, z: zGrid, type: "surface", colorscale: [[0, '#444444'], [1, '#C35858']] }], title: "3. Abstract 3D Surface" },
+    "4": { data: [{ x: surfX, y: surfY, z: surfZ, type: "surface", colorscale: [[0, 'pink'], [1, 'red']] }], title: "4. 3D Surface z(x, y)" },
+    "5": { data: [{ x: xHeart, y: yHeart, mode: "lines", line: { color: 'red', width: 1 } }], title: "5. 3D Parametric Surface (u, v)" },
+    "6": { data: lineSegments, title: "6. Heart Shape from 601 Line Segments" },
     "7": { data: pattern7, title: "7. 2000 Line Segments Pattern" },
   };
 
@@ -161,11 +161,14 @@ export default function FunctionsPage() {
         onNext={handleNext}
         backgroundUrl="/images/this-is-for-u_background.jpg"
       >
+
+    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/95 to-black"></div>
+
         {/* 흰색 배경을 가진 그래프 컨테이너 */}
-        <div
-          className="mt-16 md:mt-20 w-[90vw] max-w-[1501px] h-[75vh] md:h-[65vh] max-h-[700px] bg-white
-                     flex flex-col items-center justify-center"
-        >
+    <div
+       className="relative z-20 mt-16 md:mt-20 w-[90vw] max-w-[1501px] h-[75vh] md:h-[65vh] max-h-[700px]
+               bg-white flex flex-col items-center justify-center"
+      >
           <div ref={ref} className="w-full flex-grow">
             {width && height && (
               <Plot
@@ -179,18 +182,14 @@ export default function FunctionsPage() {
                     x: 0.5, xanchor: "center", yanchor: "top"
                   },
                   // [수정 1] 제목이 그래프와 겹치지 않도록 상단 여백을 40에서 80으로 늘립니다.
-                  margin: { t: 80, l: 40, r: 20, b: 40 },
+                  margin: index === 2 ? { t: 100, l: 40, r: 20, b: 40 } : { t: 80, l: 40, r: 20, b: 40 },
                   paper_bgcolor: "rgba(0,0,0,0)",
                   plot_bgcolor: "rgba(0,0,0,0)",
                   xaxis: { title: { text: "X", font: { family: "Pretendard, sans-serif" } } },
                   yaxis: { 
                     title: { text: "Y", font: { family: "Pretendard, sans-serif" } },
-                    // [수정 2] 하트 등 비율 유지가 중요한 그래프(1,3,4,5,6번)에만 1:1 스케일을 적용합니다.
-                    // 2번(함수), 7번(패턴) 그래프는 화면 크기에 맞게 축이 자동으로 조절됩니다.
-                    ...([1, 3, 4, 5, 6].includes(index) && {
                       scaleanchor: "x",
                       scaleratio: 1,
-                    }),
                   },
                 }}
                 config={{ responsive: true }}
