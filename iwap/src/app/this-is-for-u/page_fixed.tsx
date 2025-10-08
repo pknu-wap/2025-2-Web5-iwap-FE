@@ -25,61 +25,28 @@ export default function FunctionsPage() {
 
   const kVals = useMemo(() => Array.from({ length: 2500 }, (_, i) => i + 1), []);
 
-// [수정] 1번 그래프: 선의 두께에 따라 trace를 2개로 분리하여 촘촘함 복원
-const singleTrace1 = useMemo((): Data[] => {
-  const aVals = kVals.map((k) => (-3 / 2) * Math.pow(Math.sin((2 * Math.PI * k) / 2500), 3) + (3 / 10) * Math.pow(Math.sin((2 * Math.PI * k) / 2500), 7));
-  const bVals = kVals.map((k) => Math.sin((2 * Math.PI * k) / 1875 + Math.PI / 6) + 0.25 * Math.pow(Math.sin((2 * Math.PI * k) / 1875 + Math.PI / 6), 3));
-  const cVals = kVals.map((k) => 2 / 15 - (1 / 8) * Math.cos((Math.PI * k) / 625));
-  
-  const l1 = kVals.map((k, i) => {
-    const theta = (68 * Math.PI * k) / 2500;
-    return { re: aVals[i] + cVals[i] * Math.cos(theta), im: bVals[i] + cVals[i] * Math.sin(theta) };
-  });
-  const l2 = kVals.map((k, i) => {
-    const theta = (68 * Math.PI * k) / 2500;
-    return { re: aVals[i] - cVals[i] * Math.cos(theta), im: bVals[i] - cVals[i] * Math.sin(theta) };
-  });
-
-  // 가는 선과 굵은 선의 좌표를 분리해서 저장
-  const thinLinesX: (number | null)[] = [];
-  const thinLinesY: (number | null)[] = [];
-  const thickLinesX: (number | null)[] = [];
-  const thickLinesY: (number | null)[] = [];
-
-  for (let i = 0; i < kVals.length - 1; i++) {
-    // 가는 선 (l1, l2 경로)
-    thinLinesX.push(l1[i].re, l1[i + 1].re, null);
-    thinLinesY.push(l1[i].im, l1[i + 1].im, null);
-    thinLinesX.push(l2[i].re, l2[i + 1].re, null);
-    thinLinesY.push(l2[i].im, l2[i + 1].im, null);
-    
-    // 굵은 선 (l1과 l2를 잇는 선)
-    thickLinesX.push(l1[i].re, l2[i].re, null);
-    thickLinesY.push(l1[i].im, l2[i].im, null);
-  }
-
-  // 2개의 trace 객체를 배열로 반환
-  return [
-    { // 가는 선 trace
-      x: thinLinesX,
-      y: thinLinesY,
-      mode: "lines",
-      type: "scatter",
-      line: { color: "rgba(0,0,0,0.5)", width: 0.3 },
-      showlegend: false,
-      hoverinfo: 'none'
-    },
-    { // 굵은 선 trace
-      x: thickLinesX,
-      y: thickLinesY,
-      mode: "lines",
-      type: "scatter",
-      line: { color: "rgba(0,0,0,0.5)", width: 1 },
-      showlegend: false,
-      hoverinfo: 'none'
+  const singleTrace1 = useMemo((): Data[] => {
+    const aVals = kVals.map((k) => (-3 / 2) * Math.pow(Math.sin((2 * Math.PI * k) / 2500), 3) + (3 / 10) * Math.pow(Math.sin((2 * Math.PI * k) / 2500), 7));
+    const bVals = kVals.map((k) => Math.sin((2 * Math.PI * k) / 1875 + Math.PI / 6) + 0.25 * Math.pow(Math.sin((2 * Math.PI * k) / 1875 + Math.PI / 6), 3));
+    const cVals = kVals.map((k) => 2 / 15 - (1 / 8) * Math.cos((Math.PI * k) / 625));
+    const l1 = kVals.map((k, i) => { const theta = (68 * Math.PI * k) / 2500; return { re: aVals[i] + cVals[i] * Math.cos(theta), im: bVals[i] + cVals[i] * Math.sin(theta) }; });
+    const l2 = kVals.map((k, i) => { const theta = (68 * Math.PI * k) / 2500; return { re: aVals[i] - cVals[i] * Math.cos(theta), im: bVals[i] - cVals[i] * Math.sin(theta) }; });
+    const xCoords: (number | null)[] = [];
+    const yCoords: (number | null)[] = [];
+    for (let i = 0; i < kVals.length - 1; i++) {
+      xCoords.push(l1[i].re, l1[i + 1].re, null);
+      yCoords.push(l1[i].im, l1[i + 1].im, null);
+      xCoords.push(l2[i].re, l2[i + 1].re, null);
+      yCoords.push(l2[i].im, l2[i + 1].im, null);
+      xCoords.push(l1[i].re, l2[i].re, null);
+      yCoords.push(l1[i].im, l2[i].im, null);
     }
-  ];
-}, [kVals]);
+    return [{
+      x: xCoords, y: yCoords, mode: "lines", type: "scatter",
+      line: { color: "rgba(0,0,0,0.5)", width: 0.5 },
+      showlegend: false, hoverinfo: 'none'
+    }];
+  }, [kVals]);
   
   const xVals = useMemo(() => Array.from({ length: 200 }, (_, i) => -Math.sqrt(Math.PI) + (2 * Math.sqrt(Math.PI) * i) / 200), []);
   const fVals = xVals.map((x) => Math.pow(Math.abs(x), 2 / 3) + Math.sqrt(Math.max(0, Math.PI - x * x)) * Math.sin(a * Math.PI * x));
