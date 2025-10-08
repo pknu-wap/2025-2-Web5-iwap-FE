@@ -1,103 +1,217 @@
+"use client";
+
+import { useRef, useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
+
+const fadeStyles = [
+  { color: "rgba(255,255,255,0.70)", weight: 500 },
+  { color: "rgba(255,255,255,0.50)", weight: 300 },
+  { color: "rgba(255,255,255,0.30)", weight: 100 },
+];
+
+function FadedLetters({ letters }: { letters: string }) {
+  return (
+    <>
+      {letters.split("").map((char, i) => (
+        <span
+          key={i}
+          className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px]"
+          style={{
+            color: fadeStyles[i % fadeStyles.length].color,
+            fontWeight: fadeStyles[i % fadeStyles.length].weight,
+            fontFamily: "Pretendard",
+            letterSpacing: "-3.2px",
+          }}
+        >
+          {char}
+        </span>
+      ))}
+    </>
+  );
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+  const [isOpen, setIsOpen] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+  const h1Ref = useRef<HTMLHeadingElement>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+  return (
+    <main
+      className="relative h-screen w-full overflow-hidden"
+      onMouseMove={(e) => {
+        if (!h1Ref.current) return;
+        const rect = h1Ref.current.getBoundingClientRect();
+        setPos({
+          x: e.clientX - rect.left,
+          y: e.clientY - rect.top,
+        });
+      }}
+    >
+      <Image
+  src="/images/home_background.jpg"
+  alt="Background Light"
+  fill
+  priority
+  className="object-cover dark:hidden"
+/>
+<Image
+  src="/images/home-black_background.jpg"
+  alt="Background Dark"
+  fill
+  priority
+  className="object-cover hidden dark:block"
+/>
+
+      {/* 텍스트 + 버튼 묶음 */}
+      <div
+        className={`absolute inset-0 flex flex-col md:flex-row items-center justify-center md:justify-start md:ml-[20vw] px-4 gap-8 transition-transform duration-700 ease-out z-20 ${
+          isOpen ? "-translate-x-20" : ""
+        }`}
+      >
+        <div className="flex flex-col items-center md:items-start">
+          <Image
+            src="/images/home/wap.png"
+            alt="images/home/wap"
+            width={148}
+            height={45}
+            className="mb-4 md:mb-0 w-[148px] h-[45px] md:w-[148px] md:h-[45px] lg:w-[148px] lg:h-[45px] xl:w-[148px] xl:h-[45px]"
+          />
+
+          {/* 텍스트 */}
+          <h1
+            ref={h1Ref}
+            className="relative text-white text-center md:text-left whitespace-pre-line 
+                     text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px]"
+            style={{
+              fontFamily: "Pretendard",
+              fontWeight: 700,
+              letterSpacing: "-3.2px",
+              WebkitMaskImage: `radial-gradient(35px at ${pos.x}px ${pos.y}px, transparent 0%, black 80%)`,
+              WebkitMaskRepeat: "no-repeat",
+              WebkitMaskSize: "100% 100%",
+              maskImage: `radial-gradient(35px at ${pos.x}px ${pos.y}px, transparent 0%, black 80%)`,
+              maskRepeat: "no-repeat",
+              maskSize: "100% 100%",
+            }}
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+            !nteractive<FadedLetters letters="eee" />
+            {"\n"}
+            Web<FadedLetters letters="bbb" />
+            {"\n"}
+            Art<FadedLetters letters="ttt" />
+            {"\n"}
+            Project<FadedLetters letters="ttt" />
+          </h1>
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
+
+        {/* 버튼 */}
+        <div
+          className="relative w-[180px] h-[70px] md:w-[200px] md:h-[80px] flex items-center justify-center"
+          onMouseEnter={() => {
+            setIsOpen(true);
+            setIsHovered(true);
+          }}
+          onMouseLeave={() => {
+            setIsOpen(false);
+            setIsHovered(false);
+          }}
         >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
+          <Link href="/slides">
+            <button className="relative w-full h-full flex items-center justify-center gap-2 bg-transparent translate-y-[215px]">
+              {/* 선 */}
+              {isHovered ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="490"
+                  height="4"
+                  viewBox="0 0 490 4"
+                  fill="none"
+                >
+                  <path
+                    d="M490 2H-75"
+                    stroke="url(#paint0_linear_hover)"
+                    strokeWidth="4"
+                  />
+                  <defs>
+                    <linearGradient
+                      id="paint0_linear_hover"
+                      x1="-75"
+                      y1="2.5"
+                      x2="490"
+                      y2="2.5"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop stopColor="white" stopOpacity="0" />
+                      <stop offset="1" stopColor="#926AC6" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="490"
+                  height="4"
+                  viewBox="0 0 490 4"
+                  fill="none"
+                >
+                  <path
+                    d="M490 2H-75"
+                    stroke="url(#paint0_linear_default)"
+                    strokeWidth="4"
+                  />
+                  <defs>
+                    <linearGradient
+                      id="paint0_linear_default"
+                      x1="-75"
+                      y1="2.5"
+                      x2="490"
+                      y2="2.5"
+                      gradientUnits="userSpaceOnUse"
+                    >
+                      <stop stopColor="white" stopOpacity="0" />
+                      <stop offset="1" stopColor="white" />
+                    </linearGradient>
+                  </defs>
+                </svg>
+              )}
+
+              {/* 화살표 */}
+              {isHovered ? (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 39 70"
+                  fill="none"
+                  className="h-12 md:h-[68px]"
+                >
+                  <path
+                    d="M2 2L36 35L2 68"
+                    stroke="#926AC6"
+                    strokeWidth="4"
+                  />
+                </svg>
+              ) : (
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 39 70"
+                  fill="none"
+                  className="h-12 md:h-[68px]"
+                >
+                  <path d="M2 2L36 35L2 68" stroke="white" strokeWidth="4" />
+                </svg>
+              )}
+            </button>
+          </Link>
+        </div>
+      </div>
+
+      {/* 흰 패널 */}
+      <div
+        className={`absolute inset-y-0 right-0 bg-gradient-to-l from-white to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${
+          isOpen ? "w-full" : "w-0"
+        }`}
+      />
+    </main>
   );
 }

@@ -1,43 +1,31 @@
-"use client";
+// layout.tsx
 
-import { useState, useEffect } from "react";
 import "./globals.css";
 import localFont from "next/font/local";
 
 const Pretendard = localFont({
-  src: [
-    { path: "../../public/assets/Font/Pretendard/Pretendard-Thin.otf", weight: "100", style: "normal" },
-    { path: "../../public/assets/Font/Pretendard/Pretendard-Light.otf", weight: "300", style: "normal" },
-    { path: "../../public/assets/Font/Pretendard/Pretendard-Regular.otf", weight: "400", style: "normal" },
-    { path: "../../public/assets/Font/Pretendard/Pretendard-Medium.otf", weight: "500", style: "normal" },
-    { path: "../../public/assets/Font/Pretendard/Pretendard-SemiBold.otf", weight: "600", style: "normal" },
-    { path: "../../public/assets/Font/Pretendard/Pretendard-Bold.otf", weight: "700", style: "normal" },
-  ],
+  src: "../../public/fonts/PretendardVariable.woff2",
+  display: "swap",
 });
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
-  const [dark, setDark] = useState(false);
-
-  useEffect(() => {
-    if (dark) {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [dark]);
-
   return (
-    <html lang="en">
-      <body className={`relative ${Pretendard.className} bg-white text-black dark:bg-black dark:text-white`}>
-        {children}
-
-        {/* 다크모드 토글 버튼 */}
-        <button
-          onClick={() => setDark(!dark)}
-          className="absolute bottom-4 right-4 px-4 py-2 rounded-md bg-gray-200 dark:bg-gray-800 text-black dark:text-white z-30"
-        >
-          {dark ? "Light" : "Dark"}
-        </button>
+    <html lang="ko">
+      <body className={`relative ${Pretendard.className} text-black`}>
+        {/* [수정] 모바일(기본)에서는 숨기고, md 사이즈 이상일 때만 flex로 표시 */}
+        <header className="hidden w-full h-[96px] bg-white md:flex flex-col items-center justify-center shadow-md fixed top-0 left-0 z-50">
+          <h1 className="text-black text-3xl font-semibold">
+            !WAP
+          </h1>
+          <p className="text-black text-base font-extralight">
+            !nteractive Web Art Project
+          </p>
+        </header>
+        
+        {/* [수정] md 사이즈 이상일 때만 헤더 높이만큼 상단 패딩 적용 */}
+        <main className="md:pt-[96px]">
+          {children}
+        </main>
       </body>
     </html>
   );
