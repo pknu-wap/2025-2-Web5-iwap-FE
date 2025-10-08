@@ -108,7 +108,7 @@ export default function Home() {
 
         {/* 버튼 */}
         <div
-          className="relative w-[180px] h-[70px] md:w-[200px] md:h-[80px] flex items-center justify-center"
+          className="relative w-[180px] h-[70px] md:w-[200px] md:h-[80px] flex items-center justify-center mt-[20px] md:mt-[450px]"
           onMouseEnter={() => {
             setIsOpen(true);
             setIsHovered(true);
@@ -119,7 +119,7 @@ export default function Home() {
           }}
         >
           <Link href="/slides">
-            <button className="relative w-full h-full flex items-center justify-center gap-2 bg-transparent translate-y-[215px]">
+            <button className="relative w-full h-full flex items-center justify-center gap-2 bg-transparent">
               {/* 선 */}
               {isHovered ? (
                 <svg
@@ -131,7 +131,7 @@ export default function Home() {
                 >
                   <path
                     d="M490 2H-75"
-                    stroke="url(#paint0_linear_hover)"
+                    stroke={`url(#paint0_linear_${isHovered ? "hover" : "default"})`}
                     strokeWidth="4"
                   />
                   <defs>
