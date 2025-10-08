@@ -169,7 +169,7 @@ export default function FunctionsPage() {
        className="relative z-20 mt-16 md:mt-20 w-[90vw] max-w-[1501px] h-[75vh] md:h-[65vh] max-h-[700px]
                bg-white flex flex-col items-center justify-center"
       >
-          <div ref={ref} className="w-full flex-grow">
+          <div ref={ref} className="w-full flex-grow min-h-0">
             {width && height && (
               <Plot
                 data={selectedPlot.data}
