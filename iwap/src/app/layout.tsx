@@ -1,38 +1,31 @@
-import { Geist, Geist_Mono } from "next/font/google";
+// layout.tsx
+
 import "./globals.css";
+import localFont from "next/font/local";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const Pretendard = localFont({
+  src: "../../public/fonts/PretendardVariable.woff2",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
-
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
-        {/* 상단 고정 헤더 */}
-        <header className="w-full bg-white h-[110px] flex flex-col items-center justify-center shadow z-50">
-          <h1 className="text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold">
-            iWAP
+    <html lang="ko">
+      <body className={`relative ${Pretendard.className} text-black`}>
+        {/* [수정] 모바일(기본)에서는 숨기고, md 사이즈 이상일 때만 flex로 표시 */}
+        <header className="hidden w-full h-[96px] bg-white md:flex flex-col items-center justify-center shadow-md fixed top-0 left-0 z-50">
+          <h1 className="text-black text-3xl font-semibold">
+            !WAP
           </h1>
-          <p className="text-xs sm:text-sm md:text-base text-gray-600">
+          <p className="text-black text-base font-extralight">
             !nteractive Web Art Project
           </p>
         </header>
-
-        {/* 본문은 헤더 높이만큼 패딩 */}
-        <main>{children}</main>
+        
+        {/* [수정] md 사이즈 이상일 때만 헤더 높이만큼 상단 패딩 적용 */}
+        <main className="md:pt-[96px]">
+          {children}
+        </main>
       </body>
     </html>
   );

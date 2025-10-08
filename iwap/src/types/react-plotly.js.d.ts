@@ -1,12 +1,12 @@
 declare module "react-plotly.js" {
   import * as React from "react";
-  import { Layout, Config, Data } from "plotly.js";
+  import { Config, Data, Frame, Layout } from "plotly.js";
 
   export interface PlotParams {
     data: Data[];
-    layout?: any;
+    layout?: Partial<Layout>;
     config?: Partial<Config>;
-    frames?: any;
+    frames?: Partial<Frame>[];
     revision?: number;
     style?: React.CSSProperties;
     className?: string;
