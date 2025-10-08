@@ -7,16 +7,16 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
 
 const images = [
-  { src: "/slides/slide1.jpg", link: "/!nside", text: "!nside" },
-  { src: "/slides/slide2.jpg", link: "/String", text: "String" },
-  { src: "/slides/slide3.jpg", link: "/Piano", text: "Piano" },
-  { src: "/slides/slide4.jpg", link: "/Th!s!s4U", text: "Th!s !s 4 U" },
-  { src: "/slides/slide5.jpg", link: "/!nstrument", text: "!nstrument" },
-  { src: "/slides/slide6.jpg", link: "/slides/6", text: "작품 설명 6" },
-  { src: "/slides/slide7.jpg", link: "/slides/7", text: "작품 설명 7" },
-  { src: "/slides/slide8.jpg", link: "/slides/8", text: "작품 설명 8" },
-  { src: "/slides/slide9.jpg", link: "/slides/9", text: "작품 설명 9" },
-  { src: "/slides/slide10.jpg", link: "/slides/10", text: "작품 설명 10" },
+  { src: "/images/home/slides/slide1.jpg", link: "/string", text: "Str!ng" },
+  { src: "/images/home/slides/slide2.jpg", link: "/inside", text: "!nside" },
+  { src: "/images/home/slides/slide3.jpg", link: "/piano", text: "P!ano" },
+  { src: "/images/home/slides/slide4.jpg", link: "/this-is-for-u", text: "Th!s !s for u" },
+  { src: "/images/home/slides/slide5.jpg", link: "/slides/5", text: "작품 설명 5" },
+  { src: "/images/home/slides/slide6.jpg", link: "/slides/6", text: "작품 설명 6" },
+  { src: "/images/home/slides/slide7.jpg", link: "/slides/7", text: "작품 설명 7" },
+  { src: "/images/home/slides/slide8.jpg", link: "/slides/8", text: "작품 설명 8" },
+  { src: "/images/home/slides/slide9.jpg", link: "/slides/9", text: "작품 설명 9" },
+  { src: "/images/home/slides/slide10.jpg", link: "/slides/10", text: "작품 설명 10" },
 ];
 
 export default function SlidesPage() {
@@ -44,11 +44,6 @@ export default function SlidesPage() {
 
   return (
     <main className="relative bg-white h-screen overflow-hidden flex items-center justify-center">
-      {/* 상단 텍스트 */}
-      <div className="absolute top-0 left-0 right-0 flex flex-col items-center pt-10 z-30 pointer-events-none">
-        <h1 className="text-3xl font-bold mb-4">!WAP</h1>
-        <p className="mb-12">Interactive Web Art Project</p>
-      </div>
 
       {/* Swiper */}
       <div className="w-full z-10">
