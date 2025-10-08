@@ -53,7 +53,9 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
           
           return layer.isTextLayer ? (
             <animated.group position={position} key={layer.id}>
-              <Text fontSize={100} color="white" anchorX="center" anchorY="middle">
+              <Text 
+                font="/fonts/PretendardVariable.ttf"
+                fontSize={100} color="white" anchorX="center" anchorY="middle">
                 {layer.text}
                 <animated.meshStandardMaterial color="white" opacity={opacity} transparent />
               </Text>
@@ -140,7 +142,7 @@ export default function ImageGridLayers({ layersData }) {
       }
       return processedLayers;
     } catch (error) {
-      console.error('Error memoizing layers:', error);
+      console.error('[ImageGridLayers] Error: Failed to process and memoize layers:', error);
       return [];
     }
   }, [layersData]);

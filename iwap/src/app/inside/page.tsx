@@ -44,10 +44,10 @@ export default function InsidePage() {
       setView('visualize');
 
     } catch (err) {
-      console.error('An error occurred during data processing:', err);
+      console.error('[InsidePage] Error: An error occurred during data processing:', err);
       const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       // 데이터 처리 실패 시 에러 핸들러 호출
-      handleUploadFail(`데이터 처리 오류: ${errorMessage}`);
+      handleUploadFail(`[데이터 처리 오류]: ${errorMessage}`);
     }
   };
 

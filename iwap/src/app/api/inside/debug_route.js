@@ -15,7 +15,7 @@ async function ensureDirectoriesExist(dirs) {
     try {
       await fs.mkdir(dir, { recursive: true });
     } catch (error) {
-      console.error(`Failed to create directory ${dir}:`, error);
+      console.error(`[route.js] Failed to create directory ${dir}:`, error);
     }
   }
 }
@@ -128,8 +128,11 @@ export async function POST(request) {
 
   } catch (error) {
     const errorMessage = logMessage + `\n  -> PROXY ERROR: POST - ${error.message}`;
-    console.error(errorMessage);
+    console.error(`[route.js] API Proxy Error: ${error.message}`);
     await logToFile(errorMessage);
-    return new NextResponse('프록시 서버 오류', { status: 500 });
+    return new NextResponse(JSON.stringify({ message: 'API 프록시 서버에서 내부 오류가 발생했습니다.' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }

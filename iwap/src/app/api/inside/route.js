@@ -26,7 +26,10 @@ export async function POST(request) {
     });
 
   } catch (error) {
-    console.error(`API Proxy Error: ${error.message}`);
-    return new NextResponse('프록시 서버에서 오류가 발생했습니다.', { status: 500 });
+    console.error(`[route.js] API Proxy Error: ${error.message}`);
+    return new NextResponse(JSON.stringify({ message: 'API 프록시 서버에서 내부 오류가 발생했습니다.' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
   }
 }
