@@ -16,6 +16,8 @@ type PageHeaderProps = {
    * 이 prop을 통해 다양한 레이아웃에 유연하게 대응할 수 있음.
    */
   padding?: string;
+  className?: string;
+  darkBackground?: boolean;
 };
 
 /**
@@ -29,11 +31,16 @@ export default function PageHeader({
   onClose, 
   goBack, 
   // padding prop이 외부에서 주입되지 않은 경우, 기본 패딩 값을 사용함.
-  padding = 'py-5 px-5 sm:px-5 sm:py-5 md:py-15 lg:px-70' 
+  padding = 'py-5 px-5 sm:px-5 sm:py-5 md:py-15 lg:px-70',
+  darkBackground = true,
 }: PageHeaderProps) {
   return (
     // 최상위 <header> 요소. 외부에서 주입된 padding 클래스를 동적으로 적용.
-    <header className={`absolute top-0 left-0 z-20 w-full flex justify-between items-end text-white ${padding}`}>
+        <header
+      className={`absolute top-0 left-0 z-20 w-full flex justify-between items-end ${
+        darkBackground ? "text-white" : "text-black"
+      } ${padding}`}
+      >
       
       {/* 제목과 부제를 묶는 영역 */}
       <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-3">
