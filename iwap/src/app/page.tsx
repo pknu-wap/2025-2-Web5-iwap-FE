@@ -152,7 +152,7 @@ export default function Home() {
         {/* 이 div는 눈에 보이지 않고 움직이지도 않습니다. 오직 마우스 이벤트 감지만을 위한 것입니다. */}
         {/* 시각적 요소와 분리되어 있기 때문에 떨림 현상이 발생하지 않습니다. */}
         <div
-          className="absolute w-[280px] h-[80px] mt-[20px] md:mt-[450px] cursor-pointer"
+          className="absolute w-[360px] h-[100px] mt-[20px] md:mt-[450px] cursor-pointer"
           style={{ 
             // md 이상일 때 텍스트 너비(대략 850px) + gap(32px) 만큼 오른쪽으로 이동
             transform: 'translateX(calc(850px + 32px))'
