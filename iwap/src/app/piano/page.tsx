@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useRef } from "react";
 import FullScreenView from "@/components/ui/FullScreenView";
 import SiriWave from "siriwave";
 
+// === 유틸 ===
 const midiToFreq = (m: number) => 440 * Math.pow(2, (m - 69) / 12);
 const freqToMidi = (f: number) => Math.round(69 + 12 * Math.log2(f / 440));
 const clamp = (n: number, a: number, b: number) => Math.min(Math.max(n, a), b);
@@ -41,39 +42,39 @@ function estimatePitchACF(timeData: Float32Array, sampleRate: number): number | 
   return sampleRate / peakLag;
 }
 
-const WhiteKey = () => (
-  <li className="white h-[16em] w-[4em] z-10 border-l border-b border-[#bbb] rounded-b-[5px] shadow-[-1px_0_0_rgba(255,255,255,0.8)_inset,0_0_5px_#ccc_inset,0_0_3px_rgba(0,0,0,0.2)] bg-gradient-to-b from-[#eee] to-white active:border-t-[#777] active:border-l-[#999] active:border-b-[#999] active:shadow-[2px_0_3px_rgba(0,0,0,0.1)_inset,-5px_5px_20px_rgba(0,0,0,0.2)_inset,0_0_3px_rgba(0,0,0,0.2)] active:bg-gradient-to-b active:from-white active:to-[#e9e9e9]"></li>
-);
-const BlackKey = () => (
-  <li className="black h-[8em] w-[2em] ml-[-1em] mr-[-1em] z-20 border border-black rounded-b-[3px] shadow-[-1px_-1px_2px_rgba(255,255,255,0.2)_inset,0_-5px_2px_3px_rgba(0,0,0,0.6)_inset,0_2px_4px_rgba(0,0,0,0.5)] bg-gradient-to-tr from-[#222] to-[#555] active:shadow-[-1px_-1px_2px_rgba(255,255,255,0.2)_inset,0_-2px_2px_3px_rgba(0,0,0,0.6)_inset,0_1px_2px_rgba(0,0,0,0.5)] active:bg-gradient-to-r active:from-[#444] to-[#222]"></li>
-);
-const Octave = () => (
-  <>
-    <WhiteKey />
-    <BlackKey />
-    <WhiteKey />
-    <BlackKey />
-    <WhiteKey />
-    <WhiteKey />
-    <BlackKey />
-    <WhiteKey />
-    <BlackKey />
-    <WhiteKey />
-    <BlackKey />
-    <WhiteKey />
-  </>
-);
+// === MIDI 이벤트 기반 피아노 ===
+type MidiEvt = { type: "on" | "off"; note: number };
+
+const isBlack = (n: number) => [1, 3, 6, 8, 10].includes(n % 12);
 
 export default function VoiceToPiano() {
   const [isRecording, setIsRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [tick, setTick] = useState(0);
+  const activeNotesRef = useRef<Set<number>>(new Set());
 
+  // window.pushMidi({type:"on", note:60}) 형태로 외부 호출
+  const handleMidi = ({ type, note }: MidiEvt) => {
+    if (note < 0 || note > 127) return;
+    const s = activeNotesRef.current;
+    if (type === "on") s.add(note);
+    else s.delete(note);
+    setTick((t) => t ^ 1);
+  };
+
+  useEffect(() => {
+    // @ts-ignore
+    window.pushMidi = handleMidi;
+    return () => {
+      // @ts-ignore
+      delete window.pushMidi;
+    };
+  }, []);
+
+  // SiriWave 설정
   const siriRef = useRef<HTMLDivElement | null>(null);
   const siriWaveRef = useRef<any>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const rafRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (isRecording && siriRef.current) {
@@ -116,6 +117,37 @@ export default function VoiceToPiano() {
     setIsRecording(false);
   };
 
+  // === 피아노 건반 컴포넌트 ===
+  const PianoKey = ({ midi }: { midi: number }) => {
+    const black = isBlack(midi);
+    const active = activeNotesRef.current.has(midi);
+
+    const baseWhite =
+      "white h-[16em] w-[4em] z-10 border-l border-b border-[#bbb] rounded-b-[5px] " +
+      "shadow-[-1px_0_0_rgba(255,255,255,0.8)_inset,0_0_5px_#ccc_inset,0_0_3px_rgba(0,0,0,0.2)] " +
+      "bg-gradient-to-b from-[#eee] to-white active:border-t-[#777] active:border-l-[#999] active:border-b-[#999] " +
+      "active:shadow-[2px_0_3px_rgba(0,0,0,0.1)_inset,-5px_5px_20px_rgba(0,0,0,0.2)_inset,0_0_3px_rgba(0,0,0,0.2)] " +
+      "active:bg-gradient-to-b active:from-white active:to-[#e9e9e9]";
+    const baseBlack =
+      "black h-[8em] w-[2em] ml-[-1em] mr-[-1em] z-20 border border-black rounded-b-[3px] " +
+      "shadow-[-1px_-1px_2px_rgba(255,255,255,0.2)_inset,0_-5px_2px_3px_rgba(0,0,0,0.6)_inset,0_2px_4px_rgba(0,0,0,0.5)] " +
+      "bg-gradient-to-tr from-[#222] to-[#555] active:shadow-[-1px_-1px_2px_rgba(255,255,255,0.2)_inset,0_-2px_2px_3px_rgba(0,0,0,0.6)_inset,0_1px_2px_rgba(0,0,0,0.5)] " +
+      "active:bg-gradient-to-r active:from-[#444] to-[#222]";
+
+    const activeWhite = active ? " !from-white !to-[#e0e0e0] active:bg-gradient-to-b active:from-white active:to-[#e9e9e9]" : "";
+    const activeBlack = active ? " translate-y-[2px] ring-2 active:bg-gradient-to-r active:from-[#444] to-[#222]" : "";
+
+    return <li className={(black ? baseBlack + activeBlack : baseWhite + activeWhite)} />;
+  };
+
+  const Octave = ({ start }: { start: number }) => (
+    <>
+      {Array.from({ length: 12 }).map((_, i) => (
+        <PianoKey key={i} midi={start + i} />
+      ))}
+    </>
+  );
+
   return (
     <FullScreenView
       title="P!ano"
@@ -131,7 +163,7 @@ export default function VoiceToPiano() {
             {!isRecording ? (
               <button
                 onClick={startRecording}
-                className="relative w-[180px] h-[180px] rounded-full flex items-center justify-center bg-gradient-to-b from-[#E5E7EB] to-[#A1A1AA] shadow-xl hover:scale-105 transition-transform"
+                className="relative w-[180px] h-[180px] rounded-full flex items-center justify-center bg-gradient-to-b from-[#E5E7EB] to-[#A1A1AA] transition-transform"
               >
                 <div className="absolute inset-[8px] rounded-full bg-gradient-to-b from-white to-[#F3F4F6]" />
                 <svg
@@ -177,12 +209,9 @@ export default function VoiceToPiano() {
                 </svg>
               </button>
             ) : (
-              <div className="relative w-[180px] h-[180px] rounded-full bg-gradient-to-b from-[#d9d9d9] to-[#a2a2a2] flex items-center justify-center shadow-xl">
+              <div className="relative w-[180px] h-[180px] rounded-full bg-gradient-to-b from-[#d9d9d9] to-[#a2a2a2] flex items-center justify-center">
                 <div className="absolute inset-[8px] rounded-full bg-gradient-to-b from-white to-[#f3f3f3]" />
-                <div
-                  ref={siriRef}
-                  className="relative w-[120px] h-[60px] -translate-y-1"
-                />
+                <div ref={siriRef} className="relative w-[120px] h-[60px] -translate-y-1" />
                 <button
                   onClick={stopRecording}
                   className="absolute bottom-4 text-sm bg-red-500 hover:bg-red-600 text-white rounded-full px-4 py-1 shadow active:scale-95"
@@ -202,12 +231,28 @@ export default function VoiceToPiano() {
               <div className="scale-[0.6] md:scale-[0.8] lg:scale-100 origin-center">
                 <div className="piano-body relative h-[18.875em] w-fit my-[2em] mx-auto pt-[3em] pl-[3em] border border-[#160801] rounded-[1em] shadow-[0_0_30px_rgba(0,0,0,0.2)_inset,0_1px_rgba(212,152,125,0.2)_inset,0_5px_10px_rgba(0,0,0,0.3)] bg-gradient-to-br from-[rgba(255,255,255,0.9)] to-[rgba(255,255,255,0.5)]">
                   <ul className="flex flex-row">
-                    {Array.from({ length: 8 }).map((_, i) => (
-                      <Octave key={i} />
+                    {Array.from({ length: 7 }).map((_, i) => (
+                      <Octave key={i} start={24 + i * 12} />
                     ))}
                   </ul>
                 </div>
               </div>
+            </div>
+
+            {/* 테스트용 버튼 */}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => handleMidi({ type: "on", note: 60 })}
+                className="px-3 py-1 rounded bg-gray-900 text-white"
+              >
+                C4 ON
+              </button>
+              <button
+                onClick={() => handleMidi({ type: "off", note: 60 })}
+                className="px-3 py-1 rounded bg-gray-200"
+              >
+                C4 OFF
+              </button>
             </div>
           </div>
         )}
