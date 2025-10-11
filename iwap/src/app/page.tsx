@@ -114,7 +114,7 @@ export default function Home() {
           
           {/* 시각적인 버튼 부분 */}
           <div className="relative w-[180px] h-[70px] md:w-[200px] md:h-[80px] flex items-center justify-center mt-[20px] md:mt-[450px]">
-            <Link href="/slides">
+            <a>
               <button className="relative w-full h-full flex items-center justify-center gap-2 bg-transparent">
                 {/* 선 SVG */}
                 <svg
@@ -144,14 +144,15 @@ export default function Home() {
                   </svg>
                 )}
               </button>
-            </Link>
+            </a>
           </div>
         </div>
 
         {/* 2. 투명한 마우스 호버 감지 영역 */}
         {/* 이 div는 눈에 보이지 않고 움직이지도 않습니다. 오직 마우스 이벤트 감지만을 위한 것입니다. */}
         {/* 시각적 요소와 분리되어 있기 때문에 떨림 현상이 발생하지 않습니다. */}
-        <div
+        <Link
+          href="/slides"
           className="absolute w-[360px] h-[100px] mt-[20px] md:mt-[450px] cursor-pointer"
           style={{ 
             // md 이상일 때 텍스트 너비(대략 850px) + gap(32px) 만큼 오른쪽으로 이동
