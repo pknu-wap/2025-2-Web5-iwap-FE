@@ -54,16 +54,15 @@ export default function Home() {
       <Image src="/images/home-black_background.jpg" alt="Background Dark" fill priority className="object-cover hidden dark:block" />
 
       {/* 1. 텍스트 컨테이너 */}
-      {/* 이 컨테이너는 텍스트의 위치와 애니메이션만 담당합니다. */}
-      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center -translate-y-5 px-4 md:flex-row md:justify-start md:ml-[20vw]">
+      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center -translate-y-5 px-4 sm:flex-row sm:justify-start sm:ml-[15vw] md:ml-[20vw]">
         <div
           className={`transition-transform duration-700 ease-out ${
-            isOpen ? "md:-translate-x-20" : ""
+            isOpen ? "sm:-translate-x-20" : ""
           }`}
         >
-          <div className="flex flex-col items-center md:items-start">
-            <Image src="/images/home/wap.png" alt="images/home/wap" width={148} height={45} className="w-[148px] h-[45px] mb-4 md:mb-0" />
-            <h1 ref={h1Ref} className="relative text-white text-center md:text-left whitespace-pre-line text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px] cursor-default pb-2" style={{ fontFamily: "Pretendard", fontWeight: 700, letterSpacing: "-3.2px", WebkitMaskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`, maskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`}}>
+          <div className="flex flex-col items-center sm:items-start">
+            <Image src="/images/home/wap.png" alt="images/home/wap" width={148} height={45} className="w-[148px] h-[45px] mb-4 sm:mb-0" />
+            <h1 ref={h1Ref} className="relative text-white text-center sm:text-left whitespace-pre-line text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px] cursor-default pb-2" style={{ fontFamily: "Pretendard", fontWeight: 700, letterSpacing: "-3.2px", WebkitMaskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`, maskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`}}>
               !nteractive<FadedLetters letters="eee" />{"\n"}
               Web<FadedLetters letters="bbb" />{"\n"}
               Art<FadedLetters letters="ttt" />{"\n"}
@@ -73,12 +72,12 @@ export default function Home() {
         </div>
       </div>
       
-      {/* ✅ 2. 버튼 컨테이너 (반응형 위치 적용) */}
-      {/* 모바일에서는 텍스트 아래, 데스크톱에서는 화면 우측 하단에 위치합니다. */}
+      {/* 2. 버튼 컨테이너 */}
       <div 
         className="absolute z-30
-                   w-[240px] h-[70px] left-1/2 -translate-x-1/2 top-1/2 translate-y-[180px] /* 모바일: 텍스트 아래 */
-                   md:w-[280px] md:h-[80px] md:left-auto md:top-auto md:right-40 md:bottom-30 md:translate-x-0 md:translate-y-0 /* 데스크톱: 우측 하단 */"
+                   w-[240px] h-[70px] left-1/2 -translate-x-1/2 top-1/2 translate-y-[180px] /* 모바일 세로 */
+                   sm:w-[280px] sm:h-[80px] sm:left-auto sm:top-auto sm:right-10 sm:bottom-8 sm:translate-x-0 sm:translate-y-0 /* 모바일 가로 & 태블릿 */
+                   lg:right-40 lg:bottom-30 /* 데스크톱 */"
       >
         {/* 시각적 버튼 */}
         <div className="absolute inset-0 flex items-center justify-center">
@@ -90,7 +89,8 @@ export default function Home() {
                 <linearGradient id="paint0_linear_hover" x1="-75" y1="2.5" x2="490" y2="2.5" gradientUnits="userSpaceOnUse"><stop stopColor="white" stopOpacity="0"/><stop offset="1" stopColor="#926AC6"/></linearGradient>
               </defs>
             </svg>
-            {isHovered ? <svg viewBox="0 0 39 70" fill="none" className="h-12 md:h-[68px]"><path d="M2 2L36 35L2 68" stroke="#926AC6" strokeWidth="4"/></svg> : <svg viewBox="0 0 39 70" fill="none" className="h-12 md:h-[68px]"><path d="M2 2L36 35L2 68" stroke="white" strokeWidth="4"/></svg>}
+            {/* ✅ 화살표 SVG 크기 반응형으로 수정 */}
+            {isHovered ? <svg viewBox="0 0 39 70" fill="none" className="h-10 md:h-[68px]"><path d="M2 2L36 35L2 68" stroke="#926AC6" strokeWidth="4"/></svg> : <svg viewBox="0 0 39 70" fill="none" className="h-10 md:h-[68px]"><path d="M2 2L36 35L2 68" stroke="white" strokeWidth="4"/></svg>}
           </button>
         </div>
 
