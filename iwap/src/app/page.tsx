@@ -39,7 +39,7 @@ export default function Home() {
 
   return (
     <main
-      className="relative w-full h-dvh md:h-[calc(100dvh-96px)] overflow-hidden select-none"
+      className="relative w-full h-dvh overflow-hidden select-none"
       onMouseMove={(e) => {
         if (!h1Ref.current) return;
         const rect = h1Ref.current.getBoundingClientRect();
