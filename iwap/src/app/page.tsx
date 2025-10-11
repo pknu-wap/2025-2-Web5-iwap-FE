@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation"; // next/navigation에서 useRouter를 가져옵니다.
 
 const fadeStyles = [
   { color: "rgba(255,255,255,0.70)", weight: 500 },
@@ -36,6 +37,19 @@ export default function Home() {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const h1Ref = useRef<HTMLHeadingElement>(null);
+  const router = useRouter(); // useRouter 훅을 사용합니다.
+
+  // 페이지 이동을 처리하는 함수
+  const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
+    e.preventDefault(); // 기본 링크 이동 동작을 막습니다.
+    setIsOpen(true); // 애니메이션 상태를 활성화합니다.
+    setIsHovered(true); // 호버 상태를 활성화하여 시각적 효과를 줍니다.
+
+    // 700ms(애니메이션 시간) 후에 페이지를 이동시킵니다.
+    setTimeout(() => {
+      router.push("/slides");
+    }, 700);
+  };
 
   return (
     <main
@@ -100,6 +114,7 @@ export default function Home() {
           className="absolute inset-0 cursor-pointer"
           onMouseEnter={() => { setIsOpen(true); setIsHovered(true); }}
           onMouseLeave={() => { setIsOpen(false); setIsHovered(false); }}
+          onClick={handleLinkClick} // onClick 이벤트 핸들러를 추가합니다.
         />
       </div>
 
