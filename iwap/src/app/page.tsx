@@ -39,7 +39,7 @@ export default function Home() {
 
   return (
     <main
-      className="relative h-screen w-full overflow-hidden"
+      className="relative w-full h-dvh md:h-[calc(100dvh-96px)] overflow-hidden select-none"
       onMouseMove={(e) => {
         if (!h1Ref.current) return;
         const rect = h1Ref.current.getBoundingClientRect();
@@ -89,15 +89,15 @@ export default function Home() {
             <h1
               ref={h1Ref}
               className="relative text-white text-center md:text-left whitespace-pre-line 
-                       text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px]"
+                       text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px] cursor-none"
               style={{
                 fontFamily: "Pretendard",
                 fontWeight: 700,
                 letterSpacing: "-3.2px",
-                WebkitMaskImage: `radial-gradient(35px at ${pos.x}px ${pos.y}px, transparent 0%, black 80%)`,
+                WebkitMaskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`,
                 WebkitMaskRepeat: "no-repeat",
                 WebkitMaskSize: "100% 100%",
-                maskImage: `radial-gradient(35px at ${pos.x}px ${pos.y}px, transparent 0%, black 80%)`,
+                maskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`,
                 maskRepeat: "no-repeat",
                 maskSize: "100% 100%",
               }}
