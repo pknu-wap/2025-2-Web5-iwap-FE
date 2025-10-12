@@ -103,7 +103,7 @@ export default function Home() {
                 <linearGradient id="paint0_linear_hover" x1="-75" y1="2.5" x2="490" y2="2.5" gradientUnits="userSpaceOnUse"><stop stopColor="white" stopOpacity="0"/><stop offset="1" stopColor="#926AC6"/></linearGradient>
               </defs>
             </svg>
-            {/* ✅ 화살표 SVG 크기 반응형으로 수정 */}
+            {/* 화살표 SVG 크기 반응형으로 수정 */}
             {isHovered ? <svg viewBox="0 0 39 70" fill="none" className="h-10 md:h-[68px]"><path d="M2 2L36 35L2 68" stroke="#926AC6" strokeWidth="4"/></svg> : <svg viewBox="0 0 39 70" fill="none" className="h-10 md:h-[68px]"><path d="M2 2L36 35L2 68" stroke="white" strokeWidth="4"/></svg>}
           </button>
         </div>
