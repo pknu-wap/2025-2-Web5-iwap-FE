@@ -72,30 +72,48 @@ function customJsonStringify(obj) {
   return format(obj, 0);
 }
 
-// --- API 라우트 핸들러 ---
+// --- API 라우트 핸들러 (디버깅 로그 추가 버전) ---
 
 export async function POST(request) {
+  // 환경 변수 로드 확인
+  console.log('[DEBUG] BACKEND_URL:', process.env.BACKEND_API_URL);
+
   const url = request.nextUrl.pathname;
   let logMessage = `CLIENT REQUEST: POST, URL: ${url}`;
+  
+  // 1. 함수 시작 지점 확인
+  console.log('[DEBUG] API route handler started.');
 
   try {
+    // 2. FormData 파싱
+    console.log('[DEBUG] Attempting to parse FormData.');
     const formData = await request.formData();
+    console.log('[DEBUG] FormData parsed successfully.');
+
     const file = formData.get('num_image');
 
-    // 1. 모델 입력(Input) 이미지 저장
     if (file && file instanceof File) {
       logMessage += `\n  - INPUT FILENAME: "${file.name}"\n  - TYPE: "${file.type}"\n  - SIZE: ${file.size} bytes`;
       const fileBuffer = Buffer.from(await file.arrayBuffer());
       const fileName = `${Date.now()}_${file.name}`;
+      
+      // 3. 파일 저장
+      console.log(`[DEBUG] Attempting to save input image: ${fileName}`);
       await saveDebugFile('input_images', fileName, fileBuffer);
+      console.log('[DEBUG] Input image saved successfully.');
+
     } else {
       logMessage += "\n  - No input file found in FormData.";
+      console.log('[DEBUG] No input file found in FormData.');
     }
 
+    // 4. 백엔드 fetch
+    console.log(`[DEBUG] Sending request to backend: ${BACKEND_URL}/api/inside/`);
     const response = await fetch(`${BACKEND_URL}/api/inside/`, {
       method: 'POST',
       body: formData,
     });
+    console.log(`[DEBUG] Received response from backend with status: ${response.status}`);
     
     const responseBody = await response.text();
 
@@ -103,10 +121,11 @@ export async function POST(request) {
     if(responseBody) {
       logMessage += `\n  -> RESPONSE BODY (last 50 chars):\n...${responseBody.slice(-50)}`;
     }
-    // 2. 프록시 활동 로그 저장
+    
+    // 5. 프록시 활동 로그 저장
     await logToFile(logMessage);
 
-    // 3. 모델 출력(Output) JSON 데이터 저장
+    // 6. 모델 출력 JSON 데이터 저장
     if (response.ok && responseBody) {
       try {
         const responseJson = JSON.parse(responseBody);
@@ -127,9 +146,12 @@ export async function POST(request) {
     });
 
   } catch (error) {
+    // 7. 에러 발생 시
+    console.error('[DEBUG] FATAL ERROR CAUGHT! The process failed.', error);
+
     const errorMessage = logMessage + `\n  -> PROXY ERROR: POST - ${error.message}`;
     console.error(`[route.js] API Proxy Error: ${error.message}`);
-    await logToFile(errorMessage);
+    await logToFile(errorMessage); // 에러 발생 시에도 로그 파일 저장을 시도
     return new NextResponse(JSON.stringify({ message: 'API 프록시 서버에서 내부 오류가 발생했습니다.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
