@@ -16,7 +16,7 @@ type CardProps = {
 export const Card = ({ item, style, onClick, onMouseDown, isActive }: CardProps) => {
   return (
     <div
-      className="relative group flex-shrink-0"
+      className="relative group flex-shrink-0 cursor-pointer"
       style={style}
       onMouseDown={onMouseDown}
       onClick={onClick}

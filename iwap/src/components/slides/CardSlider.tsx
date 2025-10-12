@@ -22,6 +22,7 @@ const VISIBLE_STACK_OFFSET = 50;
 const VISIBLE_STACKED_CARDS = 4;
 const HEADER_HEIGHT = 96;
 const RIGHT_PADDING = 20;
+const DRAG_THRESHOLD = 5; // A 5-pixel threshold to distinguish a click from a drag
 
 export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
   const router = useRouter();
@@ -59,10 +60,8 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
     
     let newInitialX;
     if (isDesktop) {
-      // 데스크탑: 기존 로직대로 오른쪽 정렬
       newInitialX = window.innerWidth - stackedWidth - RIGHT_PADDING;
     } else {
-      // 모바일: 화면 중앙에 오도록 X 위치 계산
       newInitialX = (window.innerWidth - stackedWidth) / 2;
     }
 
@@ -74,14 +73,12 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
     });
 
     if (!isInitialized) {
-      // 모든 계산이 끝난 후 초기화 상태로 설정
       setIsInitialized(true);
     }
   }, [showHeader, isInitialized, images.length]);
 
   useEffect(() => {
     window.addEventListener('resize', updateDimensions);
-    // 컴포넌트 마운트 시 첫 계산 실행
     updateDimensions();
     return () => window.removeEventListener('resize', updateDimensions);
   }, [updateDimensions]);
@@ -89,18 +86,83 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container || !isExpanded) return;
-    const momentumLoop = () => { if (!container) return; container.scrollLeft += dragState.velocity; dragState.velocity *= 0.95; if (Math.abs(dragState.velocity) > 0.5) { dragState.animationFrame = requestAnimationFrame(momentumLoop); } };
-    const handleDragStart = (e: MouseEvent | TouchEvent) => { cancelAnimationFrame(dragState.animationFrame); dragState.isDragging = true; const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX; dragState.startX = pageX - container.offsetLeft; dragState.scrollLeft = container.scrollLeft; dragState.wasDragged = false; dragState.velocity = 0; container.style.cursor = 'grabbing'; container.style.userSelect = 'none'; };
-    const handleDragMove = (e: MouseEvent | TouchEvent) => { if (!dragState.isDragging) return; if ('touches' in e) e.preventDefault(); dragState.wasDragged = true; const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX; const x = pageX - container.offsetLeft; const walk = (x - dragState.startX); const prevScrollLeft = container.scrollLeft; container.scrollLeft = dragState.scrollLeft - walk; dragState.velocity = container.scrollLeft - prevScrollLeft; };
-    const handleDragEnd = () => { if (!dragState.isDragging) return; dragState.isDragging = false; container.style.cursor = 'grab'; container.style.userSelect = 'auto'; dragState.animationFrame = requestAnimationFrame(momentumLoop); };
-    container.addEventListener('mousedown', handleDragStart); container.addEventListener('touchstart', handleDragStart, { passive: false }); container.addEventListener('mousemove', handleDragMove); container.addEventListener('touchmove', handleDragMove, { passive: false }); container.addEventListener('mouseup', handleDragEnd); container.addEventListener('touchend', handleDragEnd); container.addEventListener('mouseleave', handleDragEnd);
-    return () => { container.removeEventListener('mousedown', handleDragStart); container.removeEventListener('touchstart', handleDragStart); container.removeEventListener('mousemove', handleDragMove); container.removeEventListener('touchmove', handleDragMove); container.removeEventListener('mouseup', handleDragEnd); container.removeEventListener('touchend', handleDragEnd); container.removeEventListener('mouseleave', handleDragEnd); cancelAnimationFrame(dragState.animationFrame); };
+
+    const momentumLoop = () => {
+      if (!container) return;
+      container.scrollLeft += dragState.velocity;
+      dragState.velocity *= 0.95;
+      if (Math.abs(dragState.velocity) > 0.5) {
+        dragState.animationFrame = requestAnimationFrame(momentumLoop);
+      }
+    };
+
+    const handleDragStart = (e: MouseEvent | TouchEvent) => {
+      cancelAnimationFrame(dragState.animationFrame);
+      dragState.isDragging = true;
+      const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX;
+      dragState.startX = pageX - container.offsetLeft;
+      dragState.scrollLeft = container.scrollLeft;
+      dragState.velocity = 0;
+      container.style.userSelect = 'none';
+    };
+
+    const handleDragMove = (e: MouseEvent | TouchEvent) => {
+      if (!dragState.isDragging) return;
+      if ('touches' in e) e.preventDefault();
+      
+      const pageX = 'touches' in e ? e.touches[0].pageX : e.pageX;
+      const x = pageX - container.offsetLeft;
+      const walk = x - dragState.startX;
+
+      // Only set wasDragged to true if movement exceeds the threshold.
+      // This prevents accidental drags on click.
+      if (Math.abs(walk) > DRAG_THRESHOLD) {
+        dragState.wasDragged = true;
+      }
+
+      const prevScrollLeft = container.scrollLeft;
+      container.scrollLeft = dragState.scrollLeft - walk;
+      dragState.velocity = container.scrollLeft - prevScrollLeft;
+    };
+
+    const handleDragEnd = () => {
+      if (!dragState.isDragging) return;
+      dragState.isDragging = false;
+      container.style.userSelect = 'auto';
+      dragState.animationFrame = requestAnimationFrame(momentumLoop);
+    };
+
+    container.addEventListener('mousedown', handleDragStart);
+    container.addEventListener('touchstart', handleDragStart, { passive: false });
+    container.addEventListener('mousemove', handleDragMove);
+    container.addEventListener('touchmove', handleDragMove, { passive: false });
+    container.addEventListener('mouseup', handleDragEnd);
+    container.addEventListener('touchend', handleDragEnd);
+    container.addEventListener('mouseleave', handleDragEnd);
+
+    return () => {
+      container.removeEventListener('mousedown', handleDragStart);
+      container.removeEventListener('touchstart', handleDragStart);
+      container.removeEventListener('mousemove', handleDragMove);
+      container.removeEventListener('touchmove', handleDragMove);
+      container.removeEventListener('mouseup', handleDragEnd);
+      container.removeEventListener('touchend', handleDragEnd);
+      container.removeEventListener('mouseleave', handleDragEnd);
+      cancelAnimationFrame(dragState.animationFrame);
+    };
   }, [isExpanded, dragState]);
 
   const handleCardClick = (index: number) => {
     if (dragState.wasDragged) return;
-    if (!isExpanded) { setIsExpanded(true); return; }
-    if (activeIndex === index) { router.push(images[index].link); } else { setActiveIndex(index); }
+    if (!isExpanded) {
+      setIsExpanded(true);
+      return;
+    }
+    if (activeIndex === index) {
+      router.push(images[index].link);
+    } else {
+      setActiveIndex(index);
+    }
   };
 
   const spacerWidth = `calc(50vw - ${cardDimensions.width / 2}px)`;
@@ -108,15 +170,13 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
   return (
     <div
       ref={scrollContainerRef}
-      className={`w-full ${isExpanded ? 'cursor-grab overflow-x-auto' : 'overflow-hidden'} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
+      className={`w-full ${isExpanded ? 'overflow-x-auto' : 'overflow-hidden'} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
       style={{
         height: `${cardDimensions.height}px`,
-        // 초기화 완료 시 부드럽게 표시
         opacity: isInitialized ? 1 : 0,
         transition: 'opacity 0.3s ease-in-out',
       }}
     >
-      {/* 초기화가 완료된 후에만 내부 컨텐츠를 렌더링하여 Flicker 방지 */}
       {isInitialized && (
         <div
           className="relative flex items-center h-full"
