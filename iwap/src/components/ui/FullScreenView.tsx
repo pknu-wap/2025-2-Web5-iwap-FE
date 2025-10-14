@@ -38,7 +38,6 @@ export default function FullScreenView({
   const dynamicBackgroundStyle: CSSProperties = backgroundUrl
     ? {
         backgroundImage: `
-          linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113),
           url('${backgroundUrl}')
         `,
         backgroundSize: 'cover',
