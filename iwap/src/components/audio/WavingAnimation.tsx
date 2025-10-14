@@ -4,7 +4,7 @@ import { useRef, useEffect } from "react";
 export default function WavingAnimation() {
   const width = 180;
   const height = 180;
-  const colors = ["#E3E7FF", "#EFC8FF", "#97E9FF", "#FFAAE7"];
+  const colors = ["#E3E7FF", "#EFC8FF", "#FFAAE7", "#97E9FF"];
   const refs = Array.from({ length: 8 }, () => useRef<SVGPathElement>(null));
   const tRef = useRef(0);
 
@@ -15,8 +15,8 @@ export default function WavingAnimation() {
       const x = (i / points) * width;
       const y =
         height / 2 +
-        Math.sin((x / width) * 6 + t + offsetX) * 17.5 +
-        Math.cos((x / width) * 2 + t * 0.8 + offsetX) * 6.5 +
+        Math.sin((x / width) * 6 + t + offsetX) * 7 +
+        Math.cos((x / width) * 2 + t * 0.8 + offsetX) * 7 +
         offsetY;
       d += ` L${x.toFixed(2)} ${y.toFixed(2)}`;
     }
@@ -30,10 +30,10 @@ export default function WavingAnimation() {
       tRef.current += 0.03;
       const t = tRef.current;
       const shifts = [
-        { x: 0.0, y: 0 },
-        { x: 3.6, y: 5.3 },
-        { x: 8.7, y: 8.6 },
-        { x: 11.5, y: 5.9 },
+        { x: 0.0, y: -5 },
+        { x: 3.6, y: 10},
+        { x: 8.7, y: 20 },
+        { x: 11.5, y: 30},
       ];
       refs.forEach((r, i) => {
         if (r.current)
@@ -58,10 +58,10 @@ export default function WavingAnimation() {
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        className="absolute top-0 left-0"
+        className="absolute top-0 left-0 mix-blend-multiply"
       >
         {colors.map((c, i) => (
-          <path key={i} ref={refs[i]} fill={c} opacity="0.6" />
+          <path key={i} ref={refs[i]} fill={c} opacity="0.4" />
         ))}
       </svg>
 

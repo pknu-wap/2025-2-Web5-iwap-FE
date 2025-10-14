@@ -32,9 +32,9 @@ export default function VoiceToPiano() {
       className="text-black font-[Pretendard]"
       backgroundUrl="/images/piano_background.png"
     >
-      <main className="flex flex-col items-center justify-center w-full min-h-screen">
+      <main className="flex flex-col items-center justify-center w-full h-dvh md:h-[calc(100dvh-96px)]">
         {!audioUrl ? (
-          <div className="flex flex-col items-center justify-center gap-10 mt-56">
+          <div className="flex flex-col items-center justify-center gap-10">
             <h1 className="text-3xl font-bold text-center">음성을 입력해주세요</h1>
             <RecorderButton
               isRecording={isRecording}
