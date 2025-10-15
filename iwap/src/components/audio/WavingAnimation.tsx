@@ -4,7 +4,7 @@ import { useRef, useEffect } from "react";
 export default function WavingAnimation() {
   const width = 180;
   const height = 180;
-  const colors = ["#E3E7FF", "#EFC8FF", "#FFAAE7", "#97E9FF"];
+  const colors = ["#E3E7FF", "#EFC8FF", "#FFAAE7", "#97e9ff"];
   const refs = Array.from({ length: 8 }, () => useRef<SVGPathElement>(null));
   const tRef = useRef(0);
 
@@ -58,10 +58,10 @@ export default function WavingAnimation() {
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        className="absolute top-0 left-0 mix-blend-multiply"
+        className="absolute top-0 left-0"
       >
         {colors.map((c, i) => (
-          <path key={i} ref={refs[i]} fill={c} opacity="0.4" />
+          <path key={i} ref={refs[i]} fill={c} opacity="0.6" className="mix-blend-multiply" />
         ))}
       </svg>
 
