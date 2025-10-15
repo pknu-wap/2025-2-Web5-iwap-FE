@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // next/navigation에서 useRouter를 가져옵니다.
@@ -38,6 +38,41 @@ export default function Home() {
   const [isHovered, setIsHovered] = useState(false);
   const h1Ref = useRef<HTMLHeadingElement>(null);
   const router = useRouter(); // useRouter 훅을 사용합니다.
+
+  // 시각적 버튼의 위치와 크기를 저장할 state
+  const [buttonRect, setButtonRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
+  // 시각적 버튼을 가리킬 ref
+  const buttonRef = useRef<HTMLDivElement>(null);
+
+  // 위치를 계산하고 업데이트하는 함수
+  const handleResize = () => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setButtonRect({
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height,
+      });
+    }
+  };
+
+  useEffect(() => {
+    // --- 1. 초기 위치 설정 ---
+    // 컴포넌트가 마운트될 때 한 번 실행하여 초기 위치를 잡습니다.
+    handleResize();
+
+    // --- 2. 리사이즈 이벤트 리스너 등록 ---
+    // window 객체에 'resize' 이벤트가 발생할 때마다 handleResize 함수를 호출합니다.
+    window.addEventListener("resize", handleResize);
+
+    // --- 3. 클린업 함수 ---
+    // 컴포넌트가 언마운트될 때(사라질 때) 이벤트 리스너를 제거합니다.
+    // 이를 통해 메모리 누수를 방지할 수 있습니다.
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []); // 의존성 배열은 비워두어 마운트/언마운트 시에만 실행되도록 합니다.
 
   // 페이지 이동을 처리하는 함수
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -98,7 +133,9 @@ export default function Home() {
           </div>
 
           {/* 시각적 버튼 */}
-          <div className="relative w-[240px] h-[70px] sm:w-[280px] sm:h-[80px] sm:self-end sm:mb-2 lg:mb-10 pointer-events-none">
+          <div
+            ref={buttonRef} 
+            className="relative w-[240px] h-[70px] sm:w-[280px] sm:h-[80px] sm:self-end sm:mb-2 lg:mb-10 pointer-events-none">
             <div className="absolute inset-0 flex items-center justify-center">
               <button className="relative flex items-center justify-center w-full h-full gap-2 bg-transparent">
                 <svg className="w-full" height="4" viewBox="0 0 490 4" fill="none">
@@ -116,20 +153,28 @@ export default function Home() {
       </div>
       
       {/* 고정된 호버 인식 및 링크 영역 */}
-      <div
-        className="absolute z-30
-                  w-[240px] h-[70px] left-1/2 -translate-x-1/2 top-1/2 translate-y-[180px] /* Mobile Portrait */
-                  sm:w-[280px] sm:h-[80px] sm:left-auto sm:top-auto sm:right-10 sm:bottom-8 sm:translate-x-0 sm:translate-y-0 /* Mobile Landscape & Tablet */
-                  lg:right-40 lg:bottom-30 /* Desktop */"
-      >
-        <Link
-          href="/slides"
-          className="absolute inset-0 cursor-pointer"
-          onMouseEnter={() => { setIsOpen(true); setIsHovered(true); }}
-          onMouseLeave={() => { setIsOpen(false); setIsHovered(false); }}
-          onClick={handleLinkClick}
-        />
-      </div>
+      {buttonRect && (
+        <div
+          className="absolute z-30"
+          style={{
+            // state에 저장된 값으로 위치와 크기 설정
+            // 호버 영역에 페더 영역 추가
+            top: `${buttonRect.top - 50}px`,         // 세로 시작점
+            height: `${buttonRect.height + 100}px`,  // 세로 높이
+
+            left: `${buttonRect.left - 100}px`,       // 가로 시작점
+            width: `${buttonRect.width + 250}px`,    // 가로 너비
+          }}
+        >
+          <Link
+            href="/slides"
+            className="absolute inset-0 cursor-pointer"
+            onMouseEnter={() => { setIsOpen(true); setIsHovered(true); }}
+            onMouseLeave={() => { setIsOpen(false); setIsHovered(false); }}
+            onClick={handleLinkClick}
+          />
+        </div>
+      )}
 
       {/* 페이지 전환 효과를 위한 그라데이션 오버레이 */}
       <div className={`absolute inset-y-0 right-0 bg-gradient-to-l from-white to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${isOpen ? "w-full" : "w-0"}`}></div>
