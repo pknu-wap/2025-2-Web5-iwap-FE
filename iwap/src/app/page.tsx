@@ -67,54 +67,67 @@ export default function Home() {
       <Image src="/images/home_background.jpg" alt="Background Light" fill priority className="object-cover dark:hidden" />
       <Image src="/images/home-black_background.jpg" alt="Background Dark" fill priority className="object-cover hidden dark:block" />
 
-      {/* 1. 텍스트 컨테이너 */}
-      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center -translate-y-5 px-4 sm:flex-row sm:justify-start sm:ml-[15vw] md:ml-[20vw]">
+      {/* 애니메이션 컨테이너 (텍스트 + 버튼) */}
+      <div className="absolute inset-0 z-20 flex items-center justify-center -translate-y-5 px-4 sm:justify-start sm:ml-[15vw] md:ml-[20vw]">
+        
+        {/* 애니메이션 그룹 */}
         <div
-          className={`transition-transform duration-700 ease-out ${
+          className={`flex flex-col sm:flex-row items-center sm:items-start gap-8 transition-transform duration-700 ease-out ${
             isOpen ? "sm:-translate-x-20" : ""
           }`}
         >
+          {/* 텍스트 영역 */}
           <div className="flex flex-col items-center sm:items-start">
             <Image src="/images/home/wap.png" alt="images/home/wap" width={148} height={45} className="w-[148px] h-[45px] mb-4 sm:mb-0" />
-            <h1 ref={h1Ref} className="relative text-white text-center sm:text-left whitespace-pre-line text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px] cursor-default pb-2" style={{ fontFamily: "Pretendard", fontWeight: 700, letterSpacing: "-3.2px", WebkitMaskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`, maskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`}}>
+            <h1
+              ref={h1Ref}
+              className="relative text-white text-center sm:text-left whitespace-pre-line text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px] cursor-default pb-2"
+              style={{
+                fontFamily: "Pretendard",
+                fontWeight: 700,
+                letterSpacing: "-3.2px",
+                WebkitMaskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`,
+                maskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`,
+              }}
+            >
               !nteractive<FadedLetters letters="eee" />{"\n"}
               Web<FadedLetters letters="bbb" />{"\n"}
               Art<FadedLetters letters="ttt" />{"\n"}
               Project<FadedLetters letters="ttt" />
             </h1>
           </div>
+
+          {/* 시각적 버튼 */}
+          <div className="relative w-[240px] h-[70px] sm:w-[280px] sm:h-[80px] sm:self-end sm:mb-2 lg:mb-10 pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <button className="relative flex items-center justify-center w-full h-full gap-2 bg-transparent">
+                <svg className="w-full" height="4" viewBox="0 0 490 4" fill="none">
+                  <path d="M490 2H-75" stroke={`url(#paint0_linear_${isHovered ? "hover" : "default"})`} strokeWidth="4" />
+                  <defs>
+                    <linearGradient id="paint0_linear_default" x1="-75" y1="2.5" x2="490" y2="2.5" gradientUnits="userSpaceOnUse"><stop stopColor="white" stopOpacity="0" /><stop offset="1" stopColor="white" /></linearGradient>
+                    <linearGradient id="paint0_linear_hover" x1="-75" y1="2.5" x2="490" y2="2.5" gradientUnits="userSpaceOnUse"><stop stopColor="white" stopOpacity="0" /><stop offset="1" stopColor="#926AC6" /></linearGradient>
+                  </defs>
+                </svg>
+                {isHovered ? <svg viewBox="0 0 39 70" fill="none" className="h-10 md:h-[68px]"><path d="M2 2L36 35L2 68" stroke="#926AC6" strokeWidth="4" /></svg> : <svg viewBox="0 0 39 70" fill="none" className="h-10 md:h-[68px]"><path d="M2 2L36 35L2 68" stroke="white" strokeWidth="4" /></svg>}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
       
-      {/* 2. 버튼 컨테이너 */}
-      <div 
+      {/* 고정된 호버 인식 및 링크 영역 */}
+      <div
         className="absolute z-30
-                   w-[240px] h-[70px] left-1/2 -translate-x-1/2 top-1/2 translate-y-[180px] /* 모바일 세로 */
-                   sm:w-[280px] sm:h-[80px] sm:left-auto sm:top-auto sm:right-10 sm:bottom-8 sm:translate-x-0 sm:translate-y-0 /* 모바일 가로 & 태블릿 */
-                   lg:right-40 lg:bottom-30 /* 데스크톱 */"
+                  w-[240px] h-[70px] left-1/2 -translate-x-1/2 top-1/2 translate-y-[180px] /* Mobile Portrait */
+                  sm:w-[280px] sm:h-[80px] sm:left-auto sm:top-auto sm:right-10 sm:bottom-8 sm:translate-x-0 sm:translate-y-0 /* Mobile Landscape & Tablet */
+                  lg:right-40 lg:bottom-30 /* Desktop */"
       >
-        {/* 시각적 버튼 */}
-        <div className="absolute inset-0 flex items-center justify-center">
-          <button className="relative flex items-center justify-center w-full h-full gap-2 bg-transparent pointer-events-none">
-            <svg className="w-full" height="4" viewBox="0 0 490 4" fill="none">
-              <path d="M490 2H-75" stroke={`url(#paint0_linear_${isHovered ? "hover" : "default"})`} strokeWidth="4"/>
-              <defs>
-                <linearGradient id="paint0_linear_default" x1="-75" y1="2.5" x2="490" y2="2.5" gradientUnits="userSpaceOnUse"><stop stopColor="white" stopOpacity="0"/><stop offset="1" stopColor="white"/></linearGradient>
-                <linearGradient id="paint0_linear_hover" x1="-75" y1="2.5" x2="490" y2="2.5" gradientUnits="userSpaceOnUse"><stop stopColor="white" stopOpacity="0"/><stop offset="1" stopColor="#926AC6"/></linearGradient>
-              </defs>
-            </svg>
-            {/* 화살표 SVG 크기 반응형으로 수정 */}
-            {isHovered ? <svg viewBox="0 0 39 70" fill="none" className="h-10 md:h-[68px]"><path d="M2 2L36 35L2 68" stroke="#926AC6" strokeWidth="4"/></svg> : <svg viewBox="0 0 39 70" fill="none" className="h-10 md:h-[68px]"><path d="M2 2L36 35L2 68" stroke="white" strokeWidth="4"/></svg>}
-          </button>
-        </div>
-
-        {/* 투명한 링크 영역 */}
         <Link
           href="/slides"
           className="absolute inset-0 cursor-pointer"
           onMouseEnter={() => { setIsOpen(true); setIsHovered(true); }}
           onMouseLeave={() => { setIsOpen(false); setIsHovered(false); }}
-          onClick={handleLinkClick} // onClick 이벤트 핸들러를 추가합니다.
+          onClick={handleLinkClick}
         />
       </div>
 
