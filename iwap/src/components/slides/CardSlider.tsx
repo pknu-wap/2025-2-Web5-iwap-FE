@@ -19,10 +19,14 @@ const BASE_CARD_HEIGHT = 500;
 const FOCUSED_WIDTH_RATIO = 2;
 const GAP = 40;
 const VISIBLE_STACK_OFFSET = 50;
-const VISIBLE_STACKED_CARDS = 4;
 const HEADER_HEIGHT = 96;
-const RIGHT_PADDING = 20;
-const DRAG_THRESHOLD = 5; // A 5-pixel threshold to distinguish a click from a drag
+const DRAG_THRESHOLD = 5;
+
+// 모바일 화면 기준점 정의
+const MOBILE_BREAKPOINT = 768; 
+
+const RIGHT_PADDING_DESKTOP = -80;
+const RIGHT_PADDING_MOBILE = -320;
 
 export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
   const router = useRouter();
@@ -44,7 +48,7 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
   }).current;
 
   const updateDimensions = useCallback(() => {
-    const isDesktop = window.innerWidth >= 768;
+    const isDesktop = window.innerWidth >= MOBILE_BREAKPOINT;
     const isLandscape = window.innerWidth > window.innerHeight;
     
     const headerHeight = showHeader && isDesktop ? HEADER_HEIGHT : 0;
@@ -54,16 +58,15 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
     
     const aspectRatio = BASE_CARD_WIDTH / BASE_CARD_HEIGHT;
     const newWidth = newHeight * aspectRatio;
+
+    // 모든 카드를 기준으로 초기 스택 너비를 계산
+    const stackedWidth = newWidth + (images.length > 1 ? images.length - 1 : 0) * VISIBLE_STACK_OFFSET;
     
-    const stackedVisibleCards = Math.min(images.length, VISIBLE_STACKED_CARDS);
-    const stackedWidth = newWidth + (stackedVisibleCards > 0 ? stackedVisibleCards - 1 : 0) * VISIBLE_STACK_OFFSET;
-    
-    let newInitialX;
-    if (isDesktop) {
-      newInitialX = window.innerWidth - stackedWidth - RIGHT_PADDING;
-    } else {
-      newInitialX = (window.innerWidth - stackedWidth) / 2;
-    }
+    // 화면 너비에 따라 적절한 여백 값을 선택
+    const rightPadding = isDesktop ? RIGHT_PADDING_DESKTOP : RIGHT_PADDING_MOBILE;
+
+    // 초기 위치를 오른쪽 기준으로 계산
+    const newInitialX = window.innerWidth - stackedWidth - rightPadding;
 
     setCardDimensions({
       width: newWidth,
@@ -114,8 +117,6 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
       const x = pageX - container.offsetLeft;
       const walk = x - dragState.startX;
 
-      // Only set wasDragged to true if movement exceeds the threshold.
-      // This prevents accidental drags on click.
       if (Math.abs(walk) > DRAG_THRESHOLD) {
         dragState.wasDragged = true;
       }
@@ -198,8 +199,6 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
               zIndex: index,
               marginLeft: index > 0 ? `${marginLeft}px` : (isExpanded ? `${GAP}px` : '0'),
               transition: 'width 0.5s ease-in-out, margin-left 1s ease-in-out',
-              opacity: !isExpanded && (images.length - index > VISIBLE_STACKED_CARDS) ? 0 : 1,
-              pointerEvents: !isExpanded && (images.length - index > VISIBLE_STACKED_CARDS) ? 'none' : 'auto',
             };
 
             return (
