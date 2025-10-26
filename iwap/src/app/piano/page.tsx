@@ -1,4 +1,5 @@
 "use client";
+
 import { useRef, useState, useEffect } from "react";
 import FullScreenView from "@/components/ui/FullScreenView";
 import { useRecorder } from "@/components/audio/useRecorder";
@@ -9,8 +10,9 @@ export default function VoiceToPiano() {
   const { isRecording, audioUrl, startRecording, stopRecording } = useRecorder();
   const activeNotesRef = useRef<Set<number>>(new Set());
   const [tick, setTick] = useState(0);
-  const [status, setStatus] = useState(""); // 업로드 상태 표시용
+  const [status, setStatus] = useState("");
 
+  // MIDI on/off 이벤트 등록
   const handleMidi = ({ type, note }: { type: "on" | "off"; note: number }) => {
     const s = activeNotesRef.current;
     if (type === "on") s.add(note);
@@ -20,10 +22,12 @@ export default function VoiceToPiano() {
 
   useEffect(() => {
     (window as any).pushMidi = handleMidi;
-    return () => { delete (window as any).pushMidi; };
+    return () => {
+      delete (window as any).pushMidi;
+    };
   }, []);
 
-  // 🎵 녹음 완료 시 MP3 업로드 → MIDI 변환 요청
+  // 오디오 업로드 및 MIDI 변환
   useEffect(() => {
     if (!audioUrl) return;
 
@@ -32,7 +36,7 @@ export default function VoiceToPiano() {
         setStatus("업로드 중...");
         const res = await fetch(audioUrl);
         const blob = await res.blob();
-        const mp3Blob = new Blob([blob], { type: "audio/mp3" });
+
         const formData = new FormData();
         formData.append("voice", blob, "voice.mp3");
 
@@ -56,15 +60,6 @@ export default function VoiceToPiano() {
     sendAudioToBackend();
   }, [audioUrl]);
 
-  // 피아노 스크롤 중앙 정렬
-  const pianoScrollRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (!audioUrl) return;
-    const el = pianoScrollRef.current;
-    if (!el) return;
-    const to = el.scrollWidth / 2 - el.clientWidth / 2;
-    el.scrollLeft = Math.max(0, to);
-  }, [audioUrl, tick]);
 
   return (
     <FullScreenView
@@ -74,7 +69,7 @@ export default function VoiceToPiano() {
       className="text-black font-[Pretendard]"
       backgroundUrl="/images/piano_background.png"
     >
-      <main className="flex flex-col items-center justify-center w-full min-h-[calc(100dvh-96px)] gap-6">
+      <main className="flex flex-col items-center justify-center w-full min-h-[calc(100dvh-96px)] gap-6 overflow-visible">
         {!audioUrl ? (
           <div className="flex flex-col items-center justify-center gap-8">
             <h1 className="text-3xl font-bold text-center">음성을 입력해주세요</h1>
@@ -89,23 +84,33 @@ export default function VoiceToPiano() {
             <audio src={audioUrl} controls autoPlay className="rounded-xl backdrop-blur" />
             <p className="text-lg">{status}</p>
 
+            {/* ✅ 스크롤 없이 전체 피아노 표시 */}
             <div
-              ref={pianoScrollRef}
               className="
                 relative
+                flex
+                items-center
+                justify-center
                 w-full
-                overflow-x-auto
-                [overflow-y-visible]
-                py-10
-                flex items-center justify-center
-                [scrollbar-width:none] [-ms-overflow-style:none]
-                [&::-webkit-scrollbar]:hidden
+                overflow-visible
               "
+              style={{
+                height: "70px",      // 피아노 전체가 보이게 세로 공간 확보
+                paddingTop: "5px",   // 위쪽 여백
+                paddingBottom: "30px" // 아래쪽 여백
+              }}
             >
-                <div className="scale-[0.6] md:scale-[0.85] lg:scale-100 origin-center">
-                  <Piano activeNotes={activeNotesRef.current} />
-                </div>
+              <div
+                className="overflow-visible"
+                style={{
+                  transform: "scale(0.85)",        // 화면에 맞게 축소
+                  transformOrigin: "top center",   // 가운데 기준 축소
+                  overflow: "visible",
+                }}
+              >
+                <Piano activeNotes={activeNotesRef.current} />
               </div>
+            </div>
           </div>
         )}
       </main>
