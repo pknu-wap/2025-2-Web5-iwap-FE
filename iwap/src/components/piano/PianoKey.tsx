@@ -1,4 +1,4 @@
-import { WHITE_W, WHITE_H, BLACK_W, BLACK_H } from "./PianoLayout";
+import { WHITE_W, WHITE_H } from "./PianoLayout";
 
 export default function PianoKey({
   midi,

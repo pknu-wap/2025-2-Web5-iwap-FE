@@ -92,18 +92,20 @@ export default function VoiceToPiano() {
             <div
               ref={pianoScrollRef}
               className="
+                relative
                 w-full
                 overflow-x-auto
+                [overflow-y-visible]
+                py-10
+                flex items-center justify-center
                 [scrollbar-width:none] [-ms-overflow-style:none]
                 [&::-webkit-scrollbar]:hidden
               "
             >
-              <div className="flex items-center justify-center">
                 <div className="scale-[0.6] md:scale-[0.85] lg:scale-100 origin-center">
                   <Piano activeNotes={activeNotesRef.current} />
                 </div>
               </div>
-            </div>
           </div>
         )}
       </main>
