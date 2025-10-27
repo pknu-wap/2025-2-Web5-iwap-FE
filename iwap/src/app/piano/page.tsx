@@ -69,6 +69,8 @@ export default function VoiceToPiano() {
       className="text-black font-[Pretendard]"
       backgroundUrl="/images/piano_background.png"
     >
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#1D263D80] to-[#1D263D]"></div>
+
       <main className="flex flex-col items-center justify-center w-full min-h-[calc(100dvh-96px)] gap-6 overflow-visible">
         {!audioUrl ? (
           <div className="flex flex-col items-center justify-center gap-8">
@@ -95,8 +97,8 @@ export default function VoiceToPiano() {
                 overflow-visible
               "
               style={{
-                height: "70px",      // 피아노 전체가 보이게 세로 공간 확보
-                paddingTop: "5px",   // 위쪽 여백
+                height: "120px",      // 피아노 전체가 보이게 세로 공간 확보
+                paddingTop: "25px",   // 위쪽 여백
                 paddingBottom: "30px" // 아래쪽 여백
               }}
             >
