@@ -69,7 +69,9 @@ export default function VoiceToPiano() {
       className="text-black font-[Pretendard]"
       backgroundUrl="/images/piano_background.png"
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#1D263D80] to-[#1D263D]"></div>
+      {audioUrl && (
+      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-[#1D263DD9] to-[#1D263D]"></div>
+    )}
 
       <main className="flex flex-col items-center justify-center w-full min-h-[calc(100dvh-96px)] gap-6 overflow-visible">
         {!audioUrl ? (
