@@ -10,7 +10,7 @@ export default function Piano({ activeNotes }: { activeNotes: Set<number> }) {
     <div className="relative" style={{ width: `${PIANO_WIDTH}px`, height: `${PIANO_HEIGHT}px` }}>
       {/* 흰건반 */}
       {whites.map(({ midi, x, y }) => (
-        <div key={`w-${midi}`} className="absolute" style={{ left: x, top: y, zIndex: 1 }}>
+        <div key={`w-${midi}`} className="absolute" style={{ left: x, bottom: y, zIndex: 1 }}>
           <PianoKey midi={midi} active={activeNotes.has(midi)} type="white" />
         </div>
       ))}
