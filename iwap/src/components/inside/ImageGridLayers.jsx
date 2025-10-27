@@ -6,7 +6,6 @@ import { useDrag } from '@use-gesture/react';
 import { useSpring, animated } from '@react-spring/three';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
-import SideNavButton from '@/components/ui/SideNavButton';
 import ProgressBar from '@/components/inside/ProgressBar';
 
 // --- 상수 정의 ---
@@ -254,14 +253,6 @@ export default function ImageGridLayers({ layersData }) {
         </Canvas>
       </div>
 
-      <SideNavButton 
-        direction="left"
-        onClick={(e) => { e.stopPropagation(); handleNavClick(0); }}
-      />
-      <SideNavButton 
-        direction="right"
-        onClick={(e) => { e.stopPropagation(); handleNavClick(layers.length - 1); }}
-      />
       <ProgressBar 
         currentIndex={focusLayerIndex}
         totalLayers={layers.length}
