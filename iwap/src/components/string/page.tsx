@@ -1,6 +1,8 @@
 "use client";
 
+// [수정 1] next/image에서 Image 컴포넌트를 가져옵니다.
 import { useState, useRef, useEffect, ChangeEvent, DragEvent } from "react";
+import Image from "next/image";
 
 // 백엔드에서 받을 좌표의 타입 (예: [x, y])
 type Point = [number, number];
@@ -86,11 +88,16 @@ export default function StringArtConverter() {
       if (!data.coordinates || data.coordinates.length === 0) {
         throw new Error("서버에서 유효한 좌표 데이터를 받지 못했습니다.");
       }
-      
+
       setCoordinates(data.coordinates);
 
-    } catch (err: any) {
-      setError(err.message || "알 수 없는 오류가 발생했습니다.");
+      // [수정 2] 'any' 대신 'unknown'을 사용하고, 타입을 확인하여 오류 메시지를 설정합니다.
+    } catch (err: unknown) { // 'any' -> 'unknown'
+      if (err instanceof Error) {
+        setError(err.message); // err가 Error 객체인 경우
+      } else {
+        setError("알 수 없는 오류가 발생했습니다."); // 그 외의 경우
+      }
     } finally {
       // [작업 목록] 로딩 UI 처리
       setIsLoading(false);
@@ -148,10 +155,13 @@ export default function StringArtConverter() {
           onChange={handleFileChange}
         />
         {previewUrl ? (
-          <img
+          // [수정 3] <img> 태그를 Next.js의 <Image> 컴포넌트로 교체합니다.
+          <Image
             src={previewUrl}
             alt="업로드 미리보기"
             className="object-contain w-40 h-40 rounded-md"
+            width={160} // w-40 (10rem = 160px)
+            height={160} // h-40 (10rem = 160px)
           />
         ) : (
           <div className="text-center text-gray-500">
