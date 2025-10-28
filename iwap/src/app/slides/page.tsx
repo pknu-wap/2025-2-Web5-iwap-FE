@@ -18,7 +18,7 @@ export default function SlidesPage() {
   const showHeader = pathname !== '/';
 
   return (
-    <main className={`relative bg-white flex items-center select-none overflow-hidden ${showHeader ? "h-screen md:h-[calc(100vh_-_96px)]" : "h-screen"}`}>
+    <main className={`relative bg-white flex items-center select-none overflow-hidden ${showHeader ? "h-screen md:h-[calc(100vh_-_60px)]" : "h-screen"}`}>
       <CardSlider images={images} showHeader={showHeader} />
     </main>
   );
