@@ -166,7 +166,7 @@ const singleTrace1 = useMemo((): Data[] => {
   }), [debouncedSize.width, debouncedSize.height, selectedPlot.title, index]);
 
   return (
-    <div className="relative w-full h-dvh md:h-[calc(100dvh-96px)]">
+    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]">
       <FullScreenView
         title="Th!s !s for u"
         subtitle="함수로 하트 그리기"
