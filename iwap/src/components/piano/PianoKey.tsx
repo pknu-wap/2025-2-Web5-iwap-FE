@@ -1,4 +1,3 @@
-import { useRef, useState, type PointerEvent } from "react";
 import { WHITE_W, WHITE_H, BLACK_W, BLACK_H } from "./PianoLayout";
 import { shadowOffsets } from "./Shadowoffsets";
 
@@ -15,38 +14,9 @@ export default function PianoKey({
   const keyWidth = isWhite ? WHITE_W : BLACK_W;
   const keyHeight = isWhite ? WHITE_H : BLACK_H;
 
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  const [ripplePos, setRipplePos] = useState(() => ({
+  const rippleCenter = {
     x: keyWidth / 2,
     y: keyHeight / 2,
-  }));
-  const [isHovered, setIsHovered] = useState(false);
-
-  const handlePointerMove = (event: PointerEvent<Element>) => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-
-    const rect = wrapper.getBoundingClientRect();
-    const scaleX = rect.width / wrapper.offsetWidth || 1;
-    const scaleY = rect.height / wrapper.offsetHeight || 1;
-
-    const localX = (event.clientX - rect.left) / scaleX;
-    const localY = (event.clientY - rect.top) / scaleY;
-
-    setRipplePos({
-      x: Math.max(0, Math.min(keyWidth, localX)),
-      y: Math.max(0, Math.min(keyHeight, localY)),
-    });
-  };
-
-  const handlePointerEnter = (event: PointerEvent<Element>) => {
-    setIsHovered(true);
-    handlePointerMove(event);
-  };
-
-  const handlePointerLeave = () => {
-    setIsHovered(false);
   };
 
   const wrapStyle = {
@@ -60,7 +30,6 @@ export default function PianoKey({
       aria-label={`m${midi}`}
       className={`relative group overflow-visible ${type === "black" ? "z-[30]" : "z-[10]"}`}
       style={wrapStyle}
-      ref={wrapperRef}
     >
       {type === "white" ? (
         <>
@@ -71,9 +40,6 @@ export default function PianoKey({
             viewBox="0 0 85 186"
             fill="none"
             className="absolute bottom-0 left-0"
-            onPointerEnter={handlePointerEnter}
-            onPointerMove={handlePointerMove}
-            onPointerLeave={handlePointerLeave}
           >
             <g opacity="0.6" filter="url(#filter0_f_1207_690)">
               <circle
@@ -90,11 +56,8 @@ export default function PianoKey({
                 y="11"
                 width="25"
                 height="125"
-                className={
-                  active
-                    ? "fill-[#f2f2f2]"
-                    : "fill-white"
-                }
+                fill={active ? "#B6C9E2" : "#FFFFFF"}
+                style={{ transition: "fill 0.12s ease" }}
               />
             </g>
             <defs>
@@ -166,11 +129,11 @@ export default function PianoKey({
             />
           )}
 
-          {/* hover 방사형 파장 */}
+          {/* 활성화 방사형 파장 */}
           <div className="absolute inset-0 pointer-events-none overflow-visible z-[60]">
             <div
-              className={`piano-key-ripple${isHovered ? " is-active" : ""}`}
-              style={{ left: ripplePos.x, top: ripplePos.y }}
+              className={`piano-key-ripple${active ? " is-active" : ""}`}
+              style={{ left: rippleCenter.x, top: rippleCenter.y }}
             />
           </div>
         </>
@@ -183,9 +146,6 @@ export default function PianoKey({
             viewBox="0 0 35 87"
             fill="none"
             className={`absolute left-0 ${active ? "translate-y-[1px]" : ""}`}
-            onPointerEnter={handlePointerEnter}
-            onPointerMove={handlePointerMove}
-            onPointerLeave={handlePointerLeave}
           >
             <g filter="url(#filter0_d_1273_506)">
               <rect
@@ -193,11 +153,8 @@ export default function PianoKey({
                 y="11"
                 width="13"
                 height="65"
-                className={
-                  active
-                    ? "fill-[#222]"
-                    : "fill-black"
-                }
+                fill={active ? "#97AED9" : "#000000"}
+                style={{ transition: "fill 0.12s ease" }}
               />
             </g>
             <defs>
@@ -237,11 +194,11 @@ export default function PianoKey({
             />
           </div>
 
-          {/* 검은건반 ripple */}
+          {/* 활성화 방사형 파장 */}
           <div className="absolute inset-0 pointer-events-none overflow-visible z-[60]">
             <div
-              className={`piano-key-ripple${isHovered ? " is-active" : ""}`}
-              style={{ left: ripplePos.x, top: ripplePos.y }}
+              className={`piano-key-ripple${active ? " is-active" : ""}`}
+              style={{ left: rippleCenter.x, top: rippleCenter.y }}
             />
           </div>
         </>

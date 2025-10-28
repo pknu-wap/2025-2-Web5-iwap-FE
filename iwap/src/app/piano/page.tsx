@@ -5,21 +5,56 @@ import FullScreenView from "@/components/ui/FullScreenView";
 import { useRecorder } from "@/components/audio/useRecorder";
 import RecorderButton from "@/components/audio/RecorderButton";
 import Piano from "@/components/piano/Piano";
-import PianoBackendManager from "@/app/api/piano/PianoBackendManager";
+import PianoBackendManager, {
+  type MidiTransportControls,
+} from "@/app/api/piano/PianoBackendManager";
+import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
 
 export default function VoiceToPiano() {
   const { isRecording, audioUrl, startRecording, stopRecording } = useRecorder();
   const activeNotesRef = useRef<Set<number>>(new Set());
+  const noteTimeoutsRef = useRef<Map<number, number>>(new Map());
   const [, forceRender] = useState(0);
   const [status, setStatus] = useState("");
+  const [transport, setTransport] = useState<MidiTransportControls | null>(null);
+  const [transportDuration, setTransportDuration] = useState(0);
+  const [transportPosition, setTransportPosition] = useState(0);
+  const [isTransportPlaying, setIsTransportPlaying] = useState(false);
 
   // MIDI on/off 이벤트 등록
   const handleMidi = useCallback(
     ({ type, note }: { type: "on" | "off"; note: number }) => {
-    const s = activeNotesRef.current;
-    if (type === "on") s.add(note);
-    else s.delete(note);
-    forceRender((t) => t ^ 1);
+      const activeNotes = activeNotesRef.current;
+      const timeouts = noteTimeoutsRef.current;
+
+      if (type === "on") {
+        activeNotes.add(note);
+
+        const existingTimeout = timeouts.get(note);
+        if (existingTimeout !== undefined) {
+          clearTimeout(existingTimeout);
+        }
+
+        const timeoutId = window.setTimeout(() => {
+          activeNotes.delete(note);
+          timeouts.delete(note);
+          forceRender((t) => t ^ 1);
+        }, 120);
+
+        timeouts.set(note, timeoutId);
+        forceRender((t) => t ^ 1);
+        return;
+      }
+
+      const existingTimeout = timeouts.get(note);
+      if (existingTimeout !== undefined) {
+        clearTimeout(existingTimeout);
+        timeouts.delete(note);
+      }
+
+      if (activeNotes.delete(note)) {
+        forceRender((t) => t ^ 1);
+      }
     },
     []
   );
@@ -32,6 +67,76 @@ export default function VoiceToPiano() {
       delete (window as any).pushMidi;
     };
   }, [handleMidi]);
+
+  useEffect(() => {
+    if (!transport) return;
+
+    const updateTransportState = () => {
+      const state = transport.getState();
+      const currentPosition = transport.getPosition();
+      const hasDuration = transportDuration > 0;
+      const nextPosition = hasDuration
+        ? Math.min(transportDuration, currentPosition)
+        : currentPosition;
+      setTransportPosition(nextPosition);
+      setIsTransportPlaying(state === "started");
+    };
+
+    const intervalId = window.setInterval(updateTransportState, 100);
+    updateTransportState();
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [transport, transportDuration]);
+
+  useEffect(() => {
+    return () => {
+      noteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+      noteTimeoutsRef.current.clear();
+    };
+  }, []);
+
+  const handleTransportReady = useCallback((controls: MidiTransportControls) => {
+    setTransport(controls);
+    setTransportDuration(controls.duration);
+    setTransportPosition(0);
+    setIsTransportPlaying(false);
+  }, []);
+
+  const handleTransportReset = useCallback(() => {
+    setTransport(null);
+    setTransportDuration(0);
+    setTransportPosition(0);
+    setIsTransportPlaying(false);
+    setStatus("");
+    noteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
+    noteTimeoutsRef.current.clear();
+    activeNotesRef.current.clear();
+    forceRender((t) => t ^ 1);
+  }, [forceRender]);
+
+  const handleTogglePlayback = useCallback(() => {
+    if (!transport) return;
+
+    if (isTransportPlaying) {
+      transport.pause();
+      setIsTransportPlaying(false);
+    } else {
+      void transport.start();
+      setIsTransportPlaying(true);
+    }
+  }, [transport, isTransportPlaying]);
+
+  const handleSeek = useCallback(
+    (seconds: number, resume: boolean) => {
+      if (!transport) return;
+      const clamped = Math.max(0, Math.min(transportDuration, seconds));
+      transport.seek(clamped, resume);
+      setTransportPosition(clamped);
+    },
+    [transport, transportDuration]
+  );
 
   // 🎵 오디오 업로드 및 MIDI 변환 요청은 PianoBackendManager에서 처리됩니다.
 
@@ -48,6 +153,8 @@ export default function VoiceToPiano() {
         audioUrl={audioUrl}
         onMidiEvent={handleMidi}
         onStatusChange={setStatus}
+        onTransportReady={handleTransportReady}
+        onTransportReset={handleTransportReset}
       />
       {audioUrl && (
         <>
@@ -68,20 +175,17 @@ export default function VoiceToPiano() {
         ) : (
           <div className="flex flex-col items-center w-full gap-6">
             <p className="text-lg">{status}</p>
-
-            {/* {midiLoaded ? (
-              <p className="text-sm text-gray-400">
-                MIDI 재생 중...
-                </p>
-            ) : (
-              <audio
-                src={audioUrl}
-                controls
-                autoPlay
-                className="rounded-xl backdrop-blur"
+            {transport ? (
+              <MidiPlayerBar
+                isPlaying={isTransportPlaying}
+                duration={transportDuration}
+                position={transportPosition}
+                onTogglePlay={handleTogglePlayback}
+                onSeek={handleSeek}
+                disabled={!transport || transportDuration <= 0}
+                className="w-full max-w-2xl"
               />
-            )} */}
-
+            ) : null}
             <div
               className="relative flex items-center justify-center w-full overflow-visible"
               style={{
