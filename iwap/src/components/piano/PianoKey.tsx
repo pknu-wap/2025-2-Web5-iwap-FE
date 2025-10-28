@@ -93,8 +93,6 @@ export default function PianoKey({
                 className={
                   active
                     ? "fill-[#f2f2f2]"
-                    : isHovered
-                    ? "fill-[#B6C9E2]"
                     : "fill-white"
                 }
               />
@@ -198,8 +196,6 @@ export default function PianoKey({
                 className={
                   active
                     ? "fill-[#222]"
-                    : isHovered
-                    ? "fill-[#3A4D75]"
                     : "fill-black"
                 }
               />
