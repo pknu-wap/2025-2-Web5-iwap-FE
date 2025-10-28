@@ -10,10 +10,12 @@ import React, {
   useTransition,
 } from 'react';
 import PageHeader from '../../components/ui/PageHeader';
+import PngDownloader from '../../components/ascii/PngDownloader';
+import PdfDownloader from '../../components/ascii/PdfDownloader';
 
 // --- 상수 정의 ---
 
-// 아스키 문자 집합: 밝은 문자 -> 어두운 문자 순서
+// 아스키 문자 집합
 const ASCII_CHARS_LIGHT = ' `^\',.:;-_';
 const ASCII_CHARS_MEDIUM_THIN = 'Il!i~+<>()[]{}|\\/│─';
 const ASCII_CHARS_MEDIUM_LETTERS = 'tfjrxnuczXYUJCLQ0OZ';
@@ -30,10 +32,6 @@ const CHAR_HEIGHT_PX = 7;
 const FONT_SIZE_PX = 7;
 const DEFAULT_RESOLUTION = 150;
 
-// PNG 다운로드 배율
-const PNG_SCALE_OPTIONS = [1, 2, 4]; // 선택 가능한 배율 옵션
-const DEFAULT_PNG_SCALE = 1; // 기본 배율
-
 // --- 타입 정의 ---
 type ArtDimensions = { w: number; h: number };
 type AsciiCell = { char: string; color: string };
@@ -49,14 +47,13 @@ const getCharFromGray = (gray: number): string => {
 // --- 컴포넌트 ---
 export default function AsciiPage() {
   // --- 상태 ---
-  const [asciiArt, setAsciiArt] = useState<React.ReactNode | null>(null); // 화면 표시용 JSX
-  const [asciiData, setAsciiData] = useState<AsciiCell[][] | null>(null); // 다운로드용 원본 데이터
+  const [asciiArt, setAsciiArt] = useState<React.ReactNode | null>(null);
+  const [asciiData, setAsciiData] = useState<AsciiCell[][] | null>(null);
   const [artDimensions, setArtDimensions] = useState<ArtDimensions>({ w: 0, h: 0 });
-  const [resolution, setResolution] = useState<number>(DEFAULT_RESOLUTION); // UI 해상도
-  const [debouncedResolution, setDebouncedResolution] = useState<number>(DEFAULT_RESOLUTION); // 변환 트리거용 해상도
-  const [isPending, startTransition] = useTransition(); // UI 끊김 방지
+  const [resolution, setResolution] = useState<number>(DEFAULT_RESOLUTION);
+  const [debouncedResolution, setDebouncedResolution] = useState<number>(DEFAULT_RESOLUTION);
+  const [isPending, startTransition] = useTransition();
   const [imgSrc, setImgSrc] = useState<string | null>(null);
-  const [pngScaleFactor, setPngScaleFactor] = useState<number>(DEFAULT_PNG_SCALE); // PNG 다운로드 배율
 
   // --- 참조 ---
   const dataCache = useRef<Record<number, AsciiCell[][]>>({});
@@ -66,7 +63,7 @@ export default function AsciiPage() {
   const containerRef = useRef<HTMLDivElement>(null); // 아트 표시 컨테이너
   const artRef = useRef<HTMLDivElement>(null); // 실제 아트 요소
   const zoomWrapperRef = useRef<HTMLDivElement>(null); // 스케일 래퍼
-  const downloadCanvasRef = useRef<HTMLCanvasElement>(null); // PNG 다운로드용
+  const downloadCanvasRef = useRef<HTMLCanvasElement>(null); // PNG 다운로드용 (자식에게 전달)
 
   // --- 배경 ---
   const sectionBackgroundStyle: React.CSSProperties = {
@@ -86,7 +83,6 @@ export default function AsciiPage() {
     reader.onload = (event) => startTransition(() => { setImgSrc(event.target?.result as string); setResolution(DEFAULT_RESOLUTION); setDebouncedResolution(DEFAULT_RESOLUTION); });
     reader.readAsDataURL(file);
   };
-  const handleScaleChange: React.ChangeEventHandler<HTMLInputElement> = (e) => setPngScaleFactor(Number(e.target.value));
 
   // --- 핵심 로직 ---
   /** 이미지를 아스키 아트로 변환 (데이터 및 JSX 생성, 캐싱) */
@@ -156,43 +152,15 @@ export default function AsciiPage() {
     return () => window.removeEventListener('resize', calculateAndApplyScale);
   }, [artDimensions]);
 
-  /** PNG 다운로드 로직 */
-  const downloadAsPng = useCallback(() => {
-    const zoomWrapper = zoomWrapperRef.current;
-    if (!asciiData || !downloadCanvasRef.current || !zoomWrapper || artDimensions.w === 0) { alert("먼저 이미지를 변환해주세요."); return; }
-    const canvas = downloadCanvasRef.current; const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const visibleWidth = zoomWrapper.clientWidth; const visibleHeight = zoomWrapper.clientHeight;
-    const canvasWidth = Math.ceil(visibleWidth * pngScaleFactor); const canvasHeight = Math.ceil(visibleHeight * pngScaleFactor);
-    canvas.width = canvasWidth; canvas.height = canvasHeight;
-    const charPixelWidth = canvasWidth / artDimensions.w; const charPixelHeight = canvasHeight / artDimensions.h;
-    ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-    const downloadFontSize = charPixelHeight * 0.85; ctx.font = `${downloadFontSize}px monospace`;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'top';
-    asciiData.forEach((rowData, y) => rowData.forEach((cell, x) => {
-        ctx.fillStyle = cell.color;
-        const drawX = x * charPixelWidth;
-        // 1. (핵심 수정) Y 좌표 계산 시 Math.round 사용
-        const drawY = Math.round(y * charPixelHeight);
-        ctx.fillText(cell.char, drawX, drawY);
-      })
-    );
-    try {
-      const dataURL = canvas.toDataURL('image/png'); const link = document.createElement('a');
-      link.href = dataURL; link.download = `ascii-art-${artDimensions.w}x${artDimensions.h}.png`;
-      document.body.appendChild(link); link.click(); document.body.removeChild(link);
-    } catch (error) { console.error("PNG 생성 또는 다운로드 실패:", error); alert("PNG 다운로드에 실패했습니다."); }
-  }, [asciiData, artDimensions, pngScaleFactor]);
-
-  const handleDownload = useCallback(() => downloadAsPng(), [downloadAsPng]);
 
   // --- 렌더링 ---
   return (
-    <div className="relative flex flex-col w-full h-dvh md:h-[calc(100dvh-96px)] text-gray-200 box-border" style={sectionBackgroundStyle}>
+    <div className="relative flex flex-col w-full h-dvh md:h-[calc(100dvh-60px)] text-gray-200 box-border" style={sectionBackgroundStyle}>
       {/* 제목 영역 */}
       <div className="flex-shrink-0 relative m-5 rounded-md overflow-hidden h-[100px] bg-black/50">
         <PageHeader title="ASCi!" subtitle="이미지를 텍스트로 표현" goBack={true} padding="p-5" />
       </div>
+
       {/* 아트 표시 영역 */}
       <div ref={containerRef} className="flex-1 grid place-items-center overflow-hidden bg-black min-h-0 rounded-md mx-5 mb-5">
         <div ref={zoomWrapperRef}>
@@ -200,9 +168,11 @@ export default function AsciiPage() {
         </div>
         {isPending && !asciiArt && (<p>변환 중...</p>)}
       </div>
+
       {/* 숨겨진 캔버스들 */}
       <canvas ref={canvasRef} style={{ display: 'none' }}></canvas>
-      <canvas ref={downloadCanvasRef} style={{ display: 'none' }}></canvas>
+      <canvas ref={downloadCanvasRef} style={{ display: 'none' }}></canvas> {/* PNG 컴포넌트가 사용 */}
+
       {/* 설정 영역 */}
       <div className="flex-shrink-0 relative mx-5 mb-5 rounded-md overflow-hidden bg-black/50">
         <div className="p-5">
@@ -213,6 +183,7 @@ export default function AsciiPage() {
               <label htmlFor="file-upload" className="inline-block px-4 py-2 bg-gray-700 border border-gray-600 rounded-md cursor-pointer text-gray-200 hover:bg-gray-600 transition-colors">파일 선택...</label>
               <input id="file-upload" type="file" accept="image/*" onChange={handleImageUpload} className="hidden"/>
             </fieldset>
+
             {/* 해상도 조절 */}
             <fieldset className="border border-gray-700 rounded-md p-2.5 flex-1 min-w-[300px] bg-black/20">
               <legend className="px-1 font-semibold text-gray-300" style={{ fontSize: 'clamp(0.875rem, 2.5vmin, 1.1rem)' }}>
@@ -221,18 +192,24 @@ export default function AsciiPage() {
               <div className="flex items-center gap-2.5">
                 <input type="range" min="30" max="500" step="1" value={resolution} onChange={handleResolutionChange} onMouseUp={handleRenderTrigger} onTouchEnd={handleRenderTrigger} disabled={!imgSrc || isPending} className="flex-1"/>
                 <span className="w-10 text-right">{resolution}px</span>
-                {/* PNG 배율 선택 */}
-                <div className="flex items-center gap-2 border-l border-gray-600 pl-2.5">
-                    <span className="text-sm">배율:</span>
-                    {PNG_SCALE_OPTIONS.map(scale => (
-                        <label key={scale} className="text-sm cursor-pointer">
-                            <input type="radio" name="scale" value={scale} checked={pngScaleFactor === scale} onChange={handleScaleChange} className="mr-1"/>
-                            {scale}x
-                        </label>
-                    ))}
+                
+                {/* === 다운로드 영역 === */}
+                <div className="flex items-center gap-2.5 border-l border-gray-600 pl-2.5">
+                  <PngDownloader
+                    asciiData={asciiData}
+                    artDimensions={artDimensions}
+                    downloadCanvasRef={downloadCanvasRef}
+                    zoomWrapperRef={zoomWrapperRef}
+                    disabled={!asciiData || isPending}
+                  />
+                  <PdfDownloader
+                    asciiData={asciiData}
+                    artDimensions={artDimensions}
+                    disabled={!asciiData || isPending}
+                  />
                 </div>
-                {/* PNG 다운로드 버튼 */}
-                <button onClick={handleDownload} disabled={!asciiData || isPending} className="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed" title="현재 해상도의 ASCII 아트를 PNG 파일로 다운로드합니다.">PNG 다운로드</button>
+                {/* === 다운로드 영역 끝 === */}
+
               </div>
             </fieldset>
           </div>
