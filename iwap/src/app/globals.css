@@ -44,3 +44,52 @@ body {
 .slide-card:hover {
   width: calc(var(--w-base) * 3);
 }
+
+@layer components {
+  .piano-key-ripple {
+    position: absolute;
+    z-index: 999;
+    width: 340px;
+    height: 340px;
+    transform: translate(-50%, -50%);
+    border-radius: 9999px;
+    border: 7px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 0 120px 32px rgba(255, 255, 255, 0.18);
+    filter: blur(5px);
+    pointer-events: none;
+    opacity: 0;
+    background: radial-gradient(
+      circle,
+      rgba(255, 255, 255, 0.12) 0%,
+      rgba(255, 255, 255, 0.05) 55%,
+      rgba(255, 255, 255, 0) 92%
+    );
+  }
+
+  .piano-key-ripple.is-active {
+    opacity: 1;
+    animation: piano-key-ripple 0.75s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
+}
+
+@keyframes piano-key-ripple {
+  0% {
+    transform: translate(-50%, -50%) scale(0);
+    opacity: 0;
+  }
+
+  60% {
+    transform: translate(-50%, -50%) scale(0.98);
+    opacity: 0.3;
+  }
+
+  75% {
+    transform: translate(-50%, -50%) scale(1.08);
+    opacity: 0.22;
+  }
+
+  100% {
+    transform: translate(-50%, -50%) scale(1.18);
+    opacity: 0;
+  }
+}
