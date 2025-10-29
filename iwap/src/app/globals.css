@@ -68,7 +68,7 @@ body {
 
   .piano-key-ripple.is-active {
     opacity: 1;
-    animation: piano-key-ripple 0.75s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    animation: piano-key-ripple 0.5s cubic-bezier(0.4, 0, 0.2, 1) forwards;
   }
 }
 

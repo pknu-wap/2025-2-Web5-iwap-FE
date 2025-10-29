@@ -57,7 +57,7 @@ export default function PianoKey({
                 width="25"
                 height="125"
                 fill={active ? "#B6C9E2" : "#FFFFFF"}
-                style={{ transition: "fill 0.12s ease" }}
+                style={{ transition: "fill 0.06s ease-out" }}
               />
             </g>
             <defs>
@@ -145,7 +145,7 @@ export default function PianoKey({
             height={BLACK_H}
             viewBox="0 0 35 87"
             fill="none"
-            className={`absolute left-0 ${active ? "translate-y-[1px]" : ""}`}
+            className={`absolute left-0 transition-transform duration-75 ease-out ${active ? "translate-y-[1px]" : ""}`}
           >
             <g filter="url(#filter0_d_1273_506)">
               <rect
@@ -154,7 +154,7 @@ export default function PianoKey({
                 width="13"
                 height="65"
                 fill={active ? "#97AED9" : "#000000"}
-                style={{ transition: "fill 0.12s ease" }}
+                style={{ transition: "fill 0.06s ease-out" }}
               />
             </g>
             <defs>

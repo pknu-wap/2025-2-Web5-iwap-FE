@@ -24,6 +24,16 @@ type PianoBackendManagerProps = {
 
 let sharedSampler: Tone.Sampler | null = null;
 
+const isMobileDevice = () => {
+  if (typeof navigator === "undefined") return false;
+  return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+};
+
+const USE_FX = (() => {
+  const v = (process.env.NEXT_PUBLIC_PIANO_USE_FX || "").toLowerCase();
+  return v === "1" || v === "true" || v === "yes";
+})();
+
 const getOrCreateSampler = async () => {
   if (sharedSampler) {
     await sharedSampler.loaded;
@@ -65,7 +75,21 @@ const getOrCreateSampler = async () => {
     },
     release: 1,
     baseUrl: "https://tonejs.github.io/audio/salamander/",
-  }).toDestination();
+  });
+
+  if (USE_FX) {
+    // Optional FX chain (can be disabled via env)
+    const mobile = isMobileDevice();
+    const filter = new Tone.Filter({
+      type: "lowpass",
+      frequency: mobile ? 9000 : 12000,
+      rolloff: -24,
+    });
+    const reverb = new Tone.Reverb({ decay: mobile ? 1.6 : 2.2, wet: mobile ? 0.05 : 0.08 });
+    sampler.chain(filter, reverb, Tone.Destination);
+  } else {
+    sampler.toDestination();
+  }
 
   await sampler.loaded;
   sharedSampler = sampler;
@@ -111,7 +135,7 @@ export default function PianoBackendManager({
       try {
         onStatusChange?.("Downloading generated MIDI...");
         const midiRes = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/piano/`
+          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/piano/midi`
         );
         if (!midiRes.ok) throw new Error("Failed to download MIDI file");
 
@@ -132,12 +156,9 @@ export default function PianoBackendManager({
               if (isCancelled) return;
               const instrument = sampler;
               if (!instrument) return;
-              instrument.triggerAttackRelease(
-                note.name,
-                duration,
-                time,
-                note.velocity
-              );
+              // Slight velocity floor to avoid super-quiet artifacts
+              const vel = Math.max(0.08, note.velocity ?? 0.8);
+              instrument.triggerAttackRelease(note.name, duration, time, vel);
               onMidiEvent({ type: "on", note: midiNum });
               Tone.Transport.scheduleOnce(() => {
                 if (isCancelled) return;
@@ -224,10 +245,36 @@ export default function PianoBackendManager({
       try {
         onStatusChange?.("Uploading audio for MIDI conversion...");
         const res = await fetch(audioUrl);
-        const blob = await res.blob();
+        const originalBlob = await res.blob();
+
+        // Normalize blob type to match backend allowed types
+        const allowedTypes = new Set([
+          "audio/mpeg",
+          "audio/mp3",
+          "audio/webm",
+          "audio/wav",
+        ]);
+        const normalizedType = allowedTypes.has(originalBlob.type)
+          ? originalBlob.type
+          : // For blob: URLs from MediaRecorder, default to webm if unknown
+            (audioUrl?.startsWith("blob:") ? "audio/webm" : "audio/mpeg");
+
+        const uploadBlob =
+          originalBlob.type === normalizedType
+            ? originalBlob
+            : new Blob([originalBlob], { type: normalizedType });
 
         const formData = new FormData();
-        formData.append("voice", blob, "voice.mp3");
+        const mime = uploadBlob.type || "audio/mpeg";
+        const ext =
+          mime === "audio/webm"
+            ? "webm"
+            : mime === "audio/wav"
+            ? "wav"
+            : mime === "audio/mp3" || mime === "audio/mpeg"
+            ? "mp3"
+            : "mp3";
+        formData.append("voice", uploadBlob, `voice.${ext}`);
 
         const uploadRes = await fetch(
           `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/piano/`,
@@ -237,7 +284,21 @@ export default function PianoBackendManager({
           }
         );
 
-        if (!uploadRes.ok) throw new Error("Audio upload failed");
+        if (!uploadRes.ok) {
+          let detail = "";
+          try {
+            const ct = uploadRes.headers.get("content-type") || "";
+            if (ct.includes("application/json")) {
+              const body = await uploadRes.json();
+              detail = body?.detail ? String(body.detail) : JSON.stringify(body);
+            } else {
+              detail = await uploadRes.text();
+            }
+          } catch {}
+          const message = detail ? `Audio upload failed: ${detail}` : "Audio upload failed";
+          onStatusChange?.(message);
+          throw new Error(message);
+        }
 
         onStatusChange?.("Processing MIDI response...");
         await fetchAndPlayMidi();

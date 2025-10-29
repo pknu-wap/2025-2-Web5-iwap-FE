@@ -39,7 +39,7 @@ export default function VoiceToPiano() {
           activeNotes.delete(note);
           timeouts.delete(note);
           forceRender((t) => t ^ 1);
-        }, 120);
+        }, 600);
 
         timeouts.set(note, timeoutId);
         forceRender((t) => t ^ 1);
@@ -142,7 +142,8 @@ export default function VoiceToPiano() {
 
 
   return (
-    <FullScreenView
+    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]">
+      <FullScreenView
       title="P!ano"
       subtitle="음성을 피아노로 변환하기"
       goBack={true}
@@ -162,7 +163,7 @@ export default function VoiceToPiano() {
           <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[60%] to-[#00020B]"></div>
         </>
       )}
-      <main className="flex flex-col items-center justify-center w-full min-h-[calc(100dvh-96px)] gap-6 overflow-visible">
+      <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible">
         {!audioUrl ? (
           <div className="flex flex-col items-center justify-center gap-8">
             <h1 className="text-3xl font-bold text-center">음성을 입력해주세요</h1>
@@ -183,7 +184,7 @@ export default function VoiceToPiano() {
                 onTogglePlay={handleTogglePlayback}
                 onSeek={handleSeek}
                 disabled={!transport || transportDuration <= 0}
-                className="w-full max-w-2xl"
+                className="w-full max-w-2xl -mt-3"
               />
             ) : null}
             <div
@@ -208,6 +209,7 @@ export default function VoiceToPiano() {
           </div>
         )}
       </main>
-    </FullScreenView>
+      </FullScreenView>
+    </div>
   );
 }
