@@ -140,7 +140,7 @@ export default function Home() {
             ref={buttonRef}
             className="relative w-[240px] h-[70px] sm:w-[280px] sm:h-[80px] pointer-events-none self-center sm:self-end mb-2 lg:mb-10 flex-shrink-0" // flex-shrink-0 추가로 버튼이 찌그러지는 것을 방지
           >
-            <div className="absolute inset-0 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center justify-center translate-y-7">
               <button className="relative flex items-center justify-center w-full h-full gap-2 bg-transparent">
                 <svg className="w-full" height="4" viewBox="0 0 490 4" fill="none">
                   <path d="M490 2H-75" stroke={`url(#paint0_linear_${isHovered ? "hover" : "default"})`} strokeWidth="4" />
