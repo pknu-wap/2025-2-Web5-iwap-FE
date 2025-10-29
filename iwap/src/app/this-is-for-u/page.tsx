@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useMemo, useEffect } from "react";
 import dynamic from "next/dynamic";
@@ -136,8 +136,8 @@ const singleTrace1 = useMemo((): Data[] => {
   const plots: Record<string, { data: Data[]; title: string }> = {
     "1": { data: singleTrace1, title: "1. Line Segment Pattern" },
     "2": { data: [{ x: xVals, y: fVals, type: "scatter", mode: "lines", line: { color: 'red' } }], title: `2. f(x), a=${a.toFixed(2)}` },
-    "3": { data: [{ x: xRange, y: yRange, z: zGrid, type: "surface", colorscale: [[0, '#444444'], [1, '#C35858']] }], title: "3. Abstract 3D Surface" },
-    "4": { data: [{ x: surfX, y: surfY, z: surfZ, type: "surface", colorscale: [[0, 'pink'], [1, 'red']] }], title: "4. 3D Parametric Surface (u, v)" },
+    "3": { data: [{ x: xRange, y: yRange, z: zGrid, type: "surface", colorscale: [[0, '#444444'], [1, '#C35858']], showscale: false }], title: "3. Abstract 3D Surface" },
+    "4": { data: [{ x: surfX, y: surfY, z: surfZ, type: "surface", colorscale: [[0, 'pink'], [1, 'red']], showscale: false }], title: "4. 3D Parametric Surface (u, v)" },
     "5": { data: [{ x: xHeart, y: yHeart, mode: "lines", line: { color: 'red', width: 1 }, type: 'scatter' }], title: "5. Parametric Heart Curve" },
     "6": { data: singleTrace6, title: "6. Heart Shape from 601 Line Segments" },
     "7": { data: singleTrace7, title: "7. 2000 Line Segments Pattern" },
@@ -151,19 +151,17 @@ const singleTrace1 = useMemo((): Data[] => {
   const plotLayout = useMemo<Partial<Layout>>(() => ({
     width: debouncedSize.width,
     height: debouncedSize.height,
-    // [타입 수정 확인] title은 반드시 text 속성을 가진 객체여야 함
-    title: { text: selectedPlot.title, font: { size: 18, color: "black" }, x: 0.5, xanchor: "center", yanchor: "top" },
     margin: index === 2 ? { t: 100, l: 40, r: 20, b: 40 } : { t: 80, l: 40, r: 20, b: 40 },
     paper_bgcolor: "rgba(0,0,0,0)",
     plot_bgcolor: "rgba(0,0,0,0)",
-    xaxis: { title: { text: "X", font: { family: "Pretendard, sans-serif" } } },
-    yaxis: { title: { text: "Y", font: { family: "Pretendard, sans-serif" } }, scaleanchor: "x", scaleratio: 1 },
+    xaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
+    yaxis: { visible: false, scaleanchor: "x", scaleratio: 1, showgrid: false, showticklabels: false, zeroline: false },
     scene: {
-        xaxis: { title: {text: "X"} },
-        yaxis: { title: {text: "Y"} },
-        zaxis: { title: {text: "Z"} },
+        xaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
+        yaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
+        zaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
     },
-  }), [debouncedSize.width, debouncedSize.height, selectedPlot.title, index]);
+  }), [debouncedSize.width, debouncedSize.height, index]);
 
   return (
     <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]">
@@ -194,7 +192,6 @@ const singleTrace1 = useMemo((): Data[] => {
                 onChange={(e) => setA(parseFloat(e.target.value))}
                 className="w-full accent-red-500"
               />
-              <p className="text-black text-center mt-2">a = {a.toFixed(2)}</p>
             </div>
           )}
         </div>
@@ -202,3 +199,7 @@ const singleTrace1 = useMemo((): Data[] => {
     </div>
   );
 }
+
+
+
+
