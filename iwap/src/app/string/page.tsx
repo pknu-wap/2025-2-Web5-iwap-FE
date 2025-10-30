@@ -1,12 +1,16 @@
+// app/string/page.tsx
+
 "use client";
 
-import { useState, useRef, useEffect, ChangeEvent, DragEvent } from "react";
+import { useState, useRef, useEffect } from "react";
+
+// [수정] 분리된 ImageUploader 컴포넌트를 가져옵니다.
+import ImageUploader from "../../components/ui/ImageUploader"; // 경로 확인 필요
 
 // 백엔드에서 받을 좌표의 타입 (예: [x, y])
 type Point = [number, number];
 
 // 백엔드 응답 데이터 구조 (가정)
-// "좌표를 이으면" -> [p1, p2, p3, ...] 형태의 연속된 점으로 가정
 interface ApiResponse {
   coordinates: Point[];
 }
@@ -37,22 +41,11 @@ export default function StringArtConverter() {
         setPreviewUrl(reader.result as string);
       };
       reader.readAsDataURL(selectedFile);
+    } else {
+      // 파일 선택이 취소된 경우
+      setFile(null);
+      setPreviewUrl(null);
     }
-  };
-
-  // [작업 목록] 이미지 업로드 UI - 파일 입력
-  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    handleFileSelect(e.target.files?.[0] || null);
-  };
-
-  // [작업 목록] 이미지 업로드 UI - 드래그 앤 드롭
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault(); // 드롭 이벤트를 허용하기 위해 필수
-  };
-
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    handleFileSelect(e.dataTransfer.files?.[0] || null);
   };
 
   // [작업 목록] 백엔드 API로 이미지 전송
@@ -67,10 +60,9 @@ export default function StringArtConverter() {
     setCoordinates(null);
 
     const formData = new FormData();
-    formData.append("image", file); // 백엔드에서 받을 key 이름 (예: "image")
+    formData.append("image", file);
 
     try {
-      // ❗️ process.env.NEXT_PUBLIC_BACKEND_API_URL 등을 사용하세요.
       const res = await fetch("/api/v1/string-art", {
         method: "POST",
         body: formData,
@@ -82,17 +74,18 @@ export default function StringArtConverter() {
 
       const data: ApiResponse = await res.json();
 
-      // [작업 목록] 백엔드 응답(좌표 배열) 수신
       if (!data.coordinates || data.coordinates.length === 0) {
         throw new Error("서버에서 유효한 좌표 데이터를 받지 못했습니다.");
       }
-      
-      setCoordinates(data.coordinates);
 
-    } catch (err: any) {
-      setError(err.message || "알 수 없는 오류가 발생했습니다.");
+      setCoordinates(data.coordinates);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("알 수 없는 오류가 발생했습니다.");
+      }
     } finally {
-      // [작업 목록] 로딩 UI 처리
       setIsLoading(false);
     }
   };
@@ -108,24 +101,22 @@ export default function StringArtConverter() {
       // 캔버스 초기화
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-      // 선 스타일 (이미지처럼 검고 얇은 선)
+      // 선 스타일
       ctx.strokeStyle = "black";
       ctx.lineWidth = 0.5;
-      ctx.globalAlpha = 0.3; // 선이 겹치는 효과를 위해 투명도 적용
+      ctx.globalAlpha = 0.3;
 
-      // [작업 목록] 좌표 배열을 순회하며 선 그리기
-      // [p1, p2, p3, ...] -> (p1->p2), (p2->p3), ...
       ctx.beginPath();
-      ctx.moveTo(coordinates[0][0], coordinates[0][1]); // 첫 번째 점으로 이동
+      ctx.moveTo(coordinates[0][0], coordinates[0][1]);
 
       for (let i = 1; i < coordinates.length; i++) {
         const [x, y] = coordinates[i];
-        ctx.lineTo(x, y); // 다음 점까지 선 연결
+        ctx.lineTo(x, y);
       }
 
-      ctx.stroke(); // 캔버스에 모든 선을 한 번에 그림
+      ctx.stroke();
     }
-  }, [coordinates]); // coordinates 상태가 업데이트될 때마다 실행
+  }, [coordinates]);
 
   return (
     <div className="w-full max-w-2xl p-6 mx-auto my-10 bg-white rounded-lg shadow-xl">
@@ -133,33 +124,13 @@ export default function StringArtConverter() {
         스트링 아트 변환기
       </h2>
 
-      {/* 1. 업로드 영역 */}
-      <div
-        className="flex flex-col items-center justify-center w-full p-10 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:border-blue-500 bg-gray-50"
-        onDragOver={handleDragOver}
-        onDrop={handleDrop}
-        onClick={() => document.getElementById("file-input")?.click()}
-      >
-        <input
-          type="file"
-          id="file-input"
-          className="hidden"
-          accept="image/*"
-          onChange={handleFileChange}
-        />
-        {previewUrl ? (
-          <img
-            src={previewUrl}
-            alt="업로드 미리보기"
-            className="object-contain w-40 h-40 rounded-md"
-          />
-        ) : (
-          <div className="text-center text-gray-500">
-            <p className="text-lg font-semibold">이미지를 드래그 앤 드롭</p>
-            <p className="mt-2">또는 클릭하여 업로드</p>
-          </div>
-        )}
-      </div>
+      {/* 1. [수정] ImageUploader 컴포넌트 사용 */}
+      <ImageUploader
+        id="string-art-uploader"
+        onFileSelect={handleFileSelect}
+        previewUrl={previewUrl}
+      />
+
       {file && (
         <p className="mt-2 text-sm text-center text-gray-600">
           선택된 파일: {file.name}
@@ -186,7 +157,6 @@ export default function StringArtConverter() {
       {isLoading && (
         <div className="mt-6 text-center text-gray-600">
           <p>좌표를 계산 중입니다... (시간이 걸릴 수 있습니다)</p>
-          {/* 여기에 로딩 스피너 컴포넌트를 추가할 수 있습니다. */}
         </div>
       )}
 
