@@ -1,25 +1,27 @@
- /*Ensure you had installed the package
-or read our installation document. (go to lightswind.com/components/Installation)
-npm i lightswind@latest*/
-
 "use client";
 
 import React, { useEffect, useRef, useState, useMemo, useCallback } from "react";
-import {
-  motion,
-  AnimatePresence,
-  useMotionValue,
-  easeOut,
-  type Transition,
-} from "framer-motion";
-import { cn } from "@/lib/utils";
+import { motion, AnimatePresence, useMotionValue, easeOut } from "framer-motion";
+import { cn } from "@/lib/utils"; // Tailwind className helper
 import { animate } from "framer-motion";
+
+export type ThreeDImageInput =
+  | string
+  | {
+      src: string;
+      link?: string;
+      text?: string;
+      description?: string;
+      [key: string]: unknown;
+    };
 
 export interface ThreeDImageRingProps {
   /** Array of image URLs to display in the ring */
-  images: string[];
+  images?: ThreeDImageInput[];
   /** Container width in pixels (will be scaled) */
   width?: number;
+  /** Container height in pixels (defaults to width * 1.33) */
+  height?: number;
   /** 3D perspective value */
   perspective?: number;
   /** Distance of images from center (z-depth) */
@@ -43,11 +45,15 @@ export interface ThreeDImageRingProps {
   /** Enable/disable drag functionality */
   draggable?: boolean;
   /** Animation ease for entrance */
-  ease?: Transition["ease"];
+  ease?: string;
   /** Breakpoint for mobile responsiveness (e.g., 768 for iPad mini) */
   mobileBreakpoint?: number;
   /** Scale factor for mobile (e.g., 0.7 for 70% size) */
   mobileScaleFactor?: number;
+  /** Scale factor for desktop and larger viewports */
+  desktopScale?: number;
+  /** Scale factor applied to the image when it is activated via click */
+  focusedScale?: number;
   /** Power for the drag end inertia animation (higher means faster stop) */
   inertiaPower?: number;
   /** Time constant for the drag end inertia animation (duration of deceleration in ms) */
@@ -57,8 +63,9 @@ export interface ThreeDImageRingProps {
 }
 
 export function ThreeDImageRing({
-  images,
+  images = [],
   width = 300,
+  height = width * 1.33,
   perspective = 2000,
   imageDistance = 500,
   initialRotation = 180,
@@ -70,9 +77,11 @@ export function ThreeDImageRing({
   imageClassName,
   backgroundColor,
   draggable = true,
-  ease = easeOut,
+  ease = "easeOut",
   mobileBreakpoint = 768,
   mobileScaleFactor = 0.8,
+  desktopScale = 1,
+  focusedScale = 2,
   inertiaPower = 0.8, // Default power for inertia
   inertiaTimeConstant = 300, // Default time constant for inertia
   inertiaVelocityMultiplier = 20, // Default multiplier for initial spin
@@ -85,21 +94,33 @@ export function ThreeDImageRing({
   const currentRotationY = useRef<number>(initialRotation);
   const isDragging = useRef<boolean>(false);
   const velocity = useRef<number>(0); // To track drag velocity
+  const hasAnimatedIn = useRef<boolean>(false);
 
   const [currentScale, setCurrentScale] = useState(1);
   const [showImages, setShowImages] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
 
-  const angle = useMemo(() => 360 / images.length, [images.length]);
-
-  const getBgPos = useCallback(
-    (imageIndex: number, currentRot: number, scale: number) => {
-      const scaledImageDistance = imageDistance * scale;
-      const effectiveRotation = currentRot - 180 - imageIndex * angle;
-      const parallaxOffset = ((effectiveRotation % 360 + 360) % 360) / 360;
-      return `${-(parallaxOffset * (scaledImageDistance / 1.5))}px 0px`;
-    },
-    [imageDistance, angle]
+  const normalizedImages = useMemo(
+    () =>
+      images
+        .map((item) =>
+          typeof item === "string" ? item : typeof item.src === "string" ? item.src : ""
+        )
+        .filter((src): src is string => src.length > 0),
+    [images]
   );
+
+  const angle = useMemo(
+    () => (normalizedImages.length > 0 ? 360 / normalizedImages.length : 0),
+    [normalizedImages.length]
+  );
+
+  const getBgPos = (imageIndex: number, currentRot: number, scale: number) => {
+    const scaledImageDistance = imageDistance * scale;
+    const effectiveRotation = currentRot - 180 - imageIndex * angle;
+    const parallaxOffset = ((effectiveRotation % 360 + 360) % 360) / 360;
+    return `${-(parallaxOffset * (scaledImageDistance / 1.5))}px 0px`;
+  };
 
   useEffect(() => {
     const unsubscribe = rotationY.on("change", (latestRotation) => {
@@ -115,12 +136,12 @@ export function ThreeDImageRing({
       currentRotationY.current = latestRotation;
     });
     return () => unsubscribe();
-  }, [rotationY, currentScale, getBgPos]);
+  }, [rotationY, normalizedImages.length, imageDistance, currentScale, angle]);
 
   useEffect(() => {
     const handleResize = () => {
       const viewportWidth = window.innerWidth;
-      const newScale = viewportWidth <= mobileBreakpoint ? mobileScaleFactor : 1;
+      const newScale = viewportWidth <= mobileBreakpoint ? mobileScaleFactor : desktopScale;
       setCurrentScale(newScale);
     };
 
@@ -128,14 +149,49 @@ export function ThreeDImageRing({
     handleResize();
 
     return () => window.removeEventListener("resize", handleResize);
-  }, [mobileBreakpoint, mobileScaleFactor]);
+  }, [mobileBreakpoint, mobileScaleFactor, desktopScale]);
 
   useEffect(() => {
     setShowImages(true);
   }, []);
 
+  useEffect(() => {
+    if (showImages && !hasAnimatedIn.current) {
+      hasAnimatedIn.current = true;
+    }
+  }, [showImages]);
+
+  const rotateToIndex = useCallback(
+    (index: number) => {
+      if (angle === 0) return;
+      const current = rotationY.get();
+      const target = initialRotation + index * angle;
+      let delta = target - current;
+      delta = ((delta + 540) % 360) - 180; // ensure shortest rotation path
+      const finalTarget = current + delta;
+
+      animate(rotationY, finalTarget, {
+        duration: 0.65,
+        ease: easeOut,
+      });
+    },
+    [angle, initialRotation, rotationY]
+  );
+
+  const handleImageClick = (index: number) => {
+    if (isDragging.current) return;
+    setActiveIndex((prev) => {
+      const next = prev === index ? null : index;
+      if (next !== null) {
+        rotateToIndex(next);
+      }
+      return next;
+    });
+  };
+
   const handleDragStart = (event: React.MouseEvent | React.TouchEvent) => {
     if (!draggable) return;
+    setActiveIndex(null);
     isDragging.current = true;
     const clientX = "touches" in event ? event.touches[0].clientX : event.clientX;
     startX.current = clientX;
@@ -190,7 +246,8 @@ const handleDragEnd = () => {
     power: inertiaPower,
     timeConstant: inertiaTimeConstant,
     restDelta: 0.5,
-    modifyTarget: (target) => Math.round(target / angle) * angle,
+    modifyTarget: (target) =>
+      angle !== 0 ? Math.round(target / angle) * angle : target,
     onUpdate: (latest) => {
       rotationY.set(latest);
     },
@@ -198,17 +255,6 @@ const handleDragEnd = () => {
 
   velocity.current = 0;
 };
-
-
-  // Corrected imageVariants: no function for 'visible' state
-  const imageVariants = {
-    hidden: { y: 200, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-      // Transition properties will be defined directly on the motion.div using `custom` prop
-    },
-  };
 
   return (
     <div
@@ -230,7 +276,7 @@ const handleDragEnd = () => {
         style={{
           perspective: `${perspective}px`,
           width: `${width}px`,
-          height: `${width * 1.33}px`,
+          height: `${height}px`,
           position: "absolute",
           left: "50%",
           top: "50%",
@@ -250,57 +296,85 @@ const handleDragEnd = () => {
           }}
         >
           <AnimatePresence>
-            {showImages && images.map((imageUrl, index) => (
-              <motion.div
-                key={index}
-                className={cn(
-                  "w-full h-full absolute",
-                  imageClassName
-                )}
-                style={{
-                  transformStyle: "preserve-3d",
-                  backgroundImage: `url(${imageUrl})`,
-                  backgroundSize: "cover",
-                  backgroundRepeat: "no-repeat",
-                  backfaceVisibility: "hidden",
-                  rotateY: index * -angle,
-                  z: -imageDistance * currentScale,
-                  transformOrigin: `50% 50% ${imageDistance * currentScale}px`,
-                  backgroundPosition: getBgPos(index, currentRotationY.current, currentScale),
-                }}
-                initial="hidden"
-                animate="visible"
-                exit="hidden"
-                variants={imageVariants} // Use the simplified variants object
-                custom={index} // Pass the index as a custom prop
-                transition={{
-                  delay: index * staggerDelay, // Use index directly in transition
-                  duration: animationDuration,
-                  ease,
-                }}
-                whileHover={{ opacity: 1, transition: { duration: 0.15 } }}
-                onHoverStart={() => {
-                  // Prevent hover effects while dragging
-                  if (isDragging.current) return;
-                  if (ringRef.current) {
-                    Array.from(ringRef.current.children).forEach((imgEl, i) => {
-                      if (i !== index) {
-                        (imgEl as HTMLElement).style.opacity = `${hoverOpacity}`;
+            {showImages &&
+              normalizedImages.map((imageUrl, index) => {
+                const isActive = activeIndex === index;
+                const transformOrigin = `${isActive ? 45 : 50}% 50% ${imageDistance * currentScale}px`;
+                const widthDelta = width * (focusedScale - 1);
+                let activeOffset = 0;
+
+                if (activeIndex !== null) {
+                  const length = normalizedImages.length;
+                  const relative = (index - activeIndex + length) % length;
+
+                  if (relative === 0) {
+                    activeOffset = widthDelta / 2;
+                  } else if (relative === 1) {
+                    activeOffset = widthDelta;
+                  } else if (relative === length - 1) {
+                    activeOffset = -widthDelta / 2;
+                  }
+                }
+
+                return (
+                  <motion.div
+                    key={index}
+                    className={cn(
+                      "w-full h-full absolute",
+                      imageClassName
+                    )}
+                    style={{
+                      transformStyle: "preserve-3d",
+                      backgroundImage: `url(${imageUrl})`,
+                      backgroundSize: "cover",
+                      backgroundRepeat: "no-repeat",
+                      backfaceVisibility: "hidden",
+                      rotateY: index * -angle,
+                      z: -imageDistance * currentScale,
+                      transformOrigin,
+                      backgroundPosition: getBgPos(index, currentRotationY.current, currentScale),
+                      zIndex: isActive ? normalizedImages.length + 1 : index,
+                      translateZ: isActive ? 60 * currentScale : 0,
+                    }}
+                    initial={{ y: 200, opacity: 0, scaleX: 1, scaleY: 1, x: 0 }}
+                    animate={{
+                      y: 0,
+                      opacity: 1,
+                      scaleX: isActive ? focusedScale : 1,
+                      scaleY: 1,
+                      x: activeOffset,
+                    }}
+                    exit={{ y: 200, opacity: 0, scaleX: 1, scaleY: 1, x: 0 }}
+                    transition={{
+                      delay: hasAnimatedIn.current ? 0 : index * staggerDelay,
+                      duration: hasAnimatedIn.current ? 0.35 : animationDuration,
+                      ease: easeOut, // Apply ease for entrance animation
+                    }}
+                    whileHover={{ opacity: 1, transition: { duration: 0.15 } }}
+                    onClick={() => handleImageClick(index)}
+                    onHoverStart={() => {
+                      // Prevent hover effects while dragging
+                      if (isDragging.current || activeIndex !== null) return;
+                      if (ringRef.current) {
+                        Array.from(ringRef.current.children).forEach((imgEl, i) => {
+                          if (i !== index) {
+                            (imgEl as HTMLElement).style.opacity = `${hoverOpacity}`;
+                          }
+                        });
                       }
-                    });
-                  }
-                }}
-                onHoverEnd={() => {
-                  // Prevent hover effects while dragging
-                  if (isDragging.current) return;
-                  if (ringRef.current) {
-                    Array.from(ringRef.current.children).forEach((imgEl) => {
-                      (imgEl as HTMLElement).style.opacity = `1`;
-                    });
-                  }
-                }}
-              />
-            ))}
+                    }}
+                    onHoverEnd={() => {
+                      // Prevent hover effects while dragging
+                      if (isDragging.current || activeIndex !== null) return;
+                      if (ringRef.current) {
+                        Array.from(ringRef.current.children).forEach((imgEl) => {
+                          (imgEl as HTMLElement).style.opacity = `1`;
+                        });
+                      }
+                    }}
+                  />
+                );
+              })}
           </AnimatePresence>
         </motion.div>
       </div>

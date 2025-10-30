@@ -15,6 +15,7 @@
     "@react-three/fiber": "^9.3.0",
     "@use-gesture/react": "^10.3.1",
     "framer-motion": "^12.23.24",
+    "lightswind": "^3.1.18",
     "next": "^15.5.3",
     "plotly.js": "^3.1.1",
     "react": "^19.1.0",
