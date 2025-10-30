@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import DrawingCanvas from '@/components/inside/DrawingCanvas';
 import ImageGridLayers from '@/components/inside/ImageGridLayers';
-import LoadingIndicator from '@/components/inside/LoadingIndicator';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import FullScreenView from '@/components/ui/FullScreenView';
 import PageHeader from '@/components/ui/PageHeader';
 
