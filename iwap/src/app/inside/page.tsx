@@ -94,7 +94,7 @@ export default function InsidePage() {
 
   return (
     <div 
-      className="relative w-full h-dvh md:h-[calc(100dvh-96px)]"
+      className="relative w-full h-dvh md:h-[calc(100dvh-60px)]"
       style={pageBackgroundStyle}
     >
       {error && (
