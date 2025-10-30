@@ -1,220 +1,168 @@
-// app/ascii/page.tsx
+// src/app/ascii/page.tsx
 'use client';
 
-import React, {
-  useState,
-  useRef,
-  useEffect,
-  useLayoutEffect,
-  useCallback,
-  useTransition,
-} from 'react';
-import PageHeader from '../../components/ui/PageHeader';
-import PngDownloader from '../../components/ascii/PngDownloader';
-import PdfDownloader from '../../components/ascii/PdfDownloader';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
+import PageHeader from '@/components/ui/PageHeader';
+import ImageUploader from '@/components/ui/ImageUploader';
+import LoadingIndicator from '@/components/ui/LoadingIndicator';
+import AsciiArtDisplay from '@/components/ascii/AsciiArtDisplay';
+import UndoIcon from '@/components/ui/icons/UndoIcon';
+import SubmitIcon from '@/components/ui/icons/SubmitIcon';
 
-// --- 상수 정의 ---
+// [수정] 핵심 로직과 타입을 별도의 파일에서 import 합니다.
+import { processImageToAscii, AsciiResult } from '@/components/ascii/AsciiArtProcessor';
 
-// 아스키 문자 집합
-const ASCII_CHARS_LIGHT = ' `^\',.:;-_';
-const ASCII_CHARS_MEDIUM_THIN = 'Il!i~+<>()[]{}|\\/│─';
-const ASCII_CHARS_MEDIUM_LETTERS = 'tfjrxnuczXYUJCLQ0OZ';
-const ASCII_CHARS_MEDIUM_CURVES = 'mwqpdbkhao·○';
-const ASCII_CHARS_MEDIUM_SYMBOLS = '1?*±=≤≥×÷≈√ΣΠΩΔδ∞';
-const ASCII_CHARS_DARK_LETTERS = 'YV#MW&8%B@$';
-const ASCII_CHARS_DARK_BOX = '┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬';
-const ASCII_CHARS_DARKEST_BLOCKS = '░▒▓';
-const ASCII_CHARS = ASCII_CHARS_LIGHT + ASCII_CHARS_MEDIUM_THIN + ASCII_CHARS_MEDIUM_LETTERS + ASCII_CHARS_MEDIUM_CURVES + ASCII_CHARS_MEDIUM_SYMBOLS + ASCII_CHARS_DARK_LETTERS + ASCII_CHARS_DARK_BOX + ASCII_CHARS_DARKEST_BLOCKS;
-
-// 화면 표시용 문자 크기 및 초기 해상도
-const CHAR_WIDTH_PX = 5;
-const CHAR_HEIGHT_PX = 7;
-const FONT_SIZE_PX = 7;
+// --- Page Constants ---
 const DEFAULT_RESOLUTION = 150;
 
-// --- 타입 정의 ---
-type ArtDimensions = { w: number; h: number };
-type AsciiCell = { char: string; color: string };
-
-// --- 헬퍼 함수 ---
-/** 흑백 값을 아스키 문자로 변환 */
-const getCharFromGray = (gray: number): string => {
-  const len = ASCII_CHARS.length || 1;
-  const charIndex = Math.floor((gray / 255) * (len - 1));
-  return ASCII_CHARS[charIndex] || ' ';
-};
-
-// --- 컴포넌트 ---
+// --- Page Controller Component ---
 export default function AsciiPage() {
-  // --- 상태 ---
-  const [asciiArt, setAsciiArt] = useState<React.ReactNode | null>(null);
-  const [asciiData, setAsciiData] = useState<AsciiCell[][] | null>(null);
-  const [artDimensions, setArtDimensions] = useState<ArtDimensions>({ w: 0, h: 0 });
+  const [hasMounted, setHasMounted] = useState(false);
+  const [view, setView] = useState<'upload' | 'loading' | 'visualize'>('upload');
+  const [error, setError] = useState<string | null>(null);
+
+  const [sourceImage, setSourceImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [resolution, setResolution] = useState<number>(DEFAULT_RESOLUTION);
-  const [debouncedResolution, setDebouncedResolution] = useState<number>(DEFAULT_RESOLUTION);
-  const [isPending, startTransition] = useTransition();
-  const [imgSrc, setImgSrc] = useState<string | null>(null);
+  const [asciiResult, setAsciiResult] = useState<AsciiResult | null>(null);
+  
+  const [isReProcessing, setIsReProcessing] = useState(false);
 
-  // --- 참조 ---
-  const dataCache = useRef<Record<number, AsciiCell[][]>>({});
-  const dimCache = useRef<Record<number, ArtDimensions>>({});
-  const jsxCache = useRef<Record<number, React.ReactNode>>({});
-  const canvasRef = useRef<HTMLCanvasElement>(null); // 이미지 처리용
-  const containerRef = useRef<HTMLDivElement>(null); // 아트 표시 컨테이너
-  const artRef = useRef<HTMLDivElement>(null); // 실제 아트 요소
-  const zoomWrapperRef = useRef<HTMLDivElement>(null); // 스케일 래퍼
-  const downloadCanvasRef = useRef<HTMLCanvasElement>(null); // PNG 다운로드용 (자식에게 전달)
+  const hiddenCanvasRef = useRef<HTMLCanvasElement>(null);
 
-  // --- 배경 ---
-  const sectionBackgroundStyle: React.CSSProperties = {
-    backgroundImage: `linear-gradient(rgba(10, 10, 15, 0.7), rgba(10, 10, 15, 0.7)), url('/images/ascii_background.jpg')`,
-    backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed',
-  };
+  useEffect(() => { setHasMounted(true); }, []);
 
-  // --- 이벤트 핸들러 ---
-  const handleResolutionChange: React.ChangeEventHandler<HTMLInputElement> = (e) => setResolution(Number(e.target.value));
-  const handleRenderTrigger = (): void => setDebouncedResolution(resolution);
-  const handleImageUpload: React.ChangeEventHandler<HTMLInputElement> = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    startTransition(() => { setAsciiArt(null); setAsciiData(null); setArtDimensions({ w: 0, h: 0 }); });
-    dataCache.current = {}; dimCache.current = {}; jsxCache.current = {};
-    const reader = new FileReader();
-    reader.onload = (event) => startTransition(() => { setImgSrc(event.target?.result as string); setResolution(DEFAULT_RESOLUTION); setDebouncedResolution(DEFAULT_RESOLUTION); });
-    reader.readAsDataURL(file);
-  };
+  const handleConversion = useCallback(async () => {
+    if (!sourceImage || !hiddenCanvasRef.current) return;
 
-  // --- 핵심 로직 ---
-  /** 이미지를 아스키 아트로 변환 (데이터 및 JSX 생성, 캐싱) */
-  const convertImageToAscii = useCallback((src: string, maxWidth: number): void => {
-      const img = new Image();
-      img.onload = () => {
-        const canvas = canvasRef.current; const ctx = canvas?.getContext('2d');
-        if (!canvas || !ctx) { return; }
-        const CHAR_ASPECT_RATIO = CHAR_WIDTH_PX / CHAR_HEIGHT_PX;
-        const scale = img.width > maxWidth ? maxWidth / img.width : 1;
-        const canvasWidth = Math.floor(img.width * scale);
-        const canvasHeight = Math.floor((img.height * scale) / (1 / CHAR_ASPECT_RATIO));
-        canvas.width = canvasWidth; canvas.height = canvasHeight;
-        ctx.drawImage(img, 0, 0, canvasWidth, canvasHeight);
-        const imageData = ctx.getImageData(0, 0, canvasWidth, canvasHeight); const data = imageData.data;
-        const generatedData: AsciiCell[][] = []; const artLines: React.ReactNode[] = [];
-        for (let y = 0; y < canvasHeight; y++) {
-          const rowData: AsciiCell[] = []; const lineChars: React.ReactNode[] = [];
-          for (let x = 0; x < canvasWidth; x++) {
-            const index = (y * canvasWidth + x) * 4;
-            const r = data[index]; const g = data[index + 1]; const b = data[index + 2];
-            const gray = 0.21 * r + 0.72 * g + 0.07 * b;
-            const char = getCharFromGray(gray); const color = `rgb(${r}, ${g}, ${b})`;
-            rowData.push({ char, color });
-            lineChars.push(<span key={x} style={{ color, display: 'inline-block', width: `${CHAR_WIDTH_PX}px`, height: `${CHAR_HEIGHT_PX}px`, fontSize: `${FONT_SIZE_PX}px`, textAlign: 'center', verticalAlign: 'middle', overflow: 'hidden' }}>{char}</span>);
-          }
-          generatedData.push(rowData);
-          artLines.push(<div key={y} style={{ height: `${CHAR_HEIGHT_PX}px`, lineHeight: `${CHAR_HEIGHT_PX}px`, whiteSpace: 'nowrap' }}>{lineChars}</div>);
-        }
-        const artResult = <>{artLines}</>; const artDims: ArtDimensions = { w: canvasWidth, h: canvasHeight };
-        dataCache.current[maxWidth] = generatedData; dimCache.current[maxWidth] = artDims; jsxCache.current[maxWidth] = artResult;
-        startTransition(() => { setAsciiData(generatedData); setArtDimensions(artDims); setAsciiArt(artResult); });
-      };
-      img.onerror = () => console.error("이미지 로딩 실패");
-      img.src = src;
-    }, [startTransition]
-  );
-
-  // --- 이펙트 ---
-  /** 해상도 변경 시 캐시 확인 후 렌더링 또는 변환 실행 */
-  useEffect(() => {
-    if (!imgSrc) return;
-    const cachedJsx = jsxCache.current[debouncedResolution]; const cachedDims = dimCache.current[debouncedResolution]; const cachedData = dataCache.current[debouncedResolution];
-    if (cachedJsx && cachedDims && cachedData) {
-      startTransition(() => { setAsciiArt(cachedJsx); setArtDimensions(cachedDims); setAsciiData(cachedData); });
-    } else if (imgSrc) {
-      convertImageToAscii(imgSrc, debouncedResolution);
+    const imageUrl = URL.createObjectURL(sourceImage);
+    try {
+      // [수정] import한 함수를 직접 호출합니다.
+      const result = await processImageToAscii(hiddenCanvasRef.current, imageUrl, resolution);
+      setAsciiResult({ ...result, initialResolution: resolution });
+      setView('visualize');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "An unknown error occurred.");
+      setView('upload');
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+      setIsReProcessing(false);
     }
-  }, [imgSrc, debouncedResolution, convertImageToAscii, startTransition]);
+  }, [sourceImage, resolution]);
 
-  /** 아트 크기 변경 시 화면 스케일(줌) 조정 */
-  useLayoutEffect(() => {
-    const container = containerRef.current; const art = artRef.current; const zoomWrapper = zoomWrapperRef.current;
-    if (!container || !art || !zoomWrapper || artDimensions.w === 0) { if(art) art.style.transform = 'scale(1)'; return; }
-    const calculateAndApplyScale = () => {
-      const containerWidth = container.clientWidth; const containerHeight = container.clientHeight;
-      const artNatWidth = artDimensions.w * CHAR_WIDTH_PX; const artNatHeight = artDimensions.h * CHAR_HEIGHT_PX;
-      if (artNatWidth === 0 || artNatHeight === 0) return;
-      const scale = Math.min(containerWidth / artNatWidth, containerHeight / artNatHeight);
-      const scaledWidth = artNatWidth * scale; const scaledHeight = artNatHeight * scale;
-      zoomWrapper.style.width = `${scaledWidth}px`; zoomWrapper.style.height = `${scaledHeight}px`;
-      art.style.width = `${artNatWidth}px`; art.style.height = `${artNatHeight}px`;
-      art.style.transform = `scale(${scale})`; art.style.transformOrigin = 'top left';
-    };
-    calculateAndApplyScale();
-    window.addEventListener('resize', calculateAndApplyScale);
-    return () => window.removeEventListener('resize', calculateAndApplyScale);
-  }, [artDimensions]);
+  useEffect(() => {
+    if (view === 'loading' || isReProcessing) {
+      handleConversion();
+    }
+  }, [view, isReProcessing, handleConversion]);
 
+  const handleFileSelect = useCallback((file: File | null) => {
+    setError(null);
+    setAsciiResult(null);
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
 
-  // --- 렌더링 ---
-  return (
-    <div className="relative flex flex-col w-full h-dvh md:h-[calc(100dvh-60px)] text-gray-200 box-border" style={sectionBackgroundStyle}>
-      {/* 제목 영역 */}
-      <div className="flex-shrink-0 relative m-5 rounded-md overflow-hidden h-[100px] bg-black/50">
-        <PageHeader title="ASCi!" subtitle="이미지를 텍스트로 표현" goBack={true} padding="p-5" />
-      </div>
+    if (file) {
+      setSourceImage(file);
+      setPreviewUrl(URL.createObjectURL(file));
+      setResolution(DEFAULT_RESOLUTION);
+    } else {
+      setSourceImage(null);
+      setPreviewUrl(null);
+    }
+  }, [previewUrl]);
 
-      {/* 아트 표시 영역 */}
-      <div ref={containerRef} className="flex-1 grid place-items-center overflow-hidden bg-black min-h-0 rounded-md mx-5 mb-5">
-        <div ref={zoomWrapperRef}>
-          {asciiArt && (<div ref={artRef} style={{ fontFamily: 'monospace' }}>{asciiArt}</div>)}
-        </div>
-        {isPending && !asciiArt && (<p>변환 중...</p>)}
-      </div>
+  const handleConversionStart = () => {
+    if (!sourceImage) {
+      setError("Please select an image first.");
+      return;
+    }
+    setView('loading');
+  };
 
-      {/* 숨겨진 캔버스들 */}
-      <canvas ref={canvasRef} style={{ display: 'none' }}></canvas>
-      <canvas ref={downloadCanvasRef} style={{ display: 'none' }}></canvas> {/* PNG 컴포넌트가 사용 */}
+  const handleReturnToUpload = useCallback(() => {
+    handleFileSelect(null);
+    setView('upload');
+  }, [handleFileSelect]);
 
-      {/* 설정 영역 */}
-      <div className="flex-shrink-0 relative mx-5 mb-5 rounded-md overflow-hidden bg-black/50">
-        <div className="p-5">
-          <div className="flex gap-5 flex-wrap">
-            {/* 파일 선택 */}
-            <fieldset className="border border-gray-700 rounded-md p-2.5 bg-black/20">
-              <legend className="px-1 font-semibold text-gray-300" style={{ fontSize: 'clamp(0.875rem, 2.5vmin, 1.1rem)' }}>이미지 선택</legend>
-              <label htmlFor="file-upload" className="inline-block px-4 py-2 bg-gray-700 border border-gray-600 rounded-md cursor-pointer text-gray-200 hover:bg-gray-600 transition-colors">파일 선택...</label>
-              <input id="file-upload" type="file" accept="image/*" onChange={handleImageUpload} className="hidden"/>
-            </fieldset>
+  const handleResolutionChange = (newResolution: number) => {
+    setResolution(newResolution);
+    setIsReProcessing(true);
+  };
 
-            {/* 해상도 조절 */}
-            <fieldset className="border border-gray-700 rounded-md p-2.5 flex-1 min-w-[300px] bg-black/20">
-              <legend className="px-1 font-semibold text-gray-300" style={{ fontSize: 'clamp(0.875rem, 2.5vmin, 1.1rem)' }}>
-                해상도 조절 {isPending ? (<span className="text-orange-400 ml-2">(변환 중...)</span>) : null}
-              </legend>
-              <div className="flex items-center gap-2.5">
-                <input type="range" min="30" max="500" step="1" value={resolution} onChange={handleResolutionChange} onMouseUp={handleRenderTrigger} onTouchEnd={handleRenderTrigger} disabled={!imgSrc || isPending} className="flex-1"/>
-                <span className="w-10 text-right">{resolution}px</span>
-                
-                {/* === 다운로드 영역 === */}
-                <div className="flex items-center gap-2.5 border-l border-gray-600 pl-2.5">
-                  <PngDownloader
-                    asciiData={asciiData}
-                    artDimensions={artDimensions}
-                    downloadCanvasRef={downloadCanvasRef}
-                    zoomWrapperRef={zoomWrapperRef}
-                    disabled={!asciiData || isPending}
-                  />
-                  <PdfDownloader
-                    asciiData={asciiData}
-                    artDimensions={artDimensions}
-                    disabled={!asciiData || isPending}
-                  />
-                </div>
-                {/* === 다운로드 영역 끝 === */}
+  const pageBackgroundStyle = {
+    backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113), url('/images/ascii_background.jpg')`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed',
+  };
 
+  if (!hasMounted) return null;
+
+  const renderContent = () => {
+    switch (view) {
+      case 'loading':
+        return <LoadingIndicator text="변환 중..." />;
+      case 'upload':
+        return (
+          <div className="absolute inset-0 flex flex-col">
+            <div className="w-full h-9 bg-stone-300 flex justify-between items-center mb-[-1px] flex-shrink-0">
+              <div className="flex gap-3 pl-3">
+                <button onClick={() => handleFileSelect(null)} disabled={!previewUrl} className="disabled:opacity-40"><UndoIcon /></button>
               </div>
-            </fieldset>
+              <div className="flex gap-3 pr-3">
+                <button onClick={handleConversionStart} disabled={!previewUrl}><SubmitIcon /></button>
+              </div>
+            </div>
+            <div className="w-full flex-grow relative">
+              <ImageUploader
+                id="ascii-image-upload"
+                onFileSelect={handleFileSelect}
+                previewUrl={previewUrl}
+                title="이미지 선택"
+                subtitle="파일을 드래그하거나 클릭하여 선택"
+              />
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" style={pageBackgroundStyle}>
+      {error && (
+        <p className="absolute top-4 left-1/2 -translate-x-1/2 text-red-500 bg-black/50 p-2 rounded z-30 text-center">
+          {error}
+        </p>
+      )}
+
+      {view === 'visualize' && asciiResult ? (
+        <AsciiArtDisplay
+          asciiResult={asciiResult}
+          onClose={handleReturnToUpload}
+          onResolutionChange={handleResolutionChange}
+          isProcessing={isReProcessing}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center p-4 sm:p-8">
+          <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
+            <div className="w-full h-full pt-[100px]">
+              <PageHeader title="ASCi!" subtitle="이미지를 텍스트로 표현" goBack={true} padding='p-0' />
+              <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
+                <h3 className="font-semibold text-white flex-shrink-0" style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}>
+                  이미지를 업로드하세요
+                </h3>
+                <div className="relative min-h-0">
+                  {renderContent()}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      )}
+      
+      <canvas ref={hiddenCanvasRef} style={{ display: 'none' }}></canvas>
     </div>
   );
 }

@@ -106,7 +106,7 @@ export default function PdfDownloader({
     <button
       onClick={downloadAsPdf}
       disabled={disabled}
-      className="px-3 py-1 bg-green-600 hover:bg-green-500 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+      className="px-3 py-1 bg-green-600 hover:bg-green-500 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
       title="현재 해상도의 ASCII 아트를 벡터 PDF 파일로 다운로드합니다."
     >
       PDF
