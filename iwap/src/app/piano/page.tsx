@@ -174,39 +174,69 @@ export default function VoiceToPiano() {
             />
           </div>
         ) : (
-          <div className="flex flex-col items-center w-full gap-6">
-            <p className="text-lg">{status}</p>
-            {transport ? (
-              <MidiPlayerBar
-                isPlaying={isTransportPlaying}
-                duration={transportDuration}
-                position={transportPosition}
-                onTogglePlay={handleTogglePlayback}
-                onSeek={handleSeek}
-                disabled={!transport || transportDuration <= 0}
-                className="w-full max-w-2xl -mt-3"
-              />
-            ) : null}
-            <div
-              className="relative flex items-center justify-center w-full overflow-visible"
-              style={{
-                height: "120px",
-                paddingTop: "25px",
-                paddingBottom: "30px",
-              }}
-            >
+          <>
+            <div className="hidden w-full flex-col items-center gap-6 md:flex">
+              {status ? (
+                <p className="text-lg text-center whitespace-nowrap">{status}</p>
+              ) : null}
+              {transport ? (
+                <MidiPlayerBar
+                  isPlaying={isTransportPlaying}
+                  duration={transportDuration}
+                  position={transportPosition}
+                  onTogglePlay={handleTogglePlayback}
+                  onSeek={handleSeek}
+                  disabled={!transport || transportDuration <= 0}
+                  className="w-full max-w-4xl -mt-3"
+                />
+              ) : null}
               <div
-                className="overflow-visible"
+                className="relative flex items-center justify-center w-full overflow-visible md:h-[10px] md:py-6 min-h-[30vh] py-10"
                 style={{
-                  transform: "scale(0.85)",
-                  transformOrigin: "top center",
-                  overflow: "visible",
+                  height: "120px",
+                  paddingTop: "25px",
+                  paddingBottom: "30px",
                 }}
               >
-                <Piano activeNotes={activeNotesRef.current} />
+                <div
+                  className="overflow-visible"
+                  style={{
+                    transform: "scale(0.85)",
+                    transformOrigin: "top center",
+                    overflow: "visible",
+                  }}
+                >
+                  <Piano activeNotes={activeNotesRef.current} />
+                </div>
               </div>
             </div>
-          </div>
+
+            <div className="relative flex w-full items-center justify-center md:hidden">
+              <div className="relative flex w-full items-center justify-center min-h-[70vh] py-10">
+                <div className="transform rotate-90 origin-center scale-[0.4] translate-y-8">
+                  <Piano activeNotes={activeNotesRef.current} />
+                </div>
+                {transport ? (
+                  <div className="absolute left-4 top-1/2 -translate-y-[60%] -translate-x-15 transform rotate-90 scale-[0.85]">
+                    <MidiPlayerBar
+                      isPlaying={isTransportPlaying}
+                      duration={transportDuration}
+                      position={transportPosition}
+                      onTogglePlay={handleTogglePlayback}
+                      onSeek={handleSeek}
+                      disabled={!transport || transportDuration <= 0}
+                      className="w-[450px] h-[70px]"
+                    />
+                  </div>
+                ) : null}
+                {status ? (
+                  <div className="absolute left-6 top-10 transform rotate-90 translate-x-50 md:translate-y-0 translate-y-55 md:translate-y-0">
+                    <p className="text-base text-center whitespace-nowrap">{status}</p>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </>
         )}
       </main>
       </FullScreenView>

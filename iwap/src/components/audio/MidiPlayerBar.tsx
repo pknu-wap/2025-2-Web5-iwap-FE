@@ -47,7 +47,7 @@ export default function MidiPlayerBar({
 
   return (
     <div
-      className={`w-full rounded-xl bg-white/10 backdrop-blur border border-white/20 p-4 text-white ${className}`}
+      className={`rounded-xl bg-white/10 backdrop-blur border border-white/20 p-4 text-white -translate-y-30 md:translate-y-0 ${className}`}
     >
       <div className="flex items-center justify-between text-sm mb-2">
         <button

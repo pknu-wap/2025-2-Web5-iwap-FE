@@ -119,7 +119,7 @@ export default function RecorderButton({
       {/* 진행 바 */}
       {isRecording && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 lex flex-col items-center -mt-12">
-          <div className="w-[550px] h-[12px] bg-gray-200 rounded-full overflow-hidden">
+          <div className="w-[300px] md:w-[550px] h-[12px] bg-gray-200 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-[#89C7E6] to-[#DD78E0] transition-all duration-1000 ease-linear"
               style={{ width: `${(elapsed % 60) * (100 / 60)}%` }}
