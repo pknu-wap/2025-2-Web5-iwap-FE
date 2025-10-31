@@ -32,6 +32,21 @@ export default function PageHeader({
   return (
     <header className={`${positionClasses} w-full flex justify-between items-end text-white ${padding}`}>
       
+      {/* 제목과 부제를 묶는 영역 */}
+      {(title || subtitle) && (
+        <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-3">
+          {title && (
+            <h1 className="text-5xl font-bold">
+              {title}
+            </h1>
+          )}
+          {subtitle && (
+            <p className="mt-1 sm:mt-0 text-sm font-light">
+              {subtitle}
+            </p>
+          )}
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-3">
         <h1 className="text-5xl font-bold">
           {title}
