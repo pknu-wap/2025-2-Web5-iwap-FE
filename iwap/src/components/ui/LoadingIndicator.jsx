@@ -1,4 +1,4 @@
-// components/inside/LoadingIndicator.jsx
+// components/ui/LoadingIndicator.jsx
 'use client';
 
 /** 간단한 SVG 스피너 아이콘 */

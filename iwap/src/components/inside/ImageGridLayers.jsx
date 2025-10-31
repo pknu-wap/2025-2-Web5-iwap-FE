@@ -6,11 +6,13 @@ import { useDrag } from '@use-gesture/react';
 import { useSpring, animated } from '@react-spring/three';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
-import SideNavButton from '@/components/ui/SideNavButton';
+import ProgressBar from '@/components/inside/ProgressBar';
 
 // --- 상수 정의 ---
 const RENDER_WINDOW_SIZE = 50;
 const MAX_VERTICAL_ROTATION = Math.PI / 4;
+const BASE_SPACING = 25;
+const INITIAL_ROTATION = [-0.125, 0.6, 0];
 
 // --- 내부 3D 컴포넌트: AnimatedPlane (단일 이미지 레이어) ---
 function AnimatedPlane({ texture, position, width, height, opacity }) {
@@ -25,8 +27,7 @@ function AnimatedPlane({ texture, position, width, height, opacity }) {
 // --- 내부 3D 컴포넌트: Scene (전체 3D 공간) ---
 function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
   const [visibleLayers, setVisibleLayers] = useState([]);
-  const { viewport } = useThree();
-
+  
   useFrame(() => {
     if (!layers || layers.length === 0) return;
     
@@ -46,15 +47,23 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
       <animated.group rotation={rotation}>
         {visibleLayers.map((layer) => {
           const position = animatedFocusIndex.to(fi => {
+            if (!layers || layers.length < 2) return [0, 0, 0];
+            const floorIndex = Math.floor(fi);
+            const ceilIndex = Math.min(layers.length - 1, Math.ceil(fi));
+            const fraction = fi - floorIndex;
+            const x1 = layers[floorIndex].cumulativeX;
+            const x2 = layers[ceilIndex].cumulativeX;
+            const focusedX = x1 + (x2 - x1) * fraction;
+            const finalX = layer.cumulativeX - focusedX;
             const distance = layer.originalIndex - fi;
-            const spacing = Math.max(30, Math.min(viewport.width / 2.5, 50));
-            return [distance * spacing, 0, -Math.abs(distance) * 10];
+            const finalZ = -Math.abs(distance) * 10;
+            return [finalX, 0, finalZ];
           });
           
           return layer.isTextLayer ? (
             <animated.group position={position} key={layer.id}>
               <Text 
-                font="/fonts/PretendardVariable.ttf"
+                font="/fonts/static/Pretendard-Thin.otf"
                 fontSize={100} color="white" anchorX="center" anchorY="middle">
                 {layer.text}
                 <animated.meshStandardMaterial color="white" opacity={opacity} transparent />
@@ -83,7 +92,7 @@ export default function ImageGridLayers({ layersData }) {
   const [focusAnimationConfig, setFocusAnimationConfig] = useState({ mass: 1, tension: 90, friction: 30, clamp: true });
   
   const [{ rotation, opacity }, api] = useSpring(() => ({
-    rotation: [-0.125, 0.6, 0],
+    rotation: INITIAL_ROTATION,
     opacity: 1,
     config: { mass: 1, tension: 120, friction: 30 },
   }));
@@ -95,9 +104,11 @@ export default function ImageGridLayers({ layersData }) {
     onRest: () => api.start({ opacity: 1 }),
   });
 
-  const layers = useMemo(() => {
+  const { layers, sizeChangeIndices } = useMemo(() => {
     try {
-      if (!layersData || !layersData.layers || typeof layersData.layers !== 'object') return [];
+      if (!layersData || !layersData.layers || typeof layersData.layers !== 'object') {
+        return { layers: [], sizeChangeIndices: [] };
+      }
       
       const actualLayers = layersData.layers;
 
@@ -140,10 +151,35 @@ export default function ImageGridLayers({ layersData }) {
           text: predictedIndex.toString(), originalIndex: processedLayers.length,
         });
       }
-      return processedLayers;
+
+      const layersWithPositions = [];
+      let currentX = 0;
+      processedLayers.forEach((layer, i) => {
+        const prevLayer = i > 0 ? processedLayers[i - 1] : null;
+        const prevWidth = prevLayer ? (prevLayer.width || 100) : 0;
+        const currentWidth = layer.width || 100;
+        const spacing = prevLayer ? (prevWidth / 2) + (currentWidth / 2) + BASE_SPACING : 0;
+        currentX += spacing;
+        layersWithPositions.push({ ...layer, cumulativeX: currentX });
+      });
+
+      const sizeChangeIndices = [];
+      layersWithPositions.forEach((layer, i) => {
+        if (i === 0) return;
+        const prevLayer = layersWithPositions[i - 1];
+        const prevW = prevLayer.width || (prevLayer.isTextLayer ? -1 : 0);
+        const prevH = prevLayer.height || (prevLayer.isTextLayer ? -1 : 0);
+        const currW = layer.width || (layer.isTextLayer ? -1 : 0);
+        const currH = layer.height || (layer.isTextLayer ? -1 : 0);
+        if (prevW !== currW || prevH !== currH) {
+          sizeChangeIndices.push(i);
+        }
+      });
+      
+      return { layers: layersWithPositions, sizeChangeIndices };
     } catch (error) {
       console.error('[ImageGridLayers] Error: Failed to process and memoize layers:', error);
-      return [];
+      return { layers: [], sizeChangeIndices: [] };
     }
   }, [layersData]);
 
@@ -184,7 +220,7 @@ export default function ImageGridLayers({ layersData }) {
         api.start({ opacity: 1 });
       }
       if (dragModeRef.current !== 'horizontal') {
-        api.start({ rotation: [startRotation.current[0], startRotation.current[1], startRotation.current[2]] });
+        api.start({ rotation: INITIAL_ROTATION });
       }
     }
   });
@@ -194,29 +230,34 @@ export default function ImageGridLayers({ layersData }) {
     setFocusLayerIndex(targetIndex);
   };
   
+  const handleSeek = (targetIndex) => {
+    setFocusAnimationConfig({ mass: 1, tension: 120, friction: 40 });
+    setFocusLayerIndex(targetIndex);
+  };
+  
   if (!layers || layers.length === 0) return null;
 
   return (
-    <div 
-      className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
-      {...bind()}
-    >
-      <Canvas
-        gl={{ alpha: true }}
-        style={{ background: 'transparent' }}
-        camera={{ position: [0, 20, 150], fov: 60 }}
-        onCreated={({ scene }) => { scene.background = null; }}
+    <div className="w-full h-full relative">
+      <div 
+        className="w-full h-full cursor-grab active:cursor-grabbing touch-none"
+        {...bind()}
       >
-        <Scene layers={layers} animatedFocusIndex={animatedFocusIndex} rotation={rotation} opacity={opacity}/>
-      </Canvas>
+        <Canvas
+          gl={{ alpha: true }}
+          style={{ background: 'transparent' }}
+          camera={{ position: [0, 20, 150], fov: 60 }}
+          onCreated={({ scene }) => { scene.background = null; }}
+        >
+          <Scene layers={layers} animatedFocusIndex={animatedFocusIndex} rotation={rotation} opacity={opacity}/>
+        </Canvas>
+      </div>
 
-      <SideNavButton 
-        direction="left"
-        onClick={(e) => { e.stopPropagation(); handleNavClick(0); }}
-      />
-      <SideNavButton 
-        direction="right"
-        onClick={(e) => { e.stopPropagation(); handleNavClick(layers.length - 1); }}
+      <ProgressBar 
+        currentIndex={focusLayerIndex}
+        totalLayers={layers.length}
+        onSeek={handleSeek}
+        sizeChangeIndices={sizeChangeIndices}
       />
     </div>
   );
