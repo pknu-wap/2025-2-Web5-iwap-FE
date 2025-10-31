@@ -93,3 +93,37 @@ body {
     opacity: 0;
   }
 }
+@layer utilities {
+  .slide-h { height: clamp(320px, 58vh, 520px); }
+  .slide-w { width: clamp(220px, 28vw, 360px); }
+  .slide-w-active { width: clamp(320px, 64vw, 900px); }
+}
+
+/* Swiper 기본 스타일 */
+@import "swiper/css";
+@import "swiper/css/autoplay";
+@import "swiper/css/pagination";
+
+/* 카드 그라데이션 오버레이 */
+.card-overlay::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: none;
+  opacity: 0;
+  transition: opacity .45s ease;
+}
+.card-hover .card-overlay::after { opacity: 1; }
+
+/* 활성/호버 시 이미지 확대 */
+.card-img { transition: transform .6s ease; }
+.card-hover .card-img { transform: scale(1.06); }
+
+/* Swiper bullets */
+.swiper-pagination-bullet {
+  width: 10px; height: 10px;
+  background: rgba(31,31,31,.3); opacity: 1;
+}
+.swiper-pagination-bullet-active {
+  background: rgba(31,31,31,.8); transform: scale(1.2);
+}

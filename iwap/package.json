@@ -15,7 +15,9 @@
     "@react-three/fiber": "^9.3.0",
     "@tonejs/midi": "^2.0.28",
     "@use-gesture/react": "^10.3.1",
+    "framer-motion": "^12.23.24",
     "jspdf": "^3.0.3",
+    "lightswind": "^3.1.18",
     "next": "^15.5.3",
     "plotly.js": "^3.1.1",
     "react": "^19.1.0",
@@ -25,7 +27,10 @@
     "siriwave": "^2.4.0",
     "swiper": "^12.0.2",
     "three": "^0.180.0",
-    "tone": "^15.1.22"
+    "tone": "^15.1.22",
+    "svg-pathdata": "^8.0.0",
+    "swiper": "^12.0.3",
+    "three": "^0.180.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
