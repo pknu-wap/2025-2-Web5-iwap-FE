@@ -105,14 +105,20 @@ export default function PianoOrchestraPage() {
 
   // Background chord color feedback
   useEffect(() => {
-    if (!chords.length) return;
-    const id = Tone.Transport.scheduleRepeat((time) => {
-      const t = Tone.Transport.seconds;
-      const c = chords.find((c) => t >= c.start && t < c.start + c.duration);
-      if (c) setChordBg(hueAt(c.start));
-    }, 0.1);
-    return () => Tone.Transport.clear(id);
-  }, [chords]);
+  if (!chords.length) return;
+
+  const id = Tone.Transport.scheduleRepeat((time) => {
+    const t = Tone.Transport.seconds;
+    const c = chords.find((c) => t >= c.start && t < c.start + c.duration);
+    if (c) setChordBg(hueAt(c.start));
+  }, 0.1);
+
+  // cleanup에서 Tone.Transport.clear만 호출하고 void 반환
+  return () => {
+    Tone.Transport.clear(id);
+  };
+}, [chords]);
+
 
   const stopAll = useCallback(() => {
     Tone.Transport.stop();
@@ -174,7 +180,7 @@ export default function PianoOrchestraPage() {
           // Sampler path
           (synth as any).triggerAttackRelease(Tone.Frequency(ev.note).toNote(), ev.dur, time, ev.vel);
         }
-      }, events.map((e) => [e.time, e] as any));
+      }, events.map(( e : any ) => [e.time, e] as any));
 
       part.start(0);
       parts[t.id || `track${idx}`] = part;
