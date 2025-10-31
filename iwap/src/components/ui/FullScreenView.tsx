@@ -60,8 +60,6 @@ export default function FullScreenView({
         onClose={onClose}
         goBack={goBack}
         padding={padding}
-        className="text-black"
-        darkBackground={false}
       />
       
       {/* 컨텐츠 영역 */}
