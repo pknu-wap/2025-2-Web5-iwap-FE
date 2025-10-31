@@ -47,14 +47,7 @@ export default function PageHeader({
           )}
         </div>
       )}
-      <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-3">
-        <h1 className="text-5xl font-bold">
-          {title}
-        </h1>
-        <p className="mt-1 sm:mt-0 text-sm font-light">
-          {subtitle}
-        </p>
-      </div>
+
 
       {(goBack || onClose) && (
         <div className="flex-shrink-0 pb-0">
