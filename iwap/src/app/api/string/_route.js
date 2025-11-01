@@ -3,7 +3,7 @@
  */
 import { NextResponse } from 'next/server';
 
-const BACKEND_URL = process.env.BACKEND_API_URL;
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 export async function POST(request) {
   if (!BACKEND_URL) {
