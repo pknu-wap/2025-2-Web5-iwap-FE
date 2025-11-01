@@ -118,7 +118,7 @@ export default function AsciiArtDisplay({
   // --- 슬라이더 로직 끝 ---
 
   const backgroundStyle = {
-    backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113), url('/images/ascii_background.jpg')`,
+    backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #FFFFFF), url('/images/ascii_background.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',

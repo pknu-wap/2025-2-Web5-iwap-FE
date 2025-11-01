@@ -116,7 +116,7 @@ export default function Home() {
         >
           {/* 텍스트 블록 (그룹 좌측) */}
           <div className="flex flex-col items-start">
-            <Image src="/images/home/wap.png" alt="images/home/wap" width={148} height={45} className="w-[148px] h-[45px] mb-4" />
+            <Image src="/images/home/wap.svg" alt="images/home/wap" width={148} height={45} className="w-[148px] h-[45px] mb-4" />
             <h1
               ref={h1Ref}
               className="relative text-white text-left whitespace-pre-line text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px] cursor-default pb-2"

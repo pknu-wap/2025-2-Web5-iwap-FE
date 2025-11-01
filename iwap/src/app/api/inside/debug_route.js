@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
-const BACKEND_URL = process.env.BACKEND_API_URL;
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 
 // --- 헬퍼 함수: 디렉터리 및 파일 관리 ---
 
@@ -76,7 +76,7 @@ function customJsonStringify(obj) {
 
 export async function POST(request) {
   // 환경 변수 로드 확인
-  console.log('[DEBUG] BACKEND_URL:', process.env.BACKEND_API_URL);
+  console.log('[DEBUG] BACKEND_URL:', process.env.NEXT_PUBLIC_BACKEND_API_URL);
 
   const url = request.nextUrl.pathname;
   let logMessage = `CLIENT REQUEST: POST, URL: ${url}`;

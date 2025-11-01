@@ -191,19 +191,14 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
           {images.map((item, index) => {
             const isActive = activeIndex === index;
             const cardWidth = isExpanded && isActive ? cardDimensions.focusedWidth : cardDimensions.width;
-            const collapsedMargin = !isExpanded && index > 0 ? -(cardDimensions.width - VISIBLE_STACK_OFFSET) : GAP;
-            const expandedExtraSpacing =
-              isExpanded && activeIndex !== null && index > activeIndex
-                ? cardDimensions.focusedWidth - cardDimensions.width
-                : 0;
-            const marginLeft = isExpanded ? GAP + expandedExtraSpacing : collapsedMargin;
+            const marginLeft = !isExpanded && index > 0 ? -(cardDimensions.width - VISIBLE_STACK_OFFSET) : GAP;
 
             const cardStyle: React.CSSProperties = {
               width: `${cardWidth}px`,
               height: '100%',
               zIndex: index,
               marginLeft: index > 0 ? `${marginLeft}px` : (isExpanded ? `${GAP}px` : '0'),
-              transition: 'width 0.5s ease-in-out, margin-left 0.6s ease-in-out',
+              transition: 'width 0.5s ease-in-out, margin-left 1s ease-in-out',
             };
 
             return (
@@ -221,12 +216,7 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
           <div
             className="flex-shrink-0"
             style={{
-              width:
-                isExpanded
-                  ? activeIndex !== null && activeIndex === images.length - 1
-                    ? cardDimensions.focusedWidth
-                    : cardDimensions.width
-                  : 0,
+              width: isExpanded ? cardDimensions.width : 0,
               height: '100%',
               marginLeft: isExpanded ? `${GAP}px` : '0',
               transition: 'width 1s ease-in-out, margin-left 1s ease-in-out',

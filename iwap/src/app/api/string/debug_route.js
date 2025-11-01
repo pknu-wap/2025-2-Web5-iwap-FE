@@ -6,7 +6,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
-const BACKEND_URL = process.env.BACKEND_API_URL;
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
 const DEBUG_DIR = path.join(process.cwd(), 'debug_files', 'string');
 
 // --- 헬퍼 함수: 디렉터리 및 파일 관리 ---
