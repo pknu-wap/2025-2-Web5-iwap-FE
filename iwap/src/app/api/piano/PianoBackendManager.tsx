@@ -76,7 +76,7 @@ const getOrCreateSampler = async () => {
     release: 1,
     baseUrl: "https://tonejs.github.io/audio/salamander/",
   });
-
+  
   if (USE_FX) {
     // Optional FX chain (can be disabled via env)
     const mobile = isMobileDevice();
@@ -106,6 +106,11 @@ export default function PianoBackendManager({
   onTransportReady,
   onTransportReset,
 }: PianoBackendManagerProps) {
+
+  useEffect(() => {
+    Tone.getDestination().volume.value = -20; // dB 단위
+  }, []);
+
   useEffect(() => {
     if (!audioUrl) return;
 

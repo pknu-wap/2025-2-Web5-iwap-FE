@@ -82,7 +82,7 @@ export default function MidiPlayerBar({
     disabled || !Number.isFinite(duration) || duration <= 0;
 
   return (
-    <div className="fixed bottom-20 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
+    <div className="fixed bottom-5 md:bottom-20 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
       <div
         className={`pointer-events-auto w-full max-w-2xl flex flex-col items-center p-4 text-white ${className}`}
       >
@@ -91,7 +91,7 @@ export default function MidiPlayerBar({
           type="button"
           onClick={onTogglePlay}
           disabled={disabled}
-          className="flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40"
+          className="flex h-12 w-12 translate-y-7 md:translate-y-0 items-center justify-center rounded-full transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40"
         >
           {disabled ? <SpinnerIcon /> : isPlaying ? <PauseIcon /> : <PlayIcon />}
         </button>
