@@ -4,6 +4,7 @@
 import "./globals.css";
 import localFont from "next/font/local";
 import { usePathname } from "next/navigation";
+import "@/components/lightswind.css";
 import Link from "next/link";
 
 const Pretendard = localFont({

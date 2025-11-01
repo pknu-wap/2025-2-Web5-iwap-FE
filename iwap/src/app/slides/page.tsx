@@ -10,7 +10,7 @@ const images = [
   { src: "/images/home/slides/slide3.jpg", link: "/piano", text: "P!ano", description: "음성을 피아노로 변환" },
   { src: "/images/home/slides/slide4.jpg", link: "/string", text: "Str!ng", description: "선들로 이미지를 표현" },
   { src: "/images/home/slides/slide5.jpg", link: "/ascii", text: "ASCi!", description: "이미지를 텍스트로 표현" },
-  { src: "/images/home/slides/slide6.jpg", link: "/instrument", text: "!nstrument", description: "손동작으로 음악을 연주하는 오케스트라." },
+  { src: "/images/home/slides/slide6.jpg", link: "/slides/6", text: "작품 6", description: "여섯 번째 작품에 대한 설명입니다." },
 ];
 
 export default function SlidesPage() {
