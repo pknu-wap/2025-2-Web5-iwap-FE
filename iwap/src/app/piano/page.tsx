@@ -140,6 +140,7 @@ export default function VoiceToPiano() {
 
   // 🎵 오디오 업로드 및 MIDI 변환 요청은 PianoBackendManager에서 처리됩니다.
 
+  const hasTransport = Boolean(transport);
 
   return (
     <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]">
@@ -179,17 +180,6 @@ export default function VoiceToPiano() {
               {status ? (
                 <p className="text-lg text-center whitespace-nowrap">{status}</p>
               ) : null}
-              {transport ? (
-                <MidiPlayerBar
-                  isPlaying={isTransportPlaying}
-                  duration={transportDuration}
-                  position={transportPosition}
-                  onTogglePlay={handleTogglePlayback}
-                  onSeek={handleSeek}
-                  disabled={!transport || transportDuration <= 0}
-                  className="w-full max-w-4xl -mt-3"
-                />
-              ) : null}
               <div
                 className="relative flex items-center justify-center w-full overflow-visible md:h-[10px] md:py-6 min-h-[30vh] py-10"
                 style={{
@@ -216,19 +206,6 @@ export default function VoiceToPiano() {
                 <div className="transform rotate-90 origin-center scale-[0.4] translate-y-8">
                   <Piano activeNotes={activeNotesRef.current} />
                 </div>
-                {transport ? (
-                  <div className="absolute left-4 top-1/2 -translate-y-[60%] -translate-x-15 transform rotate-90 scale-[0.85]">
-                    <MidiPlayerBar
-                      isPlaying={isTransportPlaying}
-                      duration={transportDuration}
-                      position={transportPosition}
-                      onTogglePlay={handleTogglePlayback}
-                      onSeek={handleSeek}
-                      disabled={!transport || transportDuration <= 0}
-                      className="w-[450px] h-[70px]"
-                    />
-                  </div>
-                ) : null}
                 {status ? (
                   <div className="absolute left-6 top-10 transform rotate-90 translate-x-50 md:translate-y-0 translate-y-55 md:translate-y-0">
                     <p className="text-base text-center whitespace-nowrap">{status}</p>
@@ -239,6 +216,17 @@ export default function VoiceToPiano() {
           </>
         )}
       </main>
+      {hasTransport ? (
+        <MidiPlayerBar
+          isPlaying={isTransportPlaying}
+          duration={transportDuration}
+          position={transportPosition}
+          onTogglePlay={handleTogglePlayback}
+          onSeek={handleSeek}
+          disabled={!hasTransport || transportDuration <= 0}
+          className="max-w-4xl"
+        />
+      ) : null}
       </FullScreenView>
     </div>
   );
