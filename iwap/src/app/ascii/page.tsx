@@ -6,7 +6,7 @@ import PageHeader from '@/components/ui/PageHeader';
 import ImageUploader from '@/components/ui/ImageUploader';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import AsciiArtDisplay from '@/components/ascii/AsciiArtDisplay';
-import UndoIcon from '@/components/ui/icons/UndoIcon';
+import TrashIcon from '@/components/ui/icons/TrashIcon';
 import SubmitIcon from '@/components/ui/icons/SubmitIcon';
 
 // [수정] 핵심 로직과 타입을 별도의 파일에서 import 합니다.
@@ -90,7 +90,7 @@ export default function AsciiPage() {
   };
 
   const pageBackgroundStyle = {
-    backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113), url('/images/ascii_background.jpg')`,
+    backgroundImage: `linear-gradient(to bottom, rgba(214, 211, 209, 0), #d6d3d1), url('/images/ascii_background.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -107,7 +107,7 @@ export default function AsciiPage() {
           <div className="absolute inset-0 flex flex-col">
             <div className="w-full h-9 bg-stone-300 flex justify-between items-center mb-[-1px] flex-shrink-0">
               <div className="flex gap-3 pl-3">
-                <button onClick={() => handleFileSelect(null)} disabled={!previewUrl} className="disabled:opacity-40"><UndoIcon /></button>
+                <button onClick={() => handleFileSelect(null)} disabled={!previewUrl} className="disabled:opacity-40"><TrashIcon /></button>
               </div>
               <div className="flex gap-3 pr-3">
                 <button onClick={handleConversionStart} disabled={!previewUrl}><SubmitIcon /></button>
@@ -118,8 +118,6 @@ export default function AsciiPage() {
                 id="ascii-image-upload"
                 onFileSelect={handleFileSelect}
                 previewUrl={previewUrl}
-                title="이미지 선택"
-                subtitle="파일을 드래그하거나 클릭하여 선택"
               />
             </div>
           </div>
@@ -151,7 +149,7 @@ export default function AsciiPage() {
               <PageHeader title="ASCi!" subtitle="이미지를 텍스트로 표현" goBack={true} padding='p-0' />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 className="font-semibold text-white flex-shrink-0" style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}>
-                  이미지를 업로드하세요
+                  사진을 첨부해주세요
                 </h3>
                 <div className="relative min-h-0">
                   {renderContent()}
