@@ -2,8 +2,8 @@
 'use client';
 
 import React, { useState, useRef, useLayoutEffect } from 'react';
-// [수정] FullScreenView 대신 PageHeader를 직접 import 합니다.
-import PageHeader from '@/components/ui/PageHeader'; 
+import { useDrag } from '@use-gesture/react'; // [추가] useDrag 훅 import
+import PageHeader from '@/components/ui/PageHeader';
 import PngDownloader from './PngDownloader';
 import PdfDownloader from './PdfDownloader';
 
@@ -53,6 +53,7 @@ export default function AsciiArtDisplay({
   const zoomWrapperRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const downloadCanvasRef = useRef<HTMLCanvasElement>(null);
+  const sliderBarRef = useRef<HTMLDivElement>(null); // [추가] 슬라이더 바를 위한 ref
 
   useLayoutEffect(() => {
     const container = containerRef.current;
@@ -91,38 +92,62 @@ export default function AsciiArtDisplay({
     }
   };
   
-  // FullScreenView의 배경 스타일 로직을 직접 적용합니다.
+  // --- [추가] 커스텀 슬라이더 로직 ---
+  const minRes = 30;
+  const maxRes = 500;
+  const stepRes = 1;
+
+  const bind = useDrag(({ down, xy: [x], tap, event }) => {
+    if (isProcessing || !sliderBarRef.current) return;
+    if (tap) event.preventDefault();
+
+    const { left, width } = sliderBarRef.current.getBoundingClientRect();
+    const progress = Math.max(0, Math.min(1, (x - left) / width));
+    const rawValue = minRes + progress * (maxRes - minRes);
+    const steppedValue = Math.round(rawValue / stepRes) * stepRes;
+    const finalValue = Math.max(minRes, Math.min(maxRes, steppedValue));
+
+    if (finalValue !== resolution) {
+      setResolution(finalValue);
+    }
+    
+    if (!down) {
+      handleRenderTrigger();
+    }
+  }, { filterTaps: true });
+  // --- 슬라이더 로직 끝 ---
+
   const backgroundStyle = {
     backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113), url('/images/ascii_background.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
   };
+  
+  // 슬라이더 렌더링을 위한 해상도(px -> %) 계산
+  const progressPercent = maxRes > minRes ? ((resolution - minRes) / (maxRes - minRes)) * 100 : 0;
 
   return (
-    // [수정] FullScreenView 대신 새로운 Flexbox 레이아웃으로 전체 구조를 변경합니다.
     <div className="w-full h-full" style={backgroundStyle}>
       <div className="w-full h-full flex flex-col p-4 sm:p-8">
         
-        {/* 아이템 1: PageHeader. 이제 일반적인 흐름(static)에 따라 렌더링됩니다. */}
-        <PageHeader
-          title="ASCii!"
-          subtitle="이미지를 텍스트로 표현"
-          onClose={onClose}
-          isAbsolute={false} // 이 prop을 false로 설정하여 absolute 포지셔닝을 비활성화합니다.
-          padding="p-0 pb-4" // 새로운 레이아웃에 맞는 패딩을 설정합니다.
-        />
-
-        {/* 아이템 2: 아스키 아트. flex-1 클래스로 남은 공간을 모두 차지합니다. */}
         <div ref={containerRef} className="flex-1 w-full grid place-items-center overflow-hidden min-h-0">
-          <div ref={zoomWrapperRef} className="bg-black">
-            <div ref={artRef} style={{ fontFamily: 'monospace' }}>
-              {asciiResult.art}
+          <div>
+            <PageHeader
+              title="ASCii!"
+              subtitle="이미지를 텍스트로 표현"
+              onClose={onClose}
+              isAbsolute={false}
+              padding="p-0 pb-8"
+            />
+            <div ref={zoomWrapperRef} className="bg-black">
+              <div ref={artRef} style={{ fontFamily: 'monospace' }}>
+                {asciiResult.art}
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 아이템 3: 컨트롤러. 필요한 만큼의 공간만 차지합니다. */}
         <div className="flex-shrink-0 w-full max-w-2xl mx-auto mt-4">
           <fieldset className="border border-gray-700 p-2.5 bg-black/50 text-white">
             <legend className="px-1 font-semibold text-gray-300 flex items-center">
@@ -130,15 +155,29 @@ export default function AsciiArtDisplay({
               {isProcessing && <SpinnerIcon />}
             </legend>
             <div className="flex items-center gap-2.5">
-              <input
-                type="range" min="30" max="500" step="1"
-                value={resolution}
-                onChange={(e) => setResolution(Number(e.target.value))}
-                onMouseUp={handleRenderTrigger}
-                onTouchEnd={handleRenderTrigger}
-                disabled={isProcessing}
-                className="flex-1"
-              />
+              
+              {/* [수정] 기존 input을 커스텀 슬라이더 JSX로 교체 */}
+              <div
+                ref={sliderBarRef}
+                {...bind()}
+                className={`relative flex-1 h-8 flex items-center touch-none ${isProcessing ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              >
+                <div className="relative w-full h-2">
+                  <div className="w-full h-full bg-gray-600 rounded-full"></div>
+                  <div
+                    className="absolute top-0 left-0 h-full bg-white rounded-full"
+                    style={{ width: `${progressPercent}%` }}
+                  ></div>
+                  <div 
+                    className="absolute -top-1 w-1 h-4 bg-white pointer-events-none z-20 rounded-full"
+                    style={{ 
+                      left: `${progressPercent}%`,
+                      transform: `translateX(-50%)`
+                    }}
+                  />
+                </div>
+              </div>
+              
               <span className="w-10 text-right">{resolution}px</span>
               <div className="flex items-center gap-2.5 border-l border-gray-600 pl-2.5">
                 <PngDownloader
