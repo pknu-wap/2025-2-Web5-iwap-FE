@@ -4,7 +4,7 @@ import { useRef, useEffect } from "react";
 export default function WavingAnimation() {
   const width = 180;
   const height = 180;
-  const colors = ["#E3E7FF", "#EFC8FF", "#FFAAE7", "#97e9ff"];
+  const colors = ["#E3E7FF", "#EFC8FF", "#e599d0bf", "#97e9ff"];
   const refs = Array.from({ length: 8 }, () => useRef<SVGPathElement>(null));
   const tRef = useRef(0);
 
