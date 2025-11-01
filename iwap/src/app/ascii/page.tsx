@@ -105,12 +105,12 @@ export default function AsciiPage() {
       case 'upload':
         return (
           <div className="absolute inset-0 flex flex-col">
-            <div className="w-full h-9 bg-stone-300 flex justify-between items-center mb-[-1px] flex-shrink-0">
+            <div className="w-full h-6 md:h-9 bg-stone-300 flex justify-between items-center mb-[-1px] flex-shrink-0">
               <div className="flex gap-3 pl-3">
-                <button onClick={() => handleFileSelect(null)} disabled={!previewUrl} className="disabled:opacity-40"><UndoIcon /></button>
+                <button onClick={() => handleFileSelect(null)} disabled={!previewUrl} className="disabled:opacity-40 scale-[0.7] md:scale-100"><UndoIcon /></button>
               </div>
               <div className="flex gap-3 pr-3">
-                <button onClick={handleConversionStart} disabled={!previewUrl}><SubmitIcon /></button>
+                <button onClick={handleConversionStart} disabled={!previewUrl} className="scale-[0.7] md:scale-100"><SubmitIcon /></button>
               </div>
             </div>
             <div className="w-full flex-grow relative">
@@ -145,15 +145,15 @@ export default function AsciiPage() {
           isProcessing={isReProcessing}
         />
       ) : (
-        <div className="w-full h-full flex items-center justify-center p-4 sm:p-8">
+        <div className="w-[90%] md:w-full h-[90%] md:h-full translate-x-5 md:translate-x-0 flex items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
             <div className="w-full h-full pt-[100px]">
               <PageHeader title="ASCi!" subtitle="이미지를 텍스트로 표현" goBack={true} padding='p-0' />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
-                <h3 className="font-semibold text-white flex-shrink-0" style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}>
+                <h3 className="font-semibold text-white flex-shrink-0 -translate-y-3 -translate-x-3" style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}>
                   이미지를 업로드하세요
                 </h3>
-                <div className="relative min-h-0">
+                <div className="relative min-h-0 md:scale-[1] scale-[1.1]">
                   {renderContent()}
                 </div>
               </div>
