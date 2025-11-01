@@ -48,7 +48,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         )}
         
         {/* (메인페이지가 아닌 경우) md 사이즈 이상일 때만 헤더 높이만큼 상단 패딩 적용 */}
-        <main className={showHeader ? "pt-[30px] md:pt-[60px]" : ""}>
+        <main className={ showHeader
+      ? "pt-0 md:pt-0 h-dvh overflow-hidden fixed inset-0 top-[30px] md:top-[60px]"
+      : "h-dvh overflow-hidden"}>
           {children}
         </main>
       </body>
