@@ -55,7 +55,6 @@ export default function PageHeader({
         </div>
       )}
 
-
       {(goBack || onClose) && (
         <div className={`flex-shrink-0 pb-0 ${closeButtonClassName}`}>
           <CloseButton onClick={onClose} goBack={goBack} />
