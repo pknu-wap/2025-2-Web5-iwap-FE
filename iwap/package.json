@@ -16,6 +16,7 @@
     "@tonejs/midi": "^2.0.28",
     "@use-gesture/react": "^10.3.1",
     "framer-motion": "^12.23.24",
+    "html2canvas": "^1.4.1",
     "jspdf": "^3.0.3",
     "lightswind": "^3.1.18",
     "next": "^15.5.3",
