@@ -81,7 +81,7 @@ export function ThreeDImageRing({
   mobileBreakpoint = 768,
   mobileScaleFactor = 0.8,
   desktopScale = 1,
-  focusedScale = 2,
+  focusedScale = 1,
   inertiaPower = 0.8, // Default power for inertia
   inertiaTimeConstant = 300, // Default time constant for inertia
   inertiaVelocityMultiplier = 20, // Default multiplier for initial spin
@@ -160,34 +160,6 @@ export function ThreeDImageRing({
       hasAnimatedIn.current = true;
     }
   }, [showImages]);
-
-  const rotateToIndex = useCallback(
-    (index: number) => {
-      if (angle === 0) return;
-      const current = rotationY.get();
-      const target = initialRotation + index * angle;
-      let delta = target - current;
-      delta = ((delta + 540) % 360) - 180; // ensure shortest rotation path
-      const finalTarget = current + delta;
-
-      animate(rotationY, finalTarget, {
-        duration: 0.65,
-        ease: easeOut,
-      });
-    },
-    [angle, initialRotation, rotationY]
-  );
-
-  const handleImageClick = (index: number) => {
-    if (isDragging.current) return;
-    setActiveIndex((prev) => {
-      const next = prev === index ? null : index;
-      if (next !== null) {
-        rotateToIndex(next);
-      }
-      return next;
-    });
-  };
 
   const handleDragStart = (event: React.MouseEvent | React.TouchEvent) => {
     if (!draggable) return;
@@ -351,7 +323,6 @@ const handleDragEnd = () => {
                       ease: easeOut, // Apply ease for entrance animation
                     }}
                     whileHover={{ opacity: 1, transition: { duration: 0.15 } }}
-                    onClick={() => handleImageClick(index)}
                     onHoverStart={() => {
                       // Prevent hover effects while dragging
                       if (isDragging.current || activeIndex !== null) return;
