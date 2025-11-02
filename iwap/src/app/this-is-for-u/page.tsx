@@ -132,95 +132,49 @@ export default function ThreeDImageRing({
     moved.current = false;
   };
 
-  return (
-    <div
-      className="w-full h-full overflow-hidden select-none relative flex justify-center items-center"
-      style={{ backgroundColor, transform: `scale(${currentScale})` }}
-      onMouseDown={handleDragStart}
-      onTouchStart={handleDragStart}
-    >
-      <div
-        style={{
-          perspective: `${perspective}px`,
-          width,
-          height,
-          position: "relative",
-        }}
-      >
-        <motion.div
-          ref={ringRef}
-          className="absolute inset-0"
-          style={{
-            transformStyle: "preserve-3d",
-            rotateY: rotationY,
-          }}
-        >
-          <AnimatePresence>
-            {showImages &&
-              parsedImages.map((img, index) => {
-                const rotation = index * -angle;
-                const transformOrigin = `50% 50% ${imageDistance * currentScale}px`;
-                const effectiveRotation = (currentRotation + rotation) % 360;
-                const normalized = (effectiveRotation + 360) % 360;
-                const distance = normalized > 180 ? 360 - normalized : normalized;
-                const zIndex = 1000 - Math.round(distance);
+    const pageBackgroundStyle = {
+    backgroundImage: "url('/images/this-is-for-u_background.jpg')",
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed',
+  };
 
-                return (
-                  <motion.div
-                    key={index}
-                    onClick={() => handleImageClick(index)}
-                    onMouseEnter={() => setHoverIndex(index)}
-                    onMouseLeave={() => setHoverIndex(null)}
-                    className={cn(
-                      "absolute flex items-center justify-center w-full h-full overflow-hidden text-white cursor-pointer"
-                    )}
-                    style={{
-                      transformStyle: "preserve-3d",
-                      backgroundImage: `url(${img.src})`,
-                      backgroundSize: "cover",
-                      backgroundPosition: "center",
-                      backfaceVisibility: "hidden",
-                      rotateY: index * -angle,
-                      z: -imageDistance * currentScale,
-                      transformOrigin,
-                      pointerEvents: "auto", // ✅ 항상 클릭 가능
-                      zIndex,
-                    }}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{
-                      delay: index * staggerDelay,
-                      duration: animationDuration,
-                      ease: easeOut,
-                    }}
-                  >
-                    <motion.div
-                      className="absolute inset-0 flex flex-col justify-center items-center bg-black/40 backdrop-blur-sm text-center px-3"
-                      style={{ pointerEvents: "none" }}
-                      animate={{
-                        opacity: hoverIndex === index ? 1 : 0,
-                        y: hoverIndex === index ? 0 : 10,
-                      }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      {img.text && (
-                        <p className="text-[10px] md:text-[28px] font-semibold mb-1 pointer-events-none">
-                          {img.text}
-                        </p>
-                      )}
-                      {img.description && (
-                        <p className="text-[6px] md:text-[9px] pointer-events-none">
-                          {img.description}
-                        </p>
-                      )}
-                    </motion.div>
-                  </motion.div>
-                );
-              })}
-          </AnimatePresence>
-        </motion.div>
-      </div>
+  return (
+    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)] overflow-hidden style={pageBackgroundStyle}">
+      <FullScreenView
+        title="Th!s !s for u"
+        subtitle="함수로 하트 그리기"
+        goBack={true}
+        onPrev={handlePrev}
+        onNext={handleNext}
+        backgroundUrl="/images/this-is-for-u_background.jpg"
+        titleClassName="translate-y-[120px] translate-x-[9px] md:translate-x-0 md:translate-y-0 font-semibold"
+        subtitleClassName="translate-y-[120px] translate-x-[10px] md:translate-x-0 md:translate-y-0 font-semilight"
+        closeButtonClassName="translate-y-[120px] md:translate-y-0"
+      >
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/95 to-black"></div>
+        <div className="relative z-20 md:mt-20 w-[85vw] max-w-[1501px] h-[45vh] md:h-[65vh] max-h-[700px] bg-white flex flex-col items-center justify-center">
+          <div ref={ref} className="w-full flex-grow min-h-0">
+            {debouncedSize.width > 0 && debouncedSize.height > 0 && (
+              <Plot
+                data={selectedPlot.data}
+                layout={plotLayout}
+                config={{ responsive: true }}
+                style={{ width: '100%', height: '100%' }}
+              />
+            )}
+          </div>
+          {index === 2 && (
+            <div className="w-[80%] max-w-xl my-4 flex-shrink-0">
+              <input
+                type="range" min="-10" max="10" step="0.1" value={a}
+                onChange={(e) => setA(parseFloat(e.target.value))}
+                className="w-full accent-red-500"
+              />
+            </div>
+          )}
+        </div>
+      </FullScreenView>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import DrawingCanvas from '@/components/inside/DrawingCanvas';
 import ImageGridLayers from '@/components/inside/ImageGridLayers';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
@@ -14,6 +14,11 @@ interface LayersData {
   };
 }
 
+// POST 응답 (task_id) 타입 정의
+interface TaskIdResponse {
+  task_id: string;
+}
+
 /**
  * AI 모델의 숫자 인식 과정을 시각화하는 '!nside' 페이지 컴포넌트.
  */
@@ -21,6 +26,7 @@ export default function InsidePage() {
   const [view, setView] = useState('draw'); 
   const [layersData, setLayersData] = useState<LayersData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [taskId, setTaskId] = useState<string | null>(null);
 
   /**
    * 업로드가 시작될 때 호출되어 로딩 UI를 표시합니다.
@@ -28,42 +34,110 @@ export default function InsidePage() {
   const handleUploadStart = () => {
     setView('loading');
     setError(null);
+    setTaskId(null);
+    setLayersData(null);
   };
 
   /**
-   * 업로드 및 데이터 처리 성공 시 호출됩니다.
-   * @param data - 백엔드에서 POST 응답으로 전달된 AI 레이어 데이터.
+   * 업로드 실패 시 호출 (useCallback으로 래핑)
    */
-  const handleUploadSuccess = (data: LayersData) => {
+  const handleUploadFail = useCallback((errorMessage: string) => {
+    setError(errorMessage);
+    setView('draw');
+    setTaskId(null);
+  }, []);
+
+  /**
+   * 데이터 폴링 성공 시 호출될 새 함수 (useCallback으로 래핑)
+   */
+  const handleDataReady = useCallback((data: LayersData) => {
     try {
       if (!data || !data.layers || typeof data.layers !== 'object' || Object.keys(data.layers).length === 0) {
-        throw new Error("서버로부터 유효한 데이터를 받지 못했습니다.");
+        throw new Error("서버로부터 유효한 레이어 데이터를 받지 못했습니다.");
       }
       
       setLayersData(data);
       setView('visualize');
+      setTaskId(null);
 
     } catch (err) {
       console.error('[InsidePage] Error: An error occurred during data processing:', err);
       const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-      // 데이터 처리 실패 시 에러 핸들러 호출
       handleUploadFail(`[데이터 처리 오류]: ${errorMessage}`);
+    }
+  }, [handleUploadFail]);
+
+  /**
+   * 업로드 *요청* 성공 시(2022 Accepted) 호출됩니다.
+   */
+  const handleUploadAccepted = (data: TaskIdResponse) => {
+    try {
+      if (!data || typeof data.task_id !== 'string') {
+        throw new Error("서버로부터 유효한 task_id를 받지 못했습니다.");
+      }
+      setTaskId(data.task_id);
+    } catch (err) {
+      console.error('[InsidePage] Error: An error occurred processing task_id:', err);
+      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      handleUploadFail(`[작업 ID 처리 오류]: ${errorMessage}`);
     }
   };
 
   /**
-   * 업로드 실패 시 호출되어 에러 메시지를 표시하고 UI를 되돌립니다.
-   * @param errorMessage - 표시할 에러 메시지
+   * [!! 수정된 부분 !!]
+   * 시각화 뷰에서 그리기 뷰로 돌아갈 때 호출됩니다.
    */
-  const handleUploadFail = (errorMessage: string) => {
-    setError(errorMessage);
-    setView('draw');
-  };
-
-  const handleReturnToDraw = () => {
+  const handleReturnToDraw = useCallback(() => {
     setLayersData(null);
     setView('draw');
-  };
+    setError(null); // 에러 메시지도 함께 초기화
+    setTaskId(null); // 혹시 모를 task ID도 초기화
+  }, []); // 의존성 배열은 비어있습니다.
+
+  // task_id가 설정되면 폴링을 시작하는 useEffect
+  useEffect(() => {
+    if (view !== 'loading' || !taskId) return;
+
+    let intervalId: NodeJS.Timeout | null = null;
+    let isFetching = false;
+
+    const pollData = async () => {
+      if (isFetching) return;
+      isFetching = true;
+
+      try {
+        const response = await fetch(`/api/inside/${taskId}`);
+
+        if (response.status === 200) {
+          if (intervalId) clearInterval(intervalId);
+          const data: LayersData = await response.json();
+          handleDataReady(data);
+        } else if (response.status === 202) {
+          console.log(`[InsidePage] Polling... task ${taskId} is still processing.`);
+        } else {
+          if (intervalId) clearInterval(intervalId);
+          let errorText = '응답 없음';
+          try {
+            errorText = await response.text();
+          } catch {}
+          throw new Error(`[데이터 조회 오류 ${response.status}]: ${errorText}`);
+        }
+      } catch (error) {
+        if (intervalId) clearInterval(intervalId);
+        const errorMessage = error instanceof Error ? error.message : '폴링 중 알 수 없는 오류 발생';
+        handleUploadFail(errorMessage);
+      } finally {
+        isFetching = false;
+      }
+    };
+
+    intervalId = setInterval(pollData, 2000);
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [view, taskId, handleDataReady, handleUploadFail]);
+
 
   const renderContent = () => {
     switch (view) {
@@ -71,7 +145,7 @@ export default function InsidePage() {
         return (
           <DrawingCanvas 
             onUploadStart={handleUploadStart}
-            onUploadSuccess={handleUploadSuccess as (data: object) => void} 
+            onUploadSuccess={handleUploadAccepted as (data: object) => void} 
             onUploadFail={handleUploadFail}
           />
         );
@@ -107,13 +181,13 @@ export default function InsidePage() {
         <FullScreenView
           title="!nside."
           subtitle="인공지능이 숫자를 인식하는 과정"
-          onClose={handleReturnToDraw}
+          onClose={handleReturnToDraw} // 이제 이 함수를 찾을 수 있습니다.
           backgroundUrl="/images/inside_background.jpg"
         >
           <ImageGridLayers layersData={layersData} />
         </FullScreenView>
       ) : (
-        <div className="w-full h-full flex items-center justify-center p-4 sm:p-8">
+        <div className="w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
             <div className="w-full h-full pt-[100px]">
               <PageHeader
@@ -124,14 +198,14 @@ export default function InsidePage() {
               />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 
-                  className="font-semibold text-white flex-shrink-0" 
+                  className="font-semibold text-white translate -translate-y-3 -translate-x-3" 
                   style={{
                     fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)',
                   }}
                 >
                   숫자를 그려주세요
                 </h3>
-                <div className="relative min-h-0">
+                <div className="relative min-h-0 md:scale-[1] scale-[1.1]">
                   {renderContent()}
                 </div>
               </div>

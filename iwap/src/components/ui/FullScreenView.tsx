@@ -23,6 +23,9 @@ type FullScreenViewProps = {
   backgroundStyle?: CSSProperties;
   /** 최상위 div에 적용할 추가적인 Tailwind 클래스. */
   className?: string;
+  titleClassName?: string;
+  subtitleClassName?: string;
+  closeButtonClassName?: string;
 };
 
 /**
@@ -31,14 +34,14 @@ type FullScreenViewProps = {
  */
 export default function FullScreenView({
   children, title, subtitle, onClose, goBack, padding,
-  onPrev, onNext, backgroundUrl, backgroundStyle, className = '',
+  onPrev, onNext, backgroundUrl, backgroundStyle, className = '',titleClassName = '',        // [추가]
+  subtitleClassName = '', closeButtonClassName  = '',  // [추가]
 }: FullScreenViewProps) {
   
   // backgroundUrl prop이 있으면 그라데이션과 이미지 배경 스타일을 동적으로 생성.
   const dynamicBackgroundStyle: CSSProperties = backgroundUrl
     ? {
         backgroundImage: `
-          linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113),
           url('${backgroundUrl}')
         `,
         backgroundSize: 'cover',
@@ -61,6 +64,9 @@ export default function FullScreenView({
         onClose={onClose}
         goBack={goBack}
         padding={padding}
+        titleClassName={titleClassName}       // [추가]
+        subtitleClassName={subtitleClassName}
+        closeButtonClassName={closeButtonClassName}
       />
       
       {/* 컨텐츠 영역 */}
