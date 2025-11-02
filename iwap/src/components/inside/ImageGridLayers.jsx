@@ -245,7 +245,7 @@ export default function ImageGridLayers({ layersData }) {
       >
         <Canvas
           gl={{ alpha: true }}
-          style={{ background: 'transparent' }}
+          style={{ background: 'linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113)' }}
           camera={{ position: [0, 20, 150], fov: 60 }}
           onCreated={({ scene }) => { scene.background = null; }}
         >
