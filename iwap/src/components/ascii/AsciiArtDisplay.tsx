@@ -147,7 +147,7 @@ export default function AsciiArtDisplay({
           {/* --- 왼쪽 콘텐츠 (이미지 + 슬라이더) --- */}
           {/* [수정] flex-shrink-0을 추가하여 데스크톱에서 너비가 줄어들지 않도록 함 */}
           <div className="w-full max-w-[620px] flex-shrink-0">
-            <PageHeader title="ASCii!" subtitle="이미지를 텍스트로 표현" onClose={onClose} isAbsolute={false} padding="p-0 pb-4" />
+            <PageHeader title="ASCi!" subtitle="이미지를 텍스트로 표현" onClose={onClose} isAbsolute={false} padding="p-0 pb-4" />
             
             <div className="bg-white p-1.5 shadow-lg w-full">
               {/* [수정] aspect-square를 다시 추가하여 이미지 영역이 정사각형 비율을 유지하도록 함 */}
