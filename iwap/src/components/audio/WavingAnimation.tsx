@@ -58,7 +58,7 @@ export default function WavingAnimation() {
         width={width}
         height={height}
         viewBox={`0 0 ${width} ${height}`}
-        className="absolute top-0 left-0"
+        className="absolute top-0 left-0 md:translate-y-0 -translate-y-4"
       >
         {colors.map((c, i) => (
           <path key={i} ref={refs[i]} fill={c} opacity="0.6" className="mix-blend-multiply" />
@@ -66,7 +66,7 @@ export default function WavingAnimation() {
       </svg>
 
       {/* 중앙 마이크 아이콘 */}
-      <div className="absolute flex items-center justify-center">
+      <div className="absolute flex items-center justify-center scale-75 md:scale-100">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="111"

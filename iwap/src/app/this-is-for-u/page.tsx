@@ -179,9 +179,9 @@ const singleTrace1 = useMemo((): Data[] => {
         onPrev={handlePrev}
         onNext={handleNext}
         backgroundUrl="/images/this-is-for-u_background.jpg"
-        titleClassName="translate-y-[120px] translate-x-[9px] md:translate-x-0 md:translate-y-0 font-semibold"
-        subtitleClassName="translate-y-[120px] translate-x-[10px] md:translate-x-0 md:translate-y-0 font-semilight"
-        closeButtonClassName="translate-y-[120px] md:translate-y-0"
+        titleClassName="translate-y-[60px] translate-x-[9px] md:translate-x-0 md:translate-y-0 font-semibold"
+        subtitleClassName="translate-y-[60px] translate-x-[10px] md:translate-x-0 md:translate-y-0 font-semilight"
+        closeButtonClassName="translate-y-[60px] md:translate-y-0"
       >
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/95 to-black"></div>
         <div className="relative z-20 md:mt-20 w-[85vw] max-w-[1501px] h-[45vh] md:h-[65vh] max-h-[700px] bg-white flex flex-col items-center justify-center">
@@ -209,7 +209,3 @@ const singleTrace1 = useMemo((): Data[] => {
     </div>
   );
 }
-
-
-
-
