@@ -92,7 +92,11 @@ export default function AsciiArtDisplay({
       const artNaturalWidth = artDims.w * CHAR_WIDTH_PX;
       const artNaturalHeight = artDims.h * CHAR_HEIGHT_PX;
       if (artNaturalWidth === 0) return;
+      
       const scale = Math.min(container.clientWidth / artNaturalWidth, container.clientHeight / artNaturalHeight);
+      
+      if (!isFinite(scale) || scale <= 0) return;
+
       zoomWrapper.style.width = `${artNaturalWidth * scale}px`;
       zoomWrapper.style.height = `${artNaturalHeight * scale}px`;
       art.style.width = `${artNaturalWidth}px`;
@@ -136,83 +140,61 @@ export default function AsciiArtDisplay({
   };
 
   return (
-    // [수정] min-h-full을 사용하여 최소 화면 높이를 보장하되, 내용이 길어지면 스크롤이 가능하도록 함
-    <div className="w-full min-h-full overflow-y-auto" style={backgroundStyle}>
-      {/* [수정] h-full을 제거하고 flex-col과 items-center를 추가하여 콘텐츠를 중앙 정렬 */}
-      <div className="w-full flex flex-col items-center p-4 sm:p-8">
+    // [수정] 'justify-center' 추가 (수직 중앙 정렬)
+    <div className="w-full h-screen overflow-hidden flex flex-col items-center justify-center p-4 sm:p-8" style={backgroundStyle}>
+      
+      {/* [수정] 'max-h-full' 추가 (화면 높이 초과 방지) */}
+      <div className="w-full max-w-[620px] flex flex-col max-h-full">
         
-        {/* [수정] 데스크톱에서 콘텐츠 그룹의 너비를 자동으로 조절하고 중앙에 배치하는 wrapper */}
-        <div className="w-full md:w-auto md:flex md:items-start md:gap-4">
-
-          {/* --- 왼쪽 콘텐츠 (이미지 + 슬라이더) --- */}
-          {/* [수정] flex-shrink-0을 추가하여 데스크톱에서 너비가 줄어들지 않도록 함 */}
-          <div className="w-full max-w-[620px] flex-shrink-0">
-            <PageHeader title="ASCii!" subtitle="이미지를 텍스트로 표현" onClose={onClose} isAbsolute={false} padding="p-0 pb-4" />
-            
-            <div className="bg-white p-1.5 shadow-lg w-full">
-              {/* [수정] aspect-square를 다시 추가하여 이미지 영역이 정사각형 비율을 유지하도록 함 */}
-              <div ref={containerRef} className="w-full aspect-square flex items-center justify-center overflow-hidden">
-                <div ref={zoomWrapperRef} className="bg-black overflow-hidden">
-                  <div ref={artRef} style={{ userSelect: 'none', fontFamily: 'monospace' }}>
-                    {asciiResult.data?.map((rowData, y) => (
-                      <div key={y} style={{ height: `${CHAR_HEIGHT_PX}px`, lineHeight: `${CHAR_HEIGHT_PX}px`, whiteSpace: 'nowrap' }}>
-                        {rowData.map((cell, x) => (
-                          <span key={x} style={{ color: cell.color, width: `${CHAR_WIDTH_PX}px`, fontSize: `${FONT_SIZE_PX}px`, display: 'inline-block', textAlign: 'center' }}>
-                            {cell.char}
-                          </span>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+        {/* 1. 헤더 (고정 크기) */}
+        <PageHeader title="ASCi!" subtitle="이미지를 텍스트로 표현" onClose={onClose} isAbsolute={false} padding="p-0 pb-2" />
+        
+        {/* 2. 아트워크 영역 (가변 크기) */}
+        {/* [수정] 'flex-1 min-h-0' 적용 (남은 공간 차지 및 축소) */}
+        <div ref={containerRef} className="flex-1 min-h-0 w-full flex items-center justify-center">
+          
+          <div className="bg-white p-1.5 shadow-lg">
+            <div className="w-full h-full flex items-center justify-center overflow-hidden">
+              <div ref={zoomWrapperRef} className="bg-black overflow-hidden">
+                <div ref={artRef} style={{ userSelect: 'none', fontFamily: 'monospace' }}>
+                  {asciiResult.data?.map((rowData, y) => (
+                    <div key={y} style={{ height: `${CHAR_HEIGHT_PX}px`, lineHeight: `${CHAR_HEIGHT_PX}px`, whiteSpace: 'nowrap' }}>
+                      {rowData.map((cell, x) => (
+                        <span key={x} style={{ color: cell.color, width: `${CHAR_WIDTH_PX}px`, fontSize: `${FONT_SIZE_PX}px`, display: 'inline-block', textAlign: 'center' }}>
+                          {cell.char}
+                        </span>
+                      ))}
+                    </div>
+                  ))}
                 </div>
-              </div>
-            </div>
-            
-            <div className="w-full mt-8">
-              {/* 모바일 뷰 */}
-              <div className="flex items-end gap-4 md:hidden">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center mb-1 h-5">
-                    <span className="block text-white text-sm font-normal">{resolution}px</span>
-                    {isProcessing && <div className="ml-3"><InlineLoadingIndicator text="변환 중..." /></div>}
-                  </div>
-                  <ResolutionSlider
-                    value={resolution}
-                    min={minRes}
-                    max={maxRes}
-                    disabled={isProcessing}
-                    onChange={setResolution}
-                    onChangeEnd={handleSliderChangeEnd}
-                  />
-                </div>
-                <DownloadOptions {...downloadOptionsProps} />
-              </div>
-
-              {/* 데스크톱 뷰 */}
-              <div className="hidden md:block">
-                <div className="flex items-center mb-1 h-5">
-                  <span className="block text-white text-sm font-normal">{resolution}px</span>
-                  {isProcessing && <div className="ml-3"><InlineLoadingIndicator text="변환 중..." /></div>}
-                </div>
-                <ResolutionSlider
-                  value={resolution}
-                  min={minRes}
-                  max={maxRes}
-                  disabled={isProcessing}
-                  onChange={setResolution}
-                  onChangeEnd={handleSliderChangeEnd}
-                />
               </div>
             </div>
           </div>
+        </div> {/* End Art Container */}
 
-          {/* --- 오른쪽 콘텐츠 (다운로드 버튼 그룹) --- */}
-          <div className="hidden md:block md:mt-[72px] md:flex-shrink-0">
+        {/* 3. 슬라이더 영역 (고정 크기) */}
+        <div className="w-full mt-4 mb-14">
+          <div className="flex items-end gap-4">
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center mb-1 h-5">
+                <span className="block text-white text-sm font-normal">{resolution}px</span>
+                {isProcessing && <div className="ml-3"><InlineLoadingIndicator text="변환 중..." /></div>}
+              </div>
+              <ResolutionSlider
+                value={resolution}
+                min={minRes}
+                max={maxRes}
+                disabled={isProcessing}
+                onChange={setResolution}
+                onChangeEnd={handleSliderChangeEnd}
+              />
+            </div>
             <DownloadOptions {...downloadOptionsProps} />
           </div>
+        </div> {/* End Unified Slider Area */}
 
-        </div>
-      </div>
+      </div> {/* End Main Content Wrapper */}
+
       <canvas ref={downloadCanvasRef} style={{ display: 'none' }}></canvas>
     </div>
   );
