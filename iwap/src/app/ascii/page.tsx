@@ -1,7 +1,7 @@
 // src/app/ascii/page.tsx
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import ImageUploader from '@/components/ui/ImageUploader';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
@@ -9,8 +9,12 @@ import AsciiArtDisplay from '@/components/ascii/AsciiArtDisplay';
 import TrashIcon from '@/components/ui/icons/TrashIcon';
 import SubmitIcon from '@/components/ui/icons/SubmitIcon';
 
-// [수정] 핵심 로직과 타입을 별도의 파일에서 import 합니다.
-import { processImageToAscii, AsciiResult } from '@/components/ascii/AsciiArtProcessor';
+// [수정] 웹 워커 기반의 함수들과 타입을 import 합니다.
+import {
+  processImageToAsciiWithWorker,
+  createAsciiArtFromData,
+  AsciiResult,
+} from '@/components/ascii/AsciiArtProcessor';
 
 // --- Page Constants ---
 const DEFAULT_RESOLUTION = 150;
@@ -28,18 +32,30 @@ export default function AsciiPage() {
   
   const [isReProcessing, setIsReProcessing] = useState(false);
 
-  const hiddenCanvasRef = useRef<HTMLCanvasElement>(null);
+  // [제거] hiddenCanvasRef는 더 이상 필요하지 않습니다.
+  // const hiddenCanvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => { setHasMounted(true); }, []);
 
   const handleConversion = useCallback(async () => {
-    if (!sourceImage || !hiddenCanvasRef.current) return;
+    // [수정] canvas ref 체크 로직 제거
+    if (!sourceImage) return;
 
     const imageUrl = URL.createObjectURL(sourceImage);
     try {
-      // [수정] import한 함수를 직접 호출합니다.
-      const result = await processImageToAscii(hiddenCanvasRef.current, imageUrl, resolution);
-      setAsciiResult({ ...result, initialResolution: resolution });
+      // [수정] 웹 워커를 호출하여 데이터만 먼저 받습니다.
+      const { data, dims } = await processImageToAsciiWithWorker(imageUrl, resolution);
+      
+      if (!data) {
+        // 워커가 성공 메시지를 보냈다면 이 경우는 발생하지 않아야 하지만,
+        // 타입 안정성을 위해 에러 처리를 해줍니다.
+        throw new Error("Worker returned success status but no data.");
+      }
+      
+      const art = createAsciiArtFromData(data);
+      
+      // [수정] 최종 결과를 상태에 저장합니다.
+      setAsciiResult({ art, data, dims, initialResolution: resolution });
       setView('visualize');
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
@@ -99,6 +115,7 @@ export default function AsciiPage() {
   if (!hasMounted) return null;
 
   const renderContent = () => {
+    // ... (이 부분의 코드는 변경 사항 없음)
     switch (view) {
       case 'loading':
         return <LoadingIndicator text="변환 중..." />;
@@ -107,7 +124,7 @@ export default function AsciiPage() {
           <div className="absolute inset-0 flex flex-col">
             <div className="w-full h-6 md:h-9 bg-stone-300 flex justify-between items-center mb-[-1px] flex-shrink-0">
               <div className="flex gap-3 pl-3">
-                <button onClick={() => handleFileSelect(null)} disabled={!previewUrl} className="disabled:opacity-40 scale-[0.7] md:scale-100"><UndoIcon /></button>
+                <button onClick={() => handleFileSelect(null)} disabled={!previewUrl} className="disabled:opacity-40 scale-[0.7] md:scale-100"><TrashIcon /></button>
               </div>
               <div className="flex gap-3 pr-3">
                 <button onClick={handleConversionStart} disabled={!previewUrl} className="scale-[0.7] md:scale-100"><SubmitIcon /></button>
@@ -160,7 +177,7 @@ export default function AsciiPage() {
         </div>
       )}
       
-      <canvas ref={hiddenCanvasRef} style={{ display: 'none' }}></canvas>
+      {/* [제거] hiddenCanvasRef와 canvas 엘리먼트는 더 이상 필요하지 않습니다. */}
     </div>
   );
 }

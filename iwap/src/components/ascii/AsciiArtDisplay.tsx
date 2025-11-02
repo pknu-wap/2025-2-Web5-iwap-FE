@@ -29,6 +29,22 @@ const CHAR_WIDTH_PX = 5;
 const CHAR_HEIGHT_PX = 7;
 const PNG_SCALE_OPTIONS = [1, 2, 4];
 
+// [수정 2] LoadingIndicator.jsx의 시각적 요소를 기반으로 한 인라인 로딩 인디케이터
+const SpinnerIcon = () => (
+  <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+  </svg>
+);
+
+const InlineLoadingIndicator = ({ text }: { text: string }) => (
+    <div className="flex items-center">
+        <SpinnerIcon />
+        <span className="text-sm text-white ml-2">{text}</span>
+    </div>
+);
+
+
 // --- Display Component ---
 export default function AsciiArtDisplay({
   asciiResult,
@@ -46,7 +62,6 @@ export default function AsciiArtDisplay({
   const sliderBarRef = useRef<HTMLDivElement>(null);
 
   useLayoutEffect(() => {
-    // ... (useLayoutEffect 내용은 변경 없음)
     const container = containerRef.current;
     const art = artRef.current;
     const zoomWrapper = zoomWrapperRef.current;
@@ -71,31 +86,28 @@ export default function AsciiArtDisplay({
     window.addEventListener('resize', calculateAndApplyScale);
     return () => window.removeEventListener('resize', calculateAndApplyScale);
   }, [asciiResult.dims]);
-
-  const handleRenderTrigger = () => {
-    if (resolution !== asciiResult.initialResolution) {
-      onResolutionChange(resolution);
-    }
-  };
   
   const minRes = 30;
   const maxRes = 500;
   const stepRes = 1;
 
+  // [수정 1] 드래그가 끝났을 때의 최종 값으로 변환을 요청하도록 useDrag 로직 수정
   const bind = useDrag(({ down, xy: [x], tap, event }) => {
-    // ... (useDrag 내용은 변경 없음)
     if (isProcessing || !sliderBarRef.current) return;
     if (tap) event.preventDefault();
+
     const { left, width } = sliderBarRef.current.getBoundingClientRect();
     const progress = Math.max(0, Math.min(1, (x - left) / width));
     const rawValue = minRes + progress * (maxRes - minRes);
     const steppedValue = Math.round(rawValue / stepRes) * stepRes;
     const finalValue = Math.max(minRes, Math.min(maxRes, steppedValue));
-    if (finalValue !== resolution) {
-      setResolution(finalValue);
-    }
+
+    setResolution(finalValue);
+
     if (!down) {
-      handleRenderTrigger();
+      if (finalValue !== asciiResult.initialResolution) {
+        onResolutionChange(finalValue);
+      }
     }
   }, { filterTaps: true });
 
@@ -109,12 +121,8 @@ export default function AsciiArtDisplay({
   const progressPercent = maxRes > minRes ? ((resolution - minRes) / (maxRes - minRes)) * 100 : 0;
 
   return (
-    // [수정 4] h-full을 min-h-full로 변경하여 스크롤 보장
     <div className="w-full min-h-full overflow-y-auto" style={backgroundStyle}>
-      {/* [수정 4] h-full을 min-h-full로 변경 */}
       <div className="w-full min-h-full flex flex-col items-center justify-center p-4 sm:p-8">
-        
-        {/* [수정 2] 여백을 md:gap-1로 최소화 */}
         <div className="relative w-full max-w-5xl mx-auto md:flex md:items-start md:justify-center md:gap-1">
           {/* 왼쪽: 아트 + 슬라이더 컨테이너 */}
           <div className="flex flex-col items-center w-full">
@@ -139,7 +147,16 @@ export default function AsciiArtDisplay({
             </div>
             
             <div className="w-full max-w-[620px] mt-8">
-              <span className="block text-white text-sm font-normal mb-1">{resolution}px</span>
+              {/* [수정 2] 해상도 텍스트와 인라인 로딩 인디케이터를 함께 표시 */}
+              <div className="flex items-center mb-1 h-5">
+                <span className="block text-white text-sm font-normal">{resolution}px</span>
+                {isProcessing && (
+                  <div className="ml-3">
+                    <InlineLoadingIndicator text="변환 중..." />
+                  </div>
+                )}
+              </div>
+
               <div
                 ref={sliderBarRef}
                 {...bind()}
@@ -163,7 +180,7 @@ export default function AsciiArtDisplay({
             </div>
           </div>
 
-          {/* [수정 1, 3] 오른쪽: 다운로드 패널 너비 조정 및 transform scale 적용 */}
+          {/* 오른쪽: 다운로드 패널 */}
           <div className="absolute top-[88px] right-4 z-20 md:relative md:top-auto md:right-auto md:mt-[72px] transform-origin-top-right transition-transform duration-200 ease-in-out scale-75 md:scale-100">
             <div className="w-72 h-auto p-4 bg-white/40 border border-white rounded-md flex flex-col gap-4">
               <div className="flex items-center justify-around">
