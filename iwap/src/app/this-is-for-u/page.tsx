@@ -209,7 +209,3 @@ const singleTrace1 = useMemo((): Data[] => {
     </div>
   );
 }
-
-
-
-
