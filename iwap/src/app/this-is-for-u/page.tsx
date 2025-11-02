@@ -171,7 +171,7 @@ const singleTrace1 = useMemo((): Data[] => {
   };
 
   return (
-    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)] overflow-hidden style={pageBackgroundStyle}">
+    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)] overflow-hidden">
       <FullScreenView
         title="Th!s !s for u"
         subtitle="함수로 하트 그리기"
