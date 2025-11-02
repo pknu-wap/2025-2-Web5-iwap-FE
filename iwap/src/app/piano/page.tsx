@@ -167,7 +167,7 @@ export default function VoiceToPiano() {
       <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible">
         {!audioUrl ? (
           <div className="flex flex-col items-center justify-center gap-8">
-            <h1 className="text-3xl font-bold text-center">음성을 입력해주세요</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-center">음성을 입력해주세요</h1>
             <RecorderButton
               isRecording={isRecording}
               startRecording={startRecording}
@@ -191,7 +191,7 @@ export default function VoiceToPiano() {
                 <div
                   className="overflow-visible"
                   style={{
-                    transform: "scale(0.85)",
+                    transform: "scale(0.8)",
                     transformOrigin: "top center",
                     overflow: "visible",
                   }}
@@ -203,7 +203,7 @@ export default function VoiceToPiano() {
 
             <div className="relative flex w-full items-center justify-center md:hidden">
               <div className="relative flex w-full items-center justify-center min-h-[70vh] py-10">
-                <div className="transform rotate-90 origin-center scale-[0.4] translate-y-8">
+                <div className="transform rotate-90 origin-center scale-[0.35]">
                   <Piano activeNotes={activeNotesRef.current} />
                 </div>
                 {status ? (
