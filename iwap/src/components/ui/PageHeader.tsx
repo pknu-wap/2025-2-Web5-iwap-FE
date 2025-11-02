@@ -10,6 +10,9 @@ type PageHeaderProps = {
   padding?: string;
   /** [수정] 헤더의 position을 absolute로 할지 여부를 결정합니다. 기본값은 true입니다. */
   isAbsolute?: boolean;
+  titleClassName?: string;       // [추가]
+  subtitleClassName?: string;
+  closeButtonClassName?: string; 
 };
 
 /**
@@ -21,7 +24,11 @@ export default function PageHeader({
   onClose, 
   goBack, 
   padding = 'py-5 px-5 sm:px-5 sm:py-5 md:py-15 lg:px-70',
-  isAbsolute = true, // [수정] 기본값을 true로 설정하여 기존 페이지에 영향을 주지 않습니다.
+  isAbsolute = true,
+  titleClassName = '',
+  subtitleClassName = '',
+  closeButtonClassName = '',
+   // [수정] 기본값을 true로 설정하여 기존 페이지에 영향을 주지 않습니다.
 }: PageHeaderProps) {
   
   // [수정] isAbsolute 값에 따라 동적으로 포지셔닝 클래스를 결정합니다.
@@ -36,21 +43,20 @@ export default function PageHeader({
       {(title || subtitle) && (
         <div className="flex flex-col sm:flex-row sm:items-baseline sm:gap-x-3">
           {title && (
-            <h1 className="text-5xl font-bold">
+            <h1 className={`text-[30px] md:text-[42px] !font-semibold ${titleClassName}`}>
               {title}
             </h1>
           )}
           {subtitle && (
-            <p className="mt-1 sm:mt-0 text-sm font-light">
+            <p className={`sm:mt-0 text-[12px] md:text-[14px] !font-light ${subtitleClassName}`}>
               {subtitle}
             </p>
           )}
         </div>
       )}
 
-
       {(goBack || onClose) && (
-        <div className="flex-shrink-0 pb-0">
+        <div className={`flex-shrink-0 pb-0 ${closeButtonClassName}`}>
           <CloseButton onClick={onClose} goBack={goBack} />
         </div>
       )}

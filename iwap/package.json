@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build --turbopack",
+    "build": "next build --no-lint",
     "start": "next start",
     "lint": "eslint"
   },
@@ -13,6 +13,7 @@
     "@react-spring/web": "^10.0.3",
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.3.0",
+    "@tonejs/midi": "^2.0.28",
     "@use-gesture/react": "^10.3.1",
     "framer-motion": "^12.23.24",
     "html2canvas": "^1.4.1",
@@ -24,9 +25,11 @@
     "react-dom": "^19.1.0",
     "react-plotly.js": "^2.6.0",
     "react-resize-detector": "^12.3.0",
+    "siriwave": "^2.4.0",
     "svg-pathdata": "^8.0.0",
     "swiper": "^12.0.3",
-    "three": "^0.180.0"
+    "three": "^0.180.0",
+    "tone": "^15.1.22"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
