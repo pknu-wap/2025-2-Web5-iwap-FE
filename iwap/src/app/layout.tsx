@@ -4,8 +4,9 @@
 import "./globals.css";
 import localFont from "next/font/local";
 import { usePathname } from "next/navigation";
+import "@/components/lightswind.css";
 import Link from "next/link";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const Pretendard = localFont({
   src: "../../public/fonts/PretendardVariable.woff2",
@@ -16,7 +17,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   // 현재 경로 가져오기
   const pathname = usePathname();
   // 메인 페이지가 아닌 경우 헤더 표시
-  const showHeader = pathname !== '/';
+  const [forceHideHeader, setForceHideHeader] = useState(false);
+  const showHeader = pathname !== "/" && !forceHideHeader;
   
   useEffect(() => {
     const isMobile = window.matchMedia("(max-width: 767px)").matches;
@@ -27,6 +29,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       document.body.style.overflow = "auto";
       document.documentElement.style.overflow = "auto";
     }
+  }, []);
+
+  useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ hidden: boolean }>;
+      setForceHideHeader(Boolean(customEvent.detail?.hidden));
+    };
+
+    window.addEventListener("iwap:toggle-header", handler as EventListener);
+    return () => {
+      window.removeEventListener("iwap:toggle-header", handler as EventListener);
+    };
   }, []);
 
   return (

@@ -16,6 +16,7 @@ export default function VoiceToPiano() {
   const pageTitle = "P!ano";
   const pageSubtitle = "음성을 피아노로 변환하기";
   const { isRecording, audioUrl, startRecording, stopRecording } = useRecorder();
+  const [isMobile, setIsMobile] = useState(false);
   const activeNotesRef = useRef<Set<number>>(new Set());
   const noteTimeoutsRef = useRef<Map<number, number>>(new Map());
   const [, forceRender] = useState(0);
@@ -66,6 +67,16 @@ export default function VoiceToPiano() {
   );
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const updateIsMobile = () => setIsMobile(mediaQuery.matches);
+    updateIsMobile();
+    mediaQuery.addEventListener("change", updateIsMobile);
+    return () => {
+      mediaQuery.removeEventListener("change", updateIsMobile);
+    };
+  }, []);
+
+  useEffect(() => {
     (window as any).pushMidi = handleMidi;
     return () => {
       delete (window as any).pushMidi;
@@ -97,6 +108,22 @@ export default function VoiceToPiano() {
       noteTimeoutsRef.current.clear();
     };
   }, []);
+
+  useEffect(() => {
+    const hidden = Boolean(audioUrl) && isMobile;
+    window.dispatchEvent(
+      new CustomEvent("iwap:toggle-header", {
+        detail: { hidden },
+      })
+    );
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("iwap:toggle-header", {
+          detail: { hidden: false },
+        })
+      );
+    };
+  }, [audioUrl, isMobile]);
 
   const handleTransportReady = useCallback((controls: MidiTransportControls) => {
     setTransport(controls);
