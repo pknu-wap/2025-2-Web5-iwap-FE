@@ -5,6 +5,7 @@ import {
   motion,
   AnimatePresence,
   useMotionValue,
+  animate,
   easeOut,
 } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -55,7 +56,6 @@ export default function ThreeDImageRing({
   const moved = useRef(false);
   const justDragged = useRef(false);
 
-  // 모바일용: “두 번 탭” 감지용
   const lastTappedIndex = useRef<number | null>(null);
   const lastTapTime = useRef<number>(0);
 
@@ -70,6 +70,20 @@ export default function ThreeDImageRing({
   );
 
   const angle = parsedImages.length ? 360 / parsedImages.length : 0;
+  const FRONT_THRESHOLD = 180;
+
+  const getFacingState = (index: number, baseRotation: number) => {
+    const rotation = index * -angle;
+    const effective = (baseRotation + rotation) % 360;
+    const normalized = (effective + 360) % 360;
+    const distance = normalized > 180 ? 360 - normalized : normalized;
+
+    return {
+      rotation,
+      distance,
+      isFacing: distance <= FRONT_THRESHOLD,
+    };
+  };
 
   useEffect(() => {
     const unsub = rotationY.on("change", (v) => {
@@ -91,12 +105,33 @@ export default function ThreeDImageRing({
 
   useEffect(() => setShowImages(true), []);
 
-  // ✅ 클릭 로직: 첫 클릭 hover / 두 번째 클릭 링크 이동
+  const rotateToIndex = (index: number) => {
+    const target = -index * angle;
+    const current = ((currentRotationY.current % 360) + 360) % 360;
+    let delta = target - current;
+    if (delta > 180) delta -= 360;
+    if (delta < -180) delta += 360;
+
+    animate(rotationY, currentRotationY.current + delta, {
+      duration: 0.7,
+      ease: easeOut,
+      onUpdate: (v) => (currentRotationY.current = v),
+    });
+  };
+
   const handleImageClick = (index: number) => {
     if (isDragging.current || justDragged.current || moved.current) return;
     const item = parsedImages[index];
     const now = Date.now();
     const isMobile = window.innerWidth <= mobileBreakpoint;
+
+    const { isFacing } = getFacingState(index, currentRotationY.current);
+
+    if (!isFacing) {
+      rotateToIndex(index);
+      setHoverIndex(index);
+      return;
+    }
 
     if (isMobile) {
       if (lastTappedIndex.current === index && now - lastTapTime.current < 1000) {
@@ -183,11 +218,11 @@ export default function ThreeDImageRing({
           <AnimatePresence>
             {showImages &&
               parsedImages.map((img, index) => {
-                const rotation = index * -angle;
+                const { rotation, distance, isFacing } = getFacingState(
+                  index,
+                  currentRotation
+                );
                 const transformOrigin = `50% 50% ${imageDistance * currentScale}px`;
-                const effectiveRotation = (currentRotation + rotation) % 360;
-                const normalized = (effectiveRotation + 360) % 360;
-                const distance = normalized > 180 ? 360 - normalized : normalized;
                 const zIndex = 1000 - Math.round(distance);
 
                 return (
@@ -201,15 +236,17 @@ export default function ThreeDImageRing({
                     )}
                     style={{
                       transformStyle: "preserve-3d",
+                      rotateY: rotation,
+                      z: -imageDistance * currentScale,
+                      transformOrigin,
+                      zIndex,
                       backgroundImage: `url(${img.src})`,
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                       backfaceVisibility: "hidden",
-                      rotateY: index * -angle,
-                      z: -imageDistance * currentScale,
-                      transformOrigin,
-                      zIndex,
+                      pointerEvents: isFacing ? "auto" : "none",
                     }}
+                    aria-hidden={!isFacing}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
@@ -248,3 +285,4 @@ export default function ThreeDImageRing({
     </div>
   );
 }
+

@@ -1,136 +1,167 @@
 ﻿"use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
-import {
-  motion,
-  AnimatePresence,
-  useMotionValue,
-  animate,
-  easeOut,
-} from "framer-motion";
-import { cn } from "@/lib/utils";
-import { useRouter } from "next/navigation";
+import { useState, useMemo, useEffect } from "react";
+import dynamic from "next/dynamic";
+import { useResizeDetector } from "react-resize-detector";
+import { type Data, type Layout } from "plotly.js";
+import FullScreenView from "@/components/ui/FullScreenView";
 
-export default function ThreeDImageRing({
-  images = [],
-  width = 300,
-  height = width * 1.33,
-  perspective = 2000,
-  imageDistance = 500,
-  initialRotation = 180,
-  animationDuration = 1.5,
-  staggerDelay = 0.1,
-  backgroundColor = "#fff",
-  draggable = true,
-  ease = "easeOut",
-  mobileBreakpoint = 768,
-  mobileScaleFactor = 0.8,
-  desktopScale = 1,
-}: {
-  images?: any[];
-  width?: number;
-  height?: number;
-  perspective?: number;
-  imageDistance?: number;
-  initialRotation?: number;
-  animationDuration?: number;
-  staggerDelay?: number;
-  backgroundColor?: string;
-  draggable?: boolean;
-  ease?: string;
-  mobileBreakpoint?: number;
-  mobileScaleFactor?: number;
-  desktopScale?: number;
-}) {
-  const router = useRouter();
-  const ringRef = useRef<HTMLDivElement>(null);
-  const rotationY = useMotionValue(initialRotation);
-  const currentRotationY = useRef(initialRotation);
-  const [currentRotation, setCurrentRotation] = useState(initialRotation);
-  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
-  const [showImages, setShowImages] = useState(false);
-  const [currentScale, setCurrentScale] = useState(1);
+const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
-  const startX = useRef(0);
-  const isDragging = useRef(false);
-  const moved = useRef(false);
-  const velocity = useRef(0);
-  const justDragged = useRef(false);
-
-  const parsedImages = useMemo(() => {
-    return images.map((i) =>
-      typeof i === "string"
-        ? { src: i }
-        : { src: i.src, link: i.link, text: i.text, description: i.description }
-    );
-  }, [images]);
-
-  const angle = parsedImages.length ? 360 / parsedImages.length : 0;
+export default function FunctionsPage() {
+  const [index, setIndex] = useState(1);
+  const [a, setA] = useState(1);
+  const { width, height, ref } = useResizeDetector();
+  const [debouncedSize, setDebouncedSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    const unsub = rotationY.on("change", (v) => {
-      currentRotationY.current = v;
-      setCurrentRotation(v);
-    });
-    return () => unsub();
-  }, [rotationY]);
+    const handler = setTimeout(() => {
+      if (width && height) {
+        setDebouncedSize({ width, height });
+      }
+    }, 150);
+    return () => clearTimeout(handler);
+  }, [width, height]);
 
-  useEffect(() => {
-    const handleResize = () => {
-      const vw = window.innerWidth;
-      setCurrentScale(vw <= mobileBreakpoint ? mobileScaleFactor : desktopScale);
-    };
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, [mobileBreakpoint, mobileScaleFactor, desktopScale]);
+  const kVals = useMemo(() => Array.from({ length: 2500 }, (_, i) => i + 1), []);
 
-  useEffect(() => setShowImages(true), []);
+// [수정] 1번 그래프: 선의 두께에 따라 trace를 2개로 분리하여 촘촘함 복원
+const singleTrace1 = useMemo((): Data[] => {
+  const aVals = kVals.map((k) => (-3 / 2) * Math.pow(Math.sin((2 * Math.PI * k) / 2500), 3) + (3 / 10) * Math.pow(Math.sin((2 * Math.PI * k) / 2500), 7));
+  const bVals = kVals.map((k) => Math.sin((2 * Math.PI * k) / 1875 + Math.PI / 6) + 0.25 * Math.pow(Math.sin((2 * Math.PI * k) / 1875 + Math.PI / 6), 3));
+  const cVals = kVals.map((k) => 2 / 15 - (1 / 8) * Math.cos((Math.PI * k) / 625));
+  
+  const l1 = kVals.map((k, i) => {
+    const theta = (68 * Math.PI * k) / 2500;
+    return { re: aVals[i] + cVals[i] * Math.cos(theta), im: bVals[i] + cVals[i] * Math.sin(theta) };
+  });
+  const l2 = kVals.map((k, i) => {
+    const theta = (68 * Math.PI * k) / 2500;
+    return { re: aVals[i] - cVals[i] * Math.cos(theta), im: bVals[i] - cVals[i] * Math.sin(theta) };
+  });
 
-  const handleImageClick = (index: number) => {
-    if (justDragged.current) return;
-    const link = parsedImages[index].link;
-    if (link) router.push(link);
-  };
+  // 가는 선과 굵은 선의 좌표를 분리해서 저장
+  const thinLinesX: (number | null)[] = [];
+  const thinLinesY: (number | null)[] = [];
+  const thickLinesX: (number | null)[] = [];
+  const thickLinesY: (number | null)[] = [];
 
-  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!draggable) return;
-    isDragging.current = false;
-    moved.current = false;
-    justDragged.current = false;
-    const p = "touches" in e ? e.touches[0] : e;
-    startX.current = p.clientX;
-    rotationY.stop();
-    document.addEventListener("mousemove", handleDrag as any);
-    document.addEventListener("mouseup", handleDragEnd);
-    document.addEventListener("touchmove", handleDrag as any, { passive: false });
-    document.addEventListener("touchend", handleDragEnd);
-  };
+  for (let i = 0; i < kVals.length - 1; i++) {
+    // 가는 선 (l1, l2 경로)
+    thinLinesX.push(l1[i].re, l1[i + 1].re, null);
+    thinLinesY.push(l1[i].im, l1[i + 1].im, null);
+    thinLinesX.push(l2[i].re, l2[i + 1].re, null);
+    thinLinesY.push(l2[i].im, l2[i + 1].im, null);
+    
+    // 굵은 선 (l1과 l2를 잇는 선)
+    thickLinesX.push(l1[i].re, l2[i].re, null);
+    thickLinesY.push(l1[i].im, l2[i].im, null);
+  }
 
-  const handleDrag = (e: MouseEvent | TouchEvent) => {
-    const p =
-      "touches" in e
-        ? (e as TouchEvent).touches[0]
-        : (e as MouseEvent);
-    const dx = p.clientX - startX.current;
-    if ("touches" in e) e.preventDefault();
-    if (!isDragging.current && Math.abs(dx) > 8) isDragging.current = true;
-    if (isDragging.current) {
-      moved.current = true;
-      rotationY.set(currentRotationY.current - dx * 0.5);
-      startX.current = p.clientX;
+  // 2개의 trace 객체를 배열로 반환
+  return [
+    { // 가는 선 trace
+      x: thinLinesX,
+      y: thinLinesY,
+      mode: "lines",
+      type: "scatter",
+      line: { color: "rgba(0,0,0,0.5)", width: 0.3 },
+      showlegend: false,
+      hoverinfo: 'none'
+    },
+    { // 굵은 선 trace
+      x: thickLinesX,
+      y: thickLinesY,
+      mode: "lines",
+      type: "scatter",
+      line: { color: "rgba(0,0,0,0.5)", width: 1 },
+      showlegend: false,
+      hoverinfo: 'none'
     }
+  ];
+}, [kVals]);
+  
+  const xVals = useMemo(() => Array.from({ length: 200 }, (_, i) => -Math.sqrt(Math.PI) + (2 * Math.sqrt(Math.PI) * i) / 200), []);
+  const fVals = xVals.map((x) => Math.pow(Math.abs(x), 2 / 3) + Math.sqrt(Math.max(0, Math.PI - x * x)) * Math.sin(a * Math.PI * x));
+  
+  const xRange = useMemo(() => Array.from({ length: 50 }, (_, i) => -1 + (2 * i) / 49), []);
+  const yRange = useMemo(() => Array.from({ length: 60 }, (_, j) => -1 + (2.5 * j) / 59), []);
+  const zGrid: (number | null)[][] = useMemo(() => yRange.map((y) => xRange.map((x) => {
+    const inside = 1 - x * x - Math.pow(y - Math.abs(x), 2);
+    return inside < 0 ? null : 5 - Math.sqrt(inside) * Math.cos(30 * inside);
+  })), [xRange, yRange]);
+
+  const uRange = useMemo(() => Array.from({ length: 50 }, (_, i) => (2 * Math.PI * i) / 49), []);
+  const vRange = useMemo(() => Array.from({ length: 50 }, (_, j) => (Math.PI * j) / 49), []);
+  const surfX: number[][] = useMemo(() => vRange.map((v) => uRange.map((u) => Math.sin(v) * (15 * Math.sin(u) - 4 * Math.sin(3 * u)))), [uRange, vRange]);
+  const surfY: number[][] = useMemo(() => vRange.map((v) => uRange.map(() => 8 * Math.cos(v))), [uRange, vRange]);
+  const surfZ: number[][] = useMemo(() => vRange.map((v) => uRange.map((u) => Math.sin(v) * (15 * Math.cos(u) - 6 * Math.cos(2 * u) - 2 * Math.cos(3 * u)))), [uRange, vRange]);
+
+  const tVals = useMemo(() => Array.from({ length: 2000 }, (_, i) => (Math.PI * i) / 1999), []);
+  const xHeart = useMemo(() => tVals.map((t) => (4 / 9) * Math.sin(2 * t) + (1 / 3) * Math.pow(Math.sin(t), 8) * Math.cos(3 * t) + (1 / 8) * Math.sin(2 * t) * Math.pow(Math.cos(247 * t), 4)), [tVals]);
+  const yHeart = useMemo(() => tVals.map((t) => Math.sin(t) + (1 / 3) * Math.pow(Math.sin(t), 8) * Math.sin(3 * t) + (1 / 8) * Math.sin(2 * t) * Math.pow(Math.sin(247 * t), 4)), [tVals]);
+
+  const singleTrace6 = useMemo((): Data[] => {
+    const nLines = 601;
+    const iVals = Array.from({ length: nLines }, (_, i) => i + 1);
+    const xStart = iVals.map((i) => Math.sin((10 * Math.PI * (i + 699)) / 2000));
+    const yStart = iVals.map((i) => Math.cos((8 * Math.PI * (i + 699)) / 2000));
+    const xEnd = iVals.map((i) => Math.sin((12 * Math.PI * (i + 699)) / 2000));
+    const yEnd = iVals.map((i) => Math.cos((10 * Math.PI * (i + 699)) / 2000));
+    const xCoords = iVals.flatMap((_, idx) => [xStart[idx], xEnd[idx], null]);
+    const yCoords = iVals.flatMap((_, idx) => [yStart[idx], yEnd[idx], null]);
+    return [{
+      x: xCoords, y: yCoords, mode: "lines", type: "scatter",
+      line: { color: '#000000', width: 0.3 },
+      showlegend: false, hoverinfo: 'none',
+    }];
+  }, []);
+
+  const singleTrace7 = useMemo((): Data[] => {
+    const xCoords: (number | null)[] = [];
+    const yCoords: (number | null)[] = [];
+    for (let i = 0; i < 2000; i++) {
+        const idx = i + 1;
+        xCoords.push(Math.sin((10 * Math.PI * idx) / 2000), 0.5 * Math.sin((2 * Math.PI * idx) / 2000), null);
+        yCoords.push(0.5 * Math.cos((2 * Math.PI * idx) / 2000), Math.cos((10 * Math.PI * idx) / 2000), null);
+    }
+    return [{
+        x: xCoords, y: yCoords, mode: "lines", type: "scatter",
+        line: { color: 'rgba(50, 50, 50, 0.7)', width: 0.4 },
+        showlegend: false, hoverinfo: 'none',
+    }];
+  }, []);
+
+  // [타입 수정] 'plots'의 타입 정의를 원래대로 'Data[]'로 복구
+  const plots: Record<string, { data: Data[]; title: string }> = {
+    "1": { data: singleTrace1, title: "1. Line Segment Pattern" },
+    "2": { data: [{ x: xVals, y: fVals, type: "scatter", mode: "lines", line: { color: 'red' } }], title: `2. f(x), a=${a.toFixed(2)}` },
+    "3": { data: [{ x: xRange, y: yRange, z: zGrid, type: "surface", colorscale: [[0, '#444444'], [1, '#C35858']], showscale: false }], title: "3. Abstract 3D Surface" },
+    "4": { data: [{ x: surfX, y: surfY, z: surfZ, type: "surface", colorscale: [[0, 'pink'], [1, 'red']], showscale: false }], title: "4. 3D Parametric Surface (u, v)" },
+    "5": { data: [{ x: xHeart, y: yHeart, mode: "lines", line: { color: 'red', width: 1 }, type: 'scatter' }], title: "5. Parametric Heart Curve" },
+    "6": { data: singleTrace6, title: "6. Heart Shape from 601 Line Segments" },
+    "7": { data: singleTrace7, title: "7. 2000 Line Segments Pattern" },
   };
 
-  const handleDragEnd = () => {
-    document.removeEventListener("mousemove", handleDrag as any);
-    document.removeEventListener("mouseup", handleDragEnd);
-    document.removeEventListener("touchmove", handleDrag as any);
-    document.removeEventListener("touchend", handleDragEnd);
-    if (moved.current) justDragged.current = true;
-    isDragging.current = false;
-    moved.current = false;
-  };
+  const selectedPlot = plots[index.toString()];
+
+  const handlePrev = () => setIndex((prev) => (prev === 1 ? 7 : prev - 1));
+  const handleNext = () => setIndex((prev) => (prev === 7 ? 1 : prev + 1));
+
+  const plotLayout = useMemo<Partial<Layout>>(() => ({
+    width: debouncedSize.width,
+    height: debouncedSize.height,
+    margin: index === 2 ? { t: 100, l: 40, r: 20, b: 40 } : { t: 80, l: 40, r: 20, b: 40 },
+    paper_bgcolor: "rgba(0,0,0,0)",
+    plot_bgcolor: "rgba(0,0,0,0)",
+    xaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
+    yaxis: { visible: false, scaleanchor: "x", scaleratio: 1, showgrid: false, showticklabels: false, zeroline: false },
+    scene: {
+        xaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
+        yaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
+        zaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
+    },
+  }), [debouncedSize.width, debouncedSize.height, index]);
 
     const pageBackgroundStyle = {
     backgroundImage: "url('/images/this-is-for-u_background.jpg')",
@@ -140,7 +171,7 @@ export default function ThreeDImageRing({
   };
 
   return (
-    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)] overflow-hidden style={pageBackgroundStyle}">
+    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)] overflow-hidden">
       <FullScreenView
         title="Th!s !s for u"
         subtitle="함수로 하트 그리기"
