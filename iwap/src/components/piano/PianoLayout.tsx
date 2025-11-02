@@ -7,8 +7,11 @@ export const BLACK_W = 35;
 export const BLACK_H = 110;
 const STEP = 26;
 
-const WHITE_KEY_COUNT_DESKTOP = 70;
-const WHITE_KEY_COUNT_MOBILE = Math.floor(WHITE_KEY_COUNT_DESKTOP * (2 / 3));
+export const WHITE_KEY_COUNT_DESKTOP = 70;
+const MOBILE_KEY_RATIO = 2 / 3;
+export const WHITE_KEY_COUNT_MOBILE = Math.floor(
+  WHITE_KEY_COUNT_DESKTOP * MOBILE_KEY_RATIO
+);
 
 const isBlackKey = (midi: number) => [1, 3, 6, 8, 10].includes(midi % 12);
 const isWhiteKey = (midi: number) => !isBlackKey(midi);
@@ -21,39 +24,16 @@ const BLACK_ANCHOR: Record<number, number> = {
   10: 0.70,
 };
 
-export type PianoKeyData = { midi: number; type: "white" | "black"; x: number; y: number };
-export const pianoLayout: PianoKeyData[] = [];
+export type PianoKeyData = {
+  midi: number;
+  type: "white" | "black";
+  x: number;
+  y: number;
+};
 
 const FIRST = 0;
 const LAST = 119;
 
-// ✅ 화면 크기에 따라 건반 수 결정
-const isMobile =
-  typeof navigator !== "undefined" &&
-  /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-
-const WHITE_KEY_COUNT = isMobile
-  ? WHITE_KEY_COUNT_MOBILE
-  : WHITE_KEY_COUNT_DESKTOP;
-
-// === 1) 흰건반 ===
-let whiteX = 0;
-let whiteKeyIndex = 0;
-const whiteXMap: Record<number, number> = {};
-
-for (let m = FIRST; m <= LAST; m++) {
-  if (isWhiteKey(m)) {
-    const { x: dx, y: dy } = keyOffsets[whiteKeyIndex] ?? { x: 0, y: 0 };
-    const x = whiteX + dx;
-    pianoLayout.push({ midi: m, type: "white", x, y: dy });
-    whiteXMap[m] = x;
-    whiteX += STEP;
-    whiteKeyIndex++;
-    if (whiteKeyIndex >= WHITE_KEY_COUNT) break;
-  }
-}
-
-// === 2) 검은건반 ===
 function getNeighborWhites(m: number): [number, number] | null {
   const pc = m % 12;
   const base = m - pc;
@@ -65,24 +45,54 @@ function getNeighborWhites(m: number): [number, number] | null {
   return null;
 }
 
-for (let m = FIRST; m <= LAST; m++) {
-  if (!isBlackKey(m)) continue;
+export type PianoLayoutResult = {
+  layout: PianoKeyData[];
+  width: number;
+  height: number;
+};
 
-  const pair = getNeighborWhites(m);
-  if (!pair) continue;
-  const [left, right] = pair;
-  if (whiteXMap[left] == null || whiteXMap[right] == null) continue;
+export function createPianoLayout(whiteKeyCount: number): PianoLayoutResult {
+  const layout: PianoKeyData[] = [];
+  let whiteX = 0;
+  let whiteKeyIndex = 0;
+  const whiteXMap: Record<number, number> = {};
 
-  const t = BLACK_ANCHOR[m % 12] ?? 0.5;
-  const xl = whiteXMap[left];
-  const xr = whiteXMap[right];
-  const { x: dx, y: dy } = blackOffsets[m] ?? { x: 0, y: 0 };
+  for (let m = FIRST; m <= LAST; m++) {
+    if (!isWhiteKey(m)) continue;
 
-  const x = xl + (xr - xl) * t + dx - BLACK_W / 2;
-  const y = dy;
+    const { x: dx, y: dy } = keyOffsets[whiteKeyIndex] ?? { x: 0, y: 0 };
+    const x = whiteX + dx;
+    layout.push({ midi: m, type: "white", x, y: dy });
+    whiteXMap[m] = x;
+    whiteX += STEP;
+    whiteKeyIndex++;
+    if (whiteKeyIndex >= whiteKeyCount) break;
+  }
 
-  pianoLayout.push({ midi: m, type: "black", x, y });
+  for (let m = FIRST; m <= LAST; m++) {
+    if (!isBlackKey(m)) continue;
+
+    const pair = getNeighborWhites(m);
+    if (!pair) continue;
+    const [left, right] = pair;
+    if (whiteXMap[left] == null || whiteXMap[right] == null) continue;
+
+    const t = BLACK_ANCHOR[m % 12] ?? 0.5;
+    const xl = whiteXMap[left];
+    const xr = whiteXMap[right];
+    const { x: dx, y: dy } = blackOffsets[m] ?? { x: 0, y: 0 };
+
+    const x = xl + (xr - xl) * t + dx - BLACK_W / 2;
+    const y = dy;
+
+    layout.push({ midi: m, type: "black", x, y });
+  }
+
+  return {
+    layout,
+    width: whiteX + WHITE_W,
+    height: WHITE_H,
+  };
 }
 
-export const PIANO_WIDTH = whiteX + WHITE_W;
 export const PIANO_HEIGHT = WHITE_H;
