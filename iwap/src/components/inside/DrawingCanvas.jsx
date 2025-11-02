@@ -212,14 +212,14 @@ const DrawingCanvas = ({ onUploadSuccess, onUploadStart, onUploadFail }) => {
 
   return (
     <div className="absolute inset-0 flex flex-col">
-      <div className="w-full h-9 bg-stone-300 flex justify-between items-center mb-[-1px] flex-shrink-0">
+      <div className="w-full h-6 md:h-9 bg-stone-300 flex justify-between items-center mb-[-1px] flex-shrink-0">
         <div className="flex gap-3 pl-3">
-          <button onClick={handleUndo} disabled={historyIndex <= 0} className="disabled:opacity-40"><UndoIcon /></button>
-          <button onClick={handleRedo} disabled={historyIndex >= history.length - 1} className="disabled:opacity-40"><RedoIcon /></button>
+          <button onClick={handleUndo} disabled={historyIndex <= 0} className="disabled:opacity-40 scale-70 md:scale-100"><UndoIcon /></button>
+          <button onClick={handleRedo} disabled={historyIndex >= history.length - 1} className="disabled:opacity-40 scale-70 md:scale-100 -translate-x-2 md:translate-x-0"><RedoIcon /></button>
         </div>
         <div className="flex gap-3 pr-3">
-          <button onClick={clearCanvas}><TrashIcon /></button>
-          <button onClick={handlePost}><SubmitIcon /></button>
+          <button onClick={clearCanvas} className="scale-70 md:scale-100 translate-x-2 md:translate-x-0"><TrashIcon /></button>
+          <button onClick={handlePost} className="scale-70 md:scale-100"><SubmitIcon /></button>
         </div>
       </div>
       <div className="w-full flex-grow relative">

@@ -163,8 +163,15 @@ const singleTrace1 = useMemo((): Data[] => {
     },
   }), [debouncedSize.width, debouncedSize.height, index]);
 
+    const pageBackgroundStyle = {
+    backgroundImage: "url('/images/this-is-for-u_background.jpg')",
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed',
+  };
+
   return (
-    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]">
+    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)] overflow-hidden style={pageBackgroundStyle}">
       <FullScreenView
         title="Th!s !s for u"
         subtitle="함수로 하트 그리기"
@@ -172,9 +179,12 @@ const singleTrace1 = useMemo((): Data[] => {
         onPrev={handlePrev}
         onNext={handleNext}
         backgroundUrl="/images/this-is-for-u_background.jpg"
+        titleClassName="translate-y-[60px] translate-x-[9px] md:translate-x-0 md:translate-y-0 font-semibold"
+        subtitleClassName="translate-y-[60px] translate-x-[10px] md:translate-x-0 md:translate-y-0 font-semilight"
+        closeButtonClassName="translate-y-[60px] md:translate-y-0"
       >
         <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/95 to-black"></div>
-        <div className="relative z-20 mt-8 md:mt-20 w-[90vw] max-w-[1501px] h-[75vh] md:h-[65vh] max-h-[700px] bg-white flex flex-col items-center justify-center">
+        <div className="relative z-20 md:mt-20 w-[85vw] max-w-[1501px] h-[45vh] md:h-[65vh] max-h-[700px] bg-white flex flex-col items-center justify-center">
           <div ref={ref} className="w-full flex-grow min-h-0">
             {debouncedSize.width > 0 && debouncedSize.height > 0 && (
               <Plot
@@ -199,7 +209,3 @@ const singleTrace1 = useMemo((): Data[] => {
     </div>
   );
 }
-
-
-
-
