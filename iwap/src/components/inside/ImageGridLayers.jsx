@@ -245,7 +245,7 @@ export default function ImageGridLayers({ layersData }) {
       >
         <Canvas
           gl={{ alpha: true }}
-          style={{ background: 'transparent' }}
+          style={{ background: 'linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113)' }}
           camera={{ position: [0, 20, 150], fov: 60 }}
           onCreated={({ scene }) => { scene.background = null; }}
         >
@@ -253,12 +253,14 @@ export default function ImageGridLayers({ layersData }) {
         </Canvas>
       </div>
 
-      <ProgressBar 
-        currentIndex={focusLayerIndex}
-        totalLayers={layers.length}
-        onSeek={handleSeek}
-        sizeChangeIndices={sizeChangeIndices}
-      />
+      <div className="absolute bottom-8 left-4 right-4 md:bottom-10 md:left-10 md:right-10">
+        <ProgressBar 
+          currentIndex={focusLayerIndex}
+          totalLayers={layers.length}
+          onSeek={handleSeek}
+          sizeChangeIndices={sizeChangeIndices}
+        />
+      </div>
     </div>
   );
 }
