@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation"; // ✅ 1. useRouter import
 import FullScreenView from "@/components/ui/FullScreenView";
 import CloseButton from "@/components/ui/CloseButton";
 import { useRecorder } from "@/components/audio/useRecorder";
@@ -23,6 +24,8 @@ export default function VoiceToPiano() {
   const [transportDuration, setTransportDuration] = useState(0);
   const [transportPosition, setTransportPosition] = useState(0);
   const [isTransportPlaying, setIsTransportPlaying] = useState(false);
+
+  const router = useRouter(); // ✅ 2. router 선언
 
   // ... (handleMidi 및 기타 useEffect, useCallback 함수들은 이전과 동일) ...
   // (생략된 코드는 이전 답변과 동일하게 유지해 주세요)
@@ -136,6 +139,10 @@ export default function VoiceToPiano() {
   );
   // (여기까지 handle... 함수들)
 
+  // ✅ 3. 뒤로 가기 핸들러 함수
+  const handleGoBack = () => {
+    router.back();
+  };
 
   const hasTransport = Boolean(transport);
 
@@ -144,11 +151,11 @@ export default function VoiceToPiano() {
       <FullScreenView
         title="P!ano"
         subtitle="음성을 피아노로 변환하기"
-        goBack={true}
+        goBack={true} // 이 goBack은 FullScreenView의 기본 버튼에만 적용됩니다.
         className="text-black font-[Pretendard]"
         backgroundUrl="/images/piano_background.png"
         
-        // 모바일 재생 뷰에서 기본 헤더 숨김
+        // 모바일 재생 뷰에서 '기본' 헤더 숨김
         titleClassName={`${audioUrl ? "hidden" : ""} 
                           md:block md:rotate-0 md:translate-x-0 md:translate-y-0`}
         subtitleClassName={`${audioUrl ? "hidden" : ""} 
@@ -211,7 +218,7 @@ export default function VoiceToPiano() {
                 </div>
               </div>
 
-              {/* === 💡 모바일 뷰 (md:hidden) - 수정된 부분 === */}
+              {/* === 💡 모바일 뷰 (md:hidden) === */}
               <div className="
                 md:hidden /* 모바일에서만 보임 */
                 absolute top-1/2 left-1/2 
@@ -224,24 +231,24 @@ export default function VoiceToPiano() {
                 overflow-hidden p-4 text-white
               ">
                 
-                {/*  1. 모바일용 헤더 수정 (justify-between, items-start) */}
+                {/* 1. 모바일용 헤더 */}
                 <header className="w-full flex justify-between items-start px-6 pt-4">
                   
-                  {/*  2. 제목/부제목 (왼쪽) */}
+                  {/* 2. 제목/부제목 (왼쪽) */}
                   <div className="flex flex-col items-start ">
                     <h1 className="text-[30px] font-semibold">{pageTitle}</h1>
-                    {/*  3. 부제목 고정 */}
+                    {/* 3. 부제목 고정 */}
                     <p className="text-[12px] font-semilight">{pageSubtitle}</p>
                   </div>
                   
-                  {/*  4. 닫기 버튼 (오른쪽) */}
-                  <CloseButton /> 
+                  {/* ✅ 4. 닫기 버튼 (오른쪽) - onClick 추가 */}
+                  <CloseButton onClick={handleGoBack} /> 
                 </header>
 
-                {/*  5. 피아노 + Status 래퍼 수정 (flex-col) */}
+                {/* 5. 피아노 + Status 래퍼 */}
                 <div className="flex-1 flex flex-col items-center justify-center w-full">
                   
-                  {/*  6. Status 메시지를 피아노 위로 이동 */}
+                  {/* 6. Status 메시지를 피아노 위로 이동 */}
                   {status ? (
                     <p className="text-sm whitespace-nowrap mb-2">{status}</p>
                   ) : (
