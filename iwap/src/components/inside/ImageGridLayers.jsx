@@ -253,12 +253,14 @@ export default function ImageGridLayers({ layersData }) {
         </Canvas>
       </div>
 
-      <ProgressBar 
-        currentIndex={focusLayerIndex}
-        totalLayers={layers.length}
-        onSeek={handleSeek}
-        sizeChangeIndices={sizeChangeIndices}
-      />
+      <div className="absolute bottom-8 left-4 right-4 md:bottom-10 md:left-10 md:right-10">
+        <ProgressBar 
+          currentIndex={focusLayerIndex}
+          totalLayers={layers.length}
+          onSeek={handleSeek}
+          sizeChangeIndices={sizeChangeIndices}
+        />
+      </div>
     </div>
   );
 }
