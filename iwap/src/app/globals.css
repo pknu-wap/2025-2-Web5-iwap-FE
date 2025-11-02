@@ -1,4 +1,5 @@
 @import "tailwindcss";
+/* @import "@/styles/lightswind.css"; */
 
 :root {
   --background: #ffffff;
@@ -58,3 +59,7 @@ body {
 .swiper-pagination-bullet-active {
   background: rgba(31,31,31,.8); transform: scale(1.2);
 }
+/* global.css 또는 <style jsx global> */
+/* * {
+  outline: 1px solid red !important;
+} */

@@ -1,46 +1,16 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { motion, AnimatePresence, useMotionValue, easeOut } from "framer-motion";
+import {
+  motion,
+  AnimatePresence,
+  useMotionValue,
+  easeOut,
+} from "framer-motion";
 import { cn } from "@/lib/utils";
-import { animate } from "framer-motion";
+import { useRouter } from "next/navigation";
 
-export type ThreeDImageInput =
-  | string
-  | {
-      src: string;
-      link?: string;
-      text?: string;
-      description?: string;
-      [key: string]: unknown;
-    };
-
-export interface ThreeDImageRingProps {
-  images?: ThreeDImageInput[];
-  width?: number;
-  height?: number;
-  perspective?: number;
-  imageDistance?: number;
-  initialRotation?: number;
-  animationDuration?: number;
-  staggerDelay?: number;
-  hoverOpacity?: number;
-  containerClassName?: string;
-  ringClassName?: string;
-  imageClassName?: string;
-  backgroundColor?: string;
-  draggable?: boolean;
-  ease?: string;
-  mobileBreakpoint?: number;
-  mobileScaleFactor?: number;
-  desktopScale?: number;
-  focusedScale?: number;
-  inertiaPower?: number;
-  inertiaTimeConstant?: number;
-  inertiaVelocityMultiplier?: number;
-}
-
-export function ThreeDImageRing({
+export default function ThreeDImageRing({
   images = [],
   width = 300,
   height = width * 1.33,
@@ -49,302 +19,232 @@ export function ThreeDImageRing({
   initialRotation = 180,
   animationDuration = 1.5,
   staggerDelay = 0.1,
-  hoverOpacity = 0.5,
-  containerClassName,
-  ringClassName,
-  imageClassName,
-  backgroundColor,
+  backgroundColor = "#fff",
   draggable = true,
   ease = "easeOut",
   mobileBreakpoint = 768,
   mobileScaleFactor = 0.8,
   desktopScale = 1,
-  focusedScale = 1,
-  inertiaPower = 0.8,
-  inertiaTimeConstant = 300,
-  inertiaVelocityMultiplier = 20,
-}: ThreeDImageRingProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+}: {
+  images?: any[];
+  width?: number;
+  height?: number;
+  perspective?: number;
+  imageDistance?: number;
+  initialRotation?: number;
+  animationDuration?: number;
+  staggerDelay?: number;
+  backgroundColor?: string;
+  draggable?: boolean;
+  ease?: string;
+  mobileBreakpoint?: number;
+  mobileScaleFactor?: number;
+  desktopScale?: number;
+}) {
+  const router = useRouter();
   const ringRef = useRef<HTMLDivElement>(null);
-
-  type ParsedImage = {
-    src: string;
-    link?: string;
-    title?: string;
-    description?: string;
-  };
-
   const rotationY = useMotionValue(initialRotation);
-  const startX = useRef<number>(0);
-  const currentRotationY = useRef<number>(initialRotation);
-  const isDragging = useRef<boolean>(false);
-  const velocity = useRef<number>(0);
-  const justDragged = useRef<boolean>(false);
-  const hasAnimatedIn = useRef<boolean>(false);
-
-  const [currentScale, setCurrentScale] = useState(1);
+  const currentRotationY = useRef(initialRotation);
+  const [currentRotation, setCurrentRotation] = useState(initialRotation);
+  const [hoverIndex, setHoverIndex] = useState<number | null>(null);
   const [showImages, setShowImages] = useState(false);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [currentScale, setCurrentScale] = useState(1);
 
-  const parsedImages = useMemo(() => {
-    const toString = (value: unknown) => (typeof value === "string" ? value : undefined);
+  const startX = useRef(0);
+  const isDragging = useRef(false);
+  const moved = useRef(false);
+  const justDragged = useRef(false);
 
-    return images
-      .map<ParsedImage | null>((item) => {
-        if (typeof item === "string") {
-          return item.length > 0 ? { src: item } : null;
-        }
+  // 모바일용: “두 번 탭” 감지용
+  const lastTappedIndex = useRef<number | null>(null);
+  const lastTapTime = useRef<number>(0);
 
-        const src = toString(item.src);
-        if (!src) return null;
-
-        const link = toString(item.link);
-        const title = toString((item as { title?: string }).title) ?? toString(item.text);
-        const description = toString(item.description);
-
-        return {
-          src,
-          link: link ?? undefined,
-          title: title ?? undefined,
-          description: description ?? undefined,
-        };
-      })
-      .filter((img): img is ParsedImage => img !== null);
-  }, [images]);
-
-  const angle = useMemo(
-    () => (parsedImages.length > 0 ? 360 / parsedImages.length : 0),
-    [parsedImages.length]
+  const parsedImages = useMemo(
+    () =>
+      images.map((i) =>
+        typeof i === "string"
+          ? { src: i }
+          : { src: i.src, link: i.link, text: i.text, description: i.description }
+      ),
+    [images]
   );
 
-  const focusOpacity = useMemo(() => {
-    const base = typeof hoverOpacity === "number" ? Math.min(Math.max(hoverOpacity, 0), 1) : 0.5;
-    const scaleAdjustment = Math.min(Math.max(focusedScale, 1), 1.5) - 1;
-    const blendStrength = Math.min(1, Math.max(0, 0.7 + scaleAdjustment * 0.2));
-    const blended = base + (1 - base) * blendStrength;
-    return Math.min(0.97, Math.max(0.6, blended));
-  }, [hoverOpacity, focusedScale]);
-
-  const getBgPos = (imageIndex: number, currentRot: number, scale: number) => {
-    const scaledImageDistance = imageDistance * scale;
-    const effectiveRotation = currentRot - 180 - imageIndex * angle;
-    const parallaxOffset = ((effectiveRotation % 360 + 360) % 360) / 360;
-    return `${-(parallaxOffset * (scaledImageDistance / 1.5))}px 0px`;
-  };
+  const angle = parsedImages.length ? 360 / parsedImages.length : 0;
 
   useEffect(() => {
-    const unsubscribe = rotationY.on("change", (latestRotation) => {
-      currentRotationY.current = latestRotation;
+    const unsub = rotationY.on("change", (v) => {
+      currentRotationY.current = v;
+      setCurrentRotation(v);
     });
-    return () => unsubscribe();
+    return () => unsub();
   }, [rotationY]);
 
   useEffect(() => {
     const handleResize = () => {
-      const viewportWidth = window.innerWidth;
-      const newScale = viewportWidth <= mobileBreakpoint ? mobileScaleFactor : desktopScale;
-      setCurrentScale(newScale);
+      const vw = window.innerWidth;
+      setCurrentScale(vw <= mobileBreakpoint ? mobileScaleFactor : desktopScale);
     };
-
-    window.addEventListener("resize", handleResize);
     handleResize();
-
+    window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, [mobileBreakpoint, mobileScaleFactor, desktopScale]);
 
-  useEffect(() => {
-    setShowImages(true);
-  }, []);
+  useEffect(() => setShowImages(true), []);
 
-  useEffect(() => {
-    if (showImages && !hasAnimatedIn.current) {
-      hasAnimatedIn.current = true;
-    }
-  }, [showImages]);
-
-  const activeImage = useMemo(
-    () => (activeIndex !== null ? parsedImages[activeIndex] ?? null : null),
-    [activeIndex, parsedImages]
-  );
-
+  // ✅ 클릭 로직: 첫 클릭 hover / 두 번째 클릭 링크 이동
   const handleImageClick = (index: number) => {
-    if (isDragging.current || justDragged.current) return;
+    if (isDragging.current || justDragged.current || moved.current) return;
+    const item = parsedImages[index];
+    const now = Date.now();
+    const isMobile = window.innerWidth <= mobileBreakpoint;
 
-    if (activeIndex === index) {
-      const item = parsedImages[index];
-      if (item?.link) {
-        window.open(item.link, "_blank");
+    if (isMobile) {
+      if (lastTappedIndex.current === index && now - lastTapTime.current < 1000) {
+        if (item?.link) router.push(item.link);
+        lastTappedIndex.current = null;
       } else {
-        setActiveIndex(null);
+        setHoverIndex(index);
+        lastTappedIndex.current = index;
+        lastTapTime.current = now;
       }
     } else {
-      setActiveIndex(index);
+      if (hoverIndex === index) {
+        if (item?.link) router.push(item.link);
+      } else {
+        setHoverIndex(index);
+      }
     }
   };
 
-  const handleDragStart = (event: React.MouseEvent | React.TouchEvent) => {
+  const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
     if (!draggable) return;
-    setActiveIndex(null);
-    isDragging.current = true;
+    isDragging.current = false;
+    moved.current = false;
     justDragged.current = false;
-    const clientX = "touches" in event ? event.touches[0].clientX : event.clientX;
-    startX.current = clientX;
+    const p = "touches" in e ? e.touches[0] : e;
+    startX.current = p.clientX;
     rotationY.stop();
-    velocity.current = 0;
-    if (ringRef.current) {
-      ringRef.current.style.cursor = "grabbing";
-    }
-    document.addEventListener("mousemove", handleDrag);
+    document.addEventListener("mousemove", handleDrag as any);
     document.addEventListener("mouseup", handleDragEnd);
-    document.addEventListener("touchmove", handleDrag);
+    document.addEventListener("touchmove", handleDrag as any, { passive: false });
     document.addEventListener("touchend", handleDragEnd);
   };
 
-  const handleDrag = (event: MouseEvent | TouchEvent) => {
-    if (!draggable || !isDragging.current) return;
-
-    const clientX =
-      "touches" in event ? (event as TouchEvent).touches[0].clientX : (event as MouseEvent).clientX;
-    const deltaX = clientX - startX.current;
-
-    velocity.current = -deltaX * 0.5;
-    rotationY.set(currentRotationY.current + velocity.current);
-    startX.current = clientX;
+  const handleDrag = (e: MouseEvent | TouchEvent) => {
+    const p = "touches" in e ? e.touches[0] : (e as MouseEvent);
+    const dx = p.clientX - startX.current;
+    if ("touches" in e) e.preventDefault();
+    if (!isDragging.current && Math.abs(dx) > 6) isDragging.current = true;
+    if (isDragging.current) {
+      moved.current = true;
+      rotationY.set(currentRotationY.current - dx * 0.5);
+      startX.current = p.clientX;
+    }
   };
 
   const handleDragEnd = () => {
-    isDragging.current = false;
-    justDragged.current = true;
-    if (ringRef.current) {
-      ringRef.current.style.cursor = "grab";
-      currentRotationY.current = rotationY.get();
-    }
-
-    document.removeEventListener("mousemove", handleDrag);
+    document.removeEventListener("mousemove", handleDrag as any);
     document.removeEventListener("mouseup", handleDragEnd);
-    document.removeEventListener("touchmove", handleDrag);
+    document.removeEventListener("touchmove", handleDrag as any);
     document.removeEventListener("touchend", handleDragEnd);
-
-    const initial = rotationY.get();
-    const velocityBoost = velocity.current * inertiaVelocityMultiplier;
-    const target = initial + velocityBoost;
-
-    animate(initial, target, {
-      type: "inertia",
-      velocity: velocityBoost,
-      power: inertiaPower,
-      timeConstant: inertiaTimeConstant,
-      restDelta: 0.5,
-      modifyTarget: (nextTarget) =>
-        angle !== 0 ? Math.round(nextTarget / angle) * angle : nextTarget,
-      onUpdate: (latest) => {
-        rotationY.set(latest);
-      },
-    });
-
-    velocity.current = 0;
-    requestAnimationFrame(() => {
-      justDragged.current = false;
-    });
+    if (moved.current) justDragged.current = true;
+    isDragging.current = false;
+    moved.current = false;
   };
 
   return (
     <div
-      ref={containerRef}
-      className={cn("w-full h-full overflow-hidden select-none relative", containerClassName)}
+      className="w-full h-full overflow-hidden select-none relative flex justify-center items-center"
       style={{
         backgroundColor,
         transform: `scale(${currentScale})`,
-        transformOrigin: "center center",
+        transformStyle: "flat",
+        isolation: "isolate",
       }}
-      onMouseDown={draggable ? handleDragStart : undefined}
-      onTouchStart={draggable ? handleDragStart : undefined}
+      onMouseDown={handleDragStart}
+      onTouchStart={handleDragStart}
     >
       <div
         style={{
           perspective: `${perspective}px`,
-          width: `${width}px`,
-          height: `${height}px`,
-          position: "absolute",
-          left: "50%",
-          top: "50%",
-          transform: "translate(-50%, -50%)",
+          width,
+          height,
+          position: "relative",
         }}
       >
         <motion.div
           ref={ringRef}
-          className={cn("w-full h-full absolute", ringClassName)}
+          className="absolute inset-0"
           style={{
             transformStyle: "preserve-3d",
             rotateY: rotationY,
-            cursor: draggable ? "grab" : "default",
           }}
         >
           <AnimatePresence>
             {showImages &&
-              parsedImages.map((imageData, index) => {
-                const isActive = activeIndex === index;
+              parsedImages.map((img, index) => {
+                const rotation = index * -angle;
                 const transformOrigin = `50% 50% ${imageDistance * currentScale}px`;
+                const effectiveRotation = (currentRotation + rotation) % 360;
+                const normalized = (effectiveRotation + 360) % 360;
+                const distance = normalized > 180 ? 360 - normalized : normalized;
+                const zIndex = 1000 - Math.round(distance);
 
                 return (
                   <motion.div
                     key={index}
-                    className={cn("w-full h-full absolute", imageClassName)}
                     onClick={() => handleImageClick(index)}
+                    onMouseEnter={() => setHoverIndex(index)}
+                    onMouseLeave={() => setHoverIndex(null)}
+                    className={cn(
+                      "absolute flex items-center justify-center w-full h-full overflow-hidden text-white cursor-pointer"
+                    )}
                     style={{
                       transformStyle: "preserve-3d",
-                      backgroundImage: `url(${imageData.src})`,
+                      backgroundImage: `url(${img.src})`,
                       backgroundSize: "cover",
-                      backgroundRepeat: "no-repeat",
+                      backgroundPosition: "center",
                       backfaceVisibility: "hidden",
                       rotateY: index * -angle,
                       z: -imageDistance * currentScale,
                       transformOrigin,
-                      backgroundPosition: getBgPos(index, currentRotationY.current, currentScale),
-                      zIndex: isActive ? parsedImages.length + 1 : index,
+                      zIndex,
                     }}
-                    initial={{ y: 200, opacity: 0, scaleX: 1, scaleY: 1, x: 0 }}
-                    animate={{
-                      y: 0,
-                      opacity: isActive ? 1 : hoverOpacity,
-                      scaleX: 1,
-                      scaleY: 1,
-                      x: 0,
-                    }}
-                    exit={{ y: 200, opacity: 0, scaleX: 1, scaleY: 1, x: 0 }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
                     transition={{
-                      delay: hasAnimatedIn.current ? 0 : index * staggerDelay,
-                      duration: hasAnimatedIn.current ? 0.35 : animationDuration,
+                      delay: index * staggerDelay,
+                      duration: animationDuration,
                       ease: easeOut,
                     }}
-                    whileHover={{ opacity: 1, transition: { duration: 0.15 } }}
-                  />
+                  >
+                    <motion.div
+                      className="absolute inset-0 flex flex-col justify-center items-center bg-black/40 backdrop-blur-sm text-center px-3"
+                      style={{ pointerEvents: "none" }}
+                      animate={{
+                        opacity: hoverIndex === index ? 1 : 0,
+                        y: hoverIndex === index ? 0 : 10,
+                      }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      {img.text && (
+                        <p className="text-[10px] md:text-[28px] font-semibold mb-1 pointer-events-none">
+                          {img.text}
+                        </p>
+                      )}
+                      {img.description && (
+                        <p className="text-[6px] md:text-[9px] pointer-events-none">
+                          {img.description}
+                        </p>
+                      )}
+                    </motion.div>
+                  </motion.div>
                 );
               })}
           </AnimatePresence>
         </motion.div>
       </div>
-      <AnimatePresence>
-        {activeImage && (activeImage.title || activeImage.description) && (
-          <motion.div
-            key="active-slide-details"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 16 }}
-            transition={{ duration: 0.25, ease: easeOut }}
-            className="absolute bottom-6 left-1/2 max-w-[80%] -translate-x-1/2 rounded-xl bg-black/65 px-5 py-4 text-center text-white shadow-lg backdrop-blur-sm"
-          >
-            {activeImage.title && (
-              <p className="text-base font-semibold leading-tight">{activeImage.title}</p>
-            )}
-            {activeImage.description && (
-              <p className="mt-1 text-xs leading-snug text-white/80">{activeImage.description}</p>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
-
-export default ThreeDImageRing;
