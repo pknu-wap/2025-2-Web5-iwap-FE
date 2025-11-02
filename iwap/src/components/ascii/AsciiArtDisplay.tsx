@@ -149,29 +149,23 @@ export default function AsciiArtDisplay({
         {/* 1. 헤더 (고정 크기) */}
         <PageHeader title="ASCi!" subtitle="이미지를 텍스트로 표현" onClose={onClose} isAbsolute={false} padding="p-0 pb-2" />
         
-        {/* [수정] 데스크톱에서 콘텐츠 그룹의 너비를 자동으로 조절하고 중앙에 배치하는 wrapper */}
-        <div className="w-full md:w-auto md:flex md:items-start md:gap-4">
-
-          {/* --- 왼쪽 콘텐츠 (이미지 + 슬라이더) --- */}
-          {/* [수정] flex-shrink-0을 추가하여 데스크톱에서 너비가 줄어들지 않도록 함 */}
-          <div className="w-full max-w-[620px] flex-shrink-0">
-            <PageHeader title="ASCi!" subtitle="이미지를 텍스트로 표현" onClose={onClose} isAbsolute={false} padding="p-0 pb-4" />
-            
-            <div className="bg-white p-1.5 shadow-lg w-full">
-              {/* [수정] aspect-square를 다시 추가하여 이미지 영역이 정사각형 비율을 유지하도록 함 */}
-              <div ref={containerRef} className="w-full aspect-square flex items-center justify-center overflow-hidden">
-                <div ref={zoomWrapperRef} className="bg-black overflow-hidden">
-                  <div ref={artRef} style={{ userSelect: 'none', fontFamily: 'monospace' }}>
-                    {asciiResult.data?.map((rowData, y) => (
-                      <div key={y} style={{ height: `${CHAR_HEIGHT_PX}px`, lineHeight: `${CHAR_HEIGHT_PX}px`, whiteSpace: 'nowrap' }}>
-                        {rowData.map((cell, x) => (
-                          <span key={x} style={{ color: cell.color, width: `${CHAR_WIDTH_PX}px`, fontSize: `${FONT_SIZE_PX}px`, display: 'inline-block', textAlign: 'center' }}>
-                            {cell.char}
-                          </span>
-                        ))}
-                      </div>
-                    ))}
-                  </div>
+        {/* 2. 아트워크 영역 (가변 크기) */}
+        {/* [수정] 'flex-1 min-h-0' 적용 (남은 공간 차지 및 축소) */}
+        <div ref={containerRef} className="flex-1 min-h-0 w-full flex items-center justify-center">
+          
+          <div className="bg-white p-1.5 shadow-lg">
+            <div className="w-full h-full flex items-center justify-center overflow-hidden">
+              <div ref={zoomWrapperRef} className="bg-black overflow-hidden">
+                <div ref={artRef} style={{ userSelect: 'none', fontFamily: 'monospace' }}>
+                  {asciiResult.data?.map((rowData, y) => (
+                    <div key={y} style={{ height: `${CHAR_HEIGHT_PX}px`, lineHeight: `${CHAR_HEIGHT_PX}px`, whiteSpace: 'nowrap' }}>
+                      {rowData.map((cell, x) => (
+                        <span key={x} style={{ color: cell.color, width: `${CHAR_WIDTH_PX}px`, fontSize: `${FONT_SIZE_PX}px`, display: 'inline-block', textAlign: 'center' }}>
+                          {cell.char}
+                        </span>
+                      ))}
+                    </div>
+                  ))}
                 </div>
               </div>
             </div>
