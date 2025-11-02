@@ -112,223 +112,136 @@ export default function PianoBackendManager({
   }, []);
 
   useEffect(() => {
-    if (!audioUrl) return;
+  if (!audioUrl) return;
 
-    let isCancelled = false;
-    let sampler: Tone.Sampler | null = null;
-    const activeMidiNotes = new Set<number>();
-    onStatusChange?.("");
-    onTransportReset?.();
+  let isCancelled = false;
+  let sampler: Tone.Sampler | null = null;
+  const activeMidiNotes = new Set<number>();
+  onStatusChange?.(""); // 초기화
+  onTransportReset?.();
 
-    const flushActiveNotes = () => {
-      if (!activeMidiNotes.size) return;
-      activeMidiNotes.forEach((note) => {
-        onMidiEvent({ type: "off", note });
-      });
-      activeMidiNotes.clear();
-    };
+  const flushActiveNotes = () => {
+    if (!activeMidiNotes.size) return;
+    activeMidiNotes.forEach((note) => onMidiEvent({ type: "off", note }));
+    activeMidiNotes.clear();
+  };
 
-    const disposeTransport = () => {
-      Tone.Transport.stop();
-      Tone.Transport.cancel();
-      Tone.Transport.seconds = 0;
-      sampler?.releaseAll();
-      flushActiveNotes();
-    };
+  const disposeTransport = () => {
+    Tone.Transport.stop();
+    Tone.Transport.cancel();
+    Tone.Transport.seconds = 0;
+    sampler?.releaseAll();
+    flushActiveNotes();
+  };
 
-    const fetchAndPlayMidi = async () => {
-      try {
-        onStatusChange?.("Downloading generated MIDI...");
-        const midiRes = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/piano/midi`
-        );
-        if (!midiRes.ok) throw new Error("Failed to download MIDI file");
+  const fetchAndPlayMidi = async () => {
+    try {
+      onStatusChange?.("MIDI 변환 중...");
+      const midiRes = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/piano/midi`
+      );
+      if (!midiRes.ok) throw new Error("MIDI 파일 다운로드 실패");
 
-        const midiArray = await midiRes.arrayBuffer();
-        const midi = new Midi(midiArray);
+      const midiArray = await midiRes.arrayBuffer();
+      const midi = new Midi(midiArray);
 
-        await Tone.start();
-        disposeTransport();
-        sampler = await getOrCreateSampler();
-
-        midi.tracks.forEach((track) => {
-          track.notes.forEach((note) => {
-            const midiNum = note.midi;
-            const start = note.time;
-            const duration = Math.max(note.duration, 0.05);
-
-            Tone.Transport.schedule((time) => {
-              if (isCancelled) return;
-              const instrument = sampler;
-              if (!instrument) return;
-              // Slight velocity floor to avoid super-quiet artifacts
-              const vel = Math.max(0.08, note.velocity ?? 0.8);
-              instrument.triggerAttackRelease(note.name, duration, time, vel);
-              onMidiEvent({ type: "on", note: midiNum });
-              Tone.Transport.scheduleOnce(() => {
-                if (isCancelled) return;
-                onMidiEvent({ type: "off", note: midiNum });
-              }, start + duration);
-              activeMidiNotes.add(midiNum);
-              Tone.Transport.scheduleOnce(() => {
-                if (isCancelled) return;
-                activeMidiNotes.delete(midiNum);
-              }, start + duration);
-            }, start);
-          });
-        });
-
-        if (!isCancelled) {
-          const duration =
-            midi.duration ||
-            midi.tracks.reduce((max, track) => {
-              const trackMax = track.notes.reduce(
-                (acc, n) => Math.max(acc, n.time + n.duration),
-                0
-              );
-              return Math.max(max, trackMax);
-            }, 0);
-
-          const controls: MidiTransportControls = {
-            duration,
-            start: async () => {
-              if (isCancelled) return;
-              await Tone.start();
-              if (Tone.Transport.state !== "started") {
-                Tone.Transport.start();
-                onStatusChange?.("Playing generated MIDI...");
-              }
-            },
-            pause: () => {
-              if (Tone.Transport.state !== "started") return;
-              Tone.Transport.pause();
-              sampler?.releaseAll();
-              flushActiveNotes();
-              onStatusChange?.("Playback paused");
-            },
-            stop: () => {
-              Tone.Transport.stop();
-              Tone.Transport.seconds = 0;
-              sampler?.releaseAll();
-              flushActiveNotes();
-              onStatusChange?.("Playback stopped");
-            },
-            seek: (seconds: number, resume = false) => {
-              const clamped = Math.max(0, Math.min(duration, seconds));
-              const wasRunning = Tone.Transport.state === "started";
-              if (wasRunning) {
-                Tone.Transport.pause();
-              }
-              sampler?.releaseAll();
-              flushActiveNotes();
-              Tone.Transport.seconds = clamped;
-              const shouldResume = resume || wasRunning;
-              if (shouldResume) {
-                Tone.Transport.start();
-                onStatusChange?.("Playing generated MIDI...");
-              } else if (wasRunning) {
-                onStatusChange?.("Playback paused");
-              }
-            },
-            getPosition: () => Tone.Transport.seconds,
-            getState: () =>
-              Tone.Transport.state as "started" | "stopped" | "paused",
-          };
-
-          onStatusChange?.("MIDI ready. Use the transport to listen.");
-          onTransportReady?.(controls);
-        }
-      } catch (err) {
-        console.error("MIDI playback failed:", err);
-        if (!isCancelled) {
-          onStatusChange?.("MIDI playback failed");
-        }
-      }
-    };
-
-    const sendAudioToBackend = async () => {
-      try {
-        onStatusChange?.("Uploading audio for MIDI conversion...");
-        const res = await fetch(audioUrl);
-        const originalBlob = await res.blob();
-
-        // Normalize blob type to match backend allowed types
-        const allowedTypes = new Set([
-          "audio/mpeg",
-          "audio/mp3",
-          "audio/webm",
-          "audio/wav",
-        ]);
-        const normalizedType = allowedTypes.has(originalBlob.type)
-          ? originalBlob.type
-          : // For blob: URLs from MediaRecorder, default to webm if unknown
-            (audioUrl?.startsWith("blob:") ? "audio/webm" : "audio/mpeg");
-
-        const uploadBlob =
-          originalBlob.type === normalizedType
-            ? originalBlob
-            : new Blob([originalBlob], { type: normalizedType });
-
-        const formData = new FormData();
-        const mime = uploadBlob.type || "audio/mpeg";
-        const ext =
-          mime === "audio/webm"
-            ? "webm"
-            : mime === "audio/wav"
-            ? "wav"
-            : mime === "audio/mp3" || mime === "audio/mpeg"
-            ? "mp3"
-            : "mp3";
-        formData.append("voice", uploadBlob, `voice.${ext}`);
-
-        const uploadRes = await fetch(
-          `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/piano/`,
-          {
-            method: "POST",
-            body: formData,
-          }
-        );
-
-        if (!uploadRes.ok) {
-          let detail = "";
-          try {
-            const ct = uploadRes.headers.get("content-type") || "";
-            if (ct.includes("application/json")) {
-              const body = await uploadRes.json();
-              detail = body?.detail ? String(body.detail) : JSON.stringify(body);
-            } else {
-              detail = await uploadRes.text();
-            }
-          } catch {}
-          const message = detail ? `Audio upload failed: ${detail}` : "Audio upload failed";
-          onStatusChange?.(message);
-          throw new Error(message);
-        }
-
-        onStatusChange?.("Processing MIDI response...");
-        await fetchAndPlayMidi();
-      } catch (err) {
-        console.error(err);
-        if (!isCancelled) {
-          onStatusChange?.("An error occurred");
-        }
-      }
-    };
-
-    sendAudioToBackend();
-
-    return () => {
-      isCancelled = true;
+      await Tone.start();
       disposeTransport();
-      onTransportReset?.();
-    };
-  }, [
-    audioUrl,
-    onMidiEvent,
-    onStatusChange,
-    onTransportReady,
-    onTransportReset,
-  ]);
+      sampler = await getOrCreateSampler();
+
+      midi.tracks.forEach((track) => {
+        track.notes.forEach((note) => {
+          const midiNum = note.midi;
+          const start = note.time;
+          const duration = Math.max(note.duration, 0.05);
+
+          Tone.Transport.schedule((time) => {
+            if (isCancelled) return;
+            sampler?.triggerAttackRelease(note.name, duration, time, note.velocity ?? 0.8);
+            onMidiEvent({ type: "on", note: midiNum });
+            Tone.Transport.scheduleOnce(() => {
+              if (isCancelled) return;
+              onMidiEvent({ type: "off", note: midiNum });
+            }, start + duration);
+          }, start);
+        });
+      });
+
+      const duration =
+        midi.duration ||
+        midi.tracks.reduce((max, t) =>
+          Math.max(max, ...t.notes.map((n) => n.time + n.duration)), 0);
+
+      const controls: MidiTransportControls = {
+        duration,
+        start: async () => {
+          if (isCancelled) return;
+          await Tone.start();
+          if (Tone.Transport.state !== "started") {
+            Tone.Transport.start();
+          }
+        },
+        pause: () => {
+          Tone.Transport.pause();
+          sampler?.releaseAll();
+          flushActiveNotes();
+        },
+        stop: () => {
+          Tone.Transport.stop();
+          Tone.Transport.seconds = 0;
+          sampler?.releaseAll();
+          flushActiveNotes();
+        },
+        seek: (seconds: number, resume = false) => {
+          const clamped = Math.max(0, Math.min(duration, seconds));
+          Tone.Transport.seconds = clamped;
+          if (resume) Tone.Transport.start();
+        },
+        getPosition: () => Tone.Transport.seconds,
+        getState: () => Tone.Transport.state as "started" | "stopped" | "paused",
+      };
+
+      onStatusChange?.(""); // ✅ 완료 후 상태 문구 제거
+      onTransportReady?.(controls);
+    } catch (err) {
+      console.error("MIDI 변환 실패:", err);
+      if (!isCancelled) onStatusChange?.("MIDI 변환 중 오류가 발생했습니다.");
+    }
+  };
+
+  const sendAudioToBackend = async () => {
+    try {
+      onStatusChange?.("MIDI 변환 중...");
+
+      const res = await fetch(audioUrl);
+      const blob = await res.blob();
+
+      const formData = new FormData();
+      formData.append("voice", blob, "voice.webm");
+
+      const uploadRes = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/piano/`,
+        { method: "POST", body: formData }
+      );
+
+      if (!uploadRes.ok) throw new Error("오디오 업로드 실패");
+
+      await fetchAndPlayMidi();
+    } catch (err) {
+      console.error("오디오 업로드 실패:", err);
+      if (!isCancelled) onStatusChange?.("MIDI 변환 중 오류가 발생했습니다.");
+    }
+  };
+
+  sendAudioToBackend();
+
+  return () => {
+    isCancelled = true;
+    disposeTransport();
+    onTransportReset?.();
+  };
+}, [audioUrl, onMidiEvent, onStatusChange, onTransportReady, onTransportReset]);
+
 
   return null;
 }

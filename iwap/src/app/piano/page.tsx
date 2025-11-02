@@ -2,6 +2,7 @@
 
 import { useRef, useState, useEffect, useCallback } from "react";
 import FullScreenView from "@/components/ui/FullScreenView";
+import CloseButton from "@/components/ui/CloseButton";
 import { useRecorder } from "@/components/audio/useRecorder";
 import RecorderButton from "@/components/audio/RecorderButton";
 import Piano from "@/components/piano/Piano";
@@ -11,6 +12,8 @@ import PianoBackendManager, {
 import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
 
 export default function VoiceToPiano() {
+  const pageTitle = "P!ano";
+  const pageSubtitle = "음성을 피아노로 변환하기";
   const { isRecording, audioUrl, startRecording, stopRecording } = useRecorder();
   const activeNotesRef = useRef<Set<number>>(new Set());
   const noteTimeoutsRef = useRef<Map<number, number>>(new Map());
@@ -141,16 +144,26 @@ export default function VoiceToPiano() {
   // 🎵 오디오 업로드 및 MIDI 변환 요청은 PianoBackendManager에서 처리됩니다.
 
   const hasTransport = Boolean(transport);
+  const showMobileHeader = Boolean(audioUrl);
 
   return (
     <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]">
       <FullScreenView
-      title="P!ano"
-      subtitle="음성을 피아노로 변환하기"
-      goBack={true}
-      className="text-black font-[Pretendard]"
-      backgroundUrl="/images/piano_background.png"
-    >
+  title="P!ano"
+  subtitle="음성을 피아노로 변환하기"
+  goBack={true}
+  className="text-black font-[Pretendard]"
+  backgroundUrl="/images/piano_background.png"
+
+  // ✅ audioUrl 존재할 때만 회전 적용
+  titleClassName={`${audioUrl ? "rotate-90 translate-y-[100px] translate-x-[290px]" : ""} 
+                   md:rotate-0 md:translate-x-0 md:translate-y-0`}
+  subtitleClassName={`${audioUrl ? "rotate-90 translate-y-[70px] translate-x-[260px]" : ""} 
+                      md:rotate-0 md:translate-x-0 md:translate-y-0`}
+  closeButtonClassName={`${audioUrl ? "rotate-90 translate-y-[670px]" : ""} 
+                         md:rotate-0 md:translate-y-0`}
+                         >
+
       <PianoBackendManager
         audioUrl={audioUrl}
         onMidiEvent={handleMidi}
@@ -203,7 +216,7 @@ export default function VoiceToPiano() {
 
             <div className="relative flex w-full items-center justify-center md:hidden">
               <div className="relative flex w-full items-center justify-center min-h-[70vh] py-10">
-                <div className="transform rotate-90 origin-center scale-[0.35]">
+                <div className="transform rotate-90 origin-center scale-[0.5]">
                   <Piano activeNotes={activeNotesRef.current} />
                 </div>
                 {status ? (
@@ -217,6 +230,7 @@ export default function VoiceToPiano() {
         )}
       </main>
       {hasTransport ? (
+        <div className="absolute bottom-6 left-0 right-0 flex justify-center">
         <MidiPlayerBar
           isPlaying={isTransportPlaying}
           duration={transportDuration}
@@ -224,8 +238,13 @@ export default function VoiceToPiano() {
           onTogglePlay={handleTogglePlayback}
           onSeek={handleSeek}
           disabled={!hasTransport || transportDuration <= 0}
-          className="max-w-4xl"
+          className="max-w-4xl
+                      md:rotate-0 rotate-90
+                      md:translate-x-0 -translate-x-25
+                      md:translate-y-0 -translate-y-90
+                      md:scale-100 scale-[1]"
         />
+        </div>
       ) : null}
       </FullScreenView>
     </div>
