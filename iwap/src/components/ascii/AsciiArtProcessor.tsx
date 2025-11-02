@@ -59,7 +59,7 @@ export const processImageToAsciiWithWorker = (
 ): Promise<Omit<AsciiResult, 'art' | 'initialResolution'>> => {
   return new Promise((resolve, reject) => {
     // Next.js 환경에서는 URL 객체를 사용하여 워커 경로를 지정해야 합니다.
-    const worker = new Worker(new URL('../../workers/ascii.worker.ts', import.meta.url));
+    const worker = new Worker(new URL('ascii.worker.ts', import.meta.url));
 
     worker.onmessage = (e: MessageEvent) => {
       const { status, data, dims, message } = e.data;
