@@ -25,7 +25,15 @@ body {
   color: var(--foreground);
 }
 
-/* slides 확장용 */
+.slider-no-scrollbar {
+  scrollbar-width: none;
+}
+
+.slider-no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* slides 확장용*/
 .slide-card {
   --w-base: 200px;
   width: var(--w-base);
@@ -132,3 +140,4 @@ body {
 /* * {
   outline: 1px solid red !important;
 } */
+

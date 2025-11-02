@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="ko">
-      <body className={`relative ${Pretendard.className} text-black`}>
+      <body className={`relative overflow-x-hidden ${Pretendard.className} text-black`}>
         
         {/* (메인페이지가 아닌 경우) 모바일(기본)에서는 숨기고, md 사이즈 이상일 때만 flex로 표시 */}
         {showHeader && (

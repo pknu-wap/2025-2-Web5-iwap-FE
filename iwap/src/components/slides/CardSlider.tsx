@@ -171,7 +171,7 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
   return (
     <div
       ref={scrollContainerRef}
-      className={`w-full ${isExpanded ? 'overflow-x-auto' : 'overflow-hidden'} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
+      className={`w-full ${isExpanded ? 'overflow-x-auto' : 'overflow-hidden'} slider-no-scrollbar`}
       style={{
         height: `${cardDimensions.height}px`,
         opacity: isInitialized ? 1 : 0,
