@@ -7,6 +7,9 @@ export const BLACK_W = 35;
 export const BLACK_H = 110;
 const STEP = 26;
 
+const WHITE_KEY_COUNT_DESKTOP = 70;
+const WHITE_KEY_COUNT_MOBILE = Math.floor(WHITE_KEY_COUNT_DESKTOP * (2 / 3));
+
 const isBlackKey = (midi: number) => [1, 3, 6, 8, 10].includes(midi % 12);
 const isWhiteKey = (midi: number) => !isBlackKey(midi);
 
@@ -29,7 +32,9 @@ const isMobile =
   typeof navigator !== "undefined" &&
   /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-const WHITE_KEY_COUNT = isMobile ? 50 : 70;
+const WHITE_KEY_COUNT = isMobile
+  ? WHITE_KEY_COUNT_MOBILE
+  : WHITE_KEY_COUNT_DESKTOP;
 
 // === 1) 흰건반 ===
 let whiteX = 0;
