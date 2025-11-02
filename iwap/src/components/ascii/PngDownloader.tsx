@@ -26,7 +26,6 @@ export default function PngDownloader({
 }: PngDownloaderProps) {
 
   const downloadAsPng = useCallback(() => {
-    // ... (다운로드 로직은 변경 없음)
     if (!asciiData || !downloadCanvasRef.current || artDimensions.w === 0) { return; }
     const canvas = downloadCanvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -69,17 +68,16 @@ export default function PngDownloader({
     <button
       onClick={downloadAsPng}
       disabled={disabled}
-      // [수정 3] 반응형 클래스 제거, 데스크탑 기준으로 스타일 고정
-      className="w-full flex items-center justify-center gap-2 px-3 py-1.5 bg-white rounded-[3px] text-stone-300 text-xl font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
+      // [수정 3] cursor-pointer 추가
+      className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-white rounded-[3px] text-stone-300 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
       title="선택한 배율로 PNG 파일을 다운로드합니다."
     >
       <Image 
         src="/icons/download.svg" 
         alt="Download"
-        width={20}
-        height={20} 
-        // [수정 3] 반응형 클래스 제거
-        className="w-5 h-5"
+        width={16}
+        height={16} 
+        className="w-4 h-4"
       />
       PNG
     </button>
