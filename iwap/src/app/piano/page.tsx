@@ -11,15 +11,10 @@ import PianoBackendManager, {
   type MidiTransportControls,
 } from "@/app/api/piano/PianoBackendManager";
 import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
-import * as Tone from "tone";
 
 export default function VoiceToPiano() {
-  useEffect(() => {
-    const startTone = async () => await Tone.start();
-    document.addEventListener("click", startTone, { once: true });
-    return () => document.removeEventListener("click", startTone);
-  }, []);
-  
+  const pageTitle = "P!ano";
+  const pageSubtitle = "음성을 피아노로 변환하기";
   const { isRecording, audioUrl, startRecording, stopRecording } = useRecorder();
   const [isMobile, setIsMobile] = useState(false);
   const activeNotesRef = useRef<Set<number>>(new Set());
