@@ -72,7 +72,7 @@ import Image from "next/image";
   const pageBackgroundStyle = {
     backgroundImage: `
       linear-gradient(to bottom, rgba(13, 17, 19, 0), #090223),
-      url('/images/home/slides/slide6.svg')
+      url('/images/instrument_background.jpg')
     `,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
