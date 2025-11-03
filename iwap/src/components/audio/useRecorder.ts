@@ -34,6 +34,7 @@ export function useRecorder() {
       const outType = chosenMime || (recorder as any).mimeType || "audio/webm";
       const blob = new Blob(chunks, { type: outType });
       setAudioUrl(URL.createObjectURL(blob));
+      setIsRecording(false);
       recorder.removeEventListener("dataavailable", handleData);
       recorder.removeEventListener("stop", handleStop);
     };
@@ -60,7 +61,6 @@ export function useRecorder() {
       streamRef.current?.getTracks().forEach((t) => t.stop());
     } catch {}
     streamRef.current = null;
-    setIsRecording(false);
     mediaRecorderRef.current = null;
   };
 

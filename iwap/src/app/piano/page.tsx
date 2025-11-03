@@ -1,7 +1,13 @@
 "use client";
 
-import { useRef, useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation"; // ✅ 1. useRouter import
+import {
+  useRef,
+  useState,
+  useEffect,
+  useLayoutEffect,
+  useCallback,
+} from "react";
+import { useRouter } from "next/navigation"; //  1. useRouter import
 import FullScreenView from "@/components/ui/FullScreenView";
 import CloseButton from "@/components/ui/CloseButton";
 import { useRecorder } from "@/components/audio/useRecorder";
@@ -16,7 +22,10 @@ export default function VoiceToPiano() {
   const pageTitle = "P!ano";
   const pageSubtitle = "음성을 피아노로 변환하기";
   const { isRecording, audioUrl, startRecording, stopRecording } = useRecorder();
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia("(max-width: 767px)").matches;
+  });
   const activeNotesRef = useRef<Set<number>>(new Set());
   const noteTimeoutsRef = useRef<Map<number, number>>(new Map());
   const [, forceRender] = useState(0);
@@ -25,8 +34,13 @@ export default function VoiceToPiano() {
   const [transportDuration, setTransportDuration] = useState(0);
   const [transportPosition, setTransportPosition] = useState(0);
   const [isTransportPlaying, setIsTransportPlaying] = useState(false);
+  const midiDownloadUrlRef = useRef<string | null>(null);
+  const [midiDownload, setMidiDownload] = useState<{
+    url: string;
+    filename: string;
+  } | null>(null);
 
-  const router = useRouter(); // ✅ 2. router 선언
+  const router = useRouter(); //  2. router 선언
 
   // ... (handleMidi 및 기타 useEffect, useCallback 함수들은 이전과 동일) ...
   // (생략된 코드는 이전 답변과 동일하게 유지해 주세요)
@@ -109,21 +123,31 @@ export default function VoiceToPiano() {
     };
   }, []);
 
-  useEffect(() => {
+  const headerHiddenRef = useRef(false);
+
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
     const hidden = Boolean(audioUrl) && isMobile;
+    if (headerHiddenRef.current === hidden) return;
+    headerHiddenRef.current = hidden;
     window.dispatchEvent(
       new CustomEvent("iwap:toggle-header", {
         detail: { hidden },
       })
     );
+  }, [audioUrl, isMobile]);
+
+  useEffect(() => {
     return () => {
+      if (!headerHiddenRef.current || typeof window === "undefined") return;
       window.dispatchEvent(
         new CustomEvent("iwap:toggle-header", {
           detail: { hidden: false },
         })
       );
+      headerHiddenRef.current = false;
     };
-  }, [audioUrl, isMobile]);
+  }, []);
 
   const handleTransportReady = useCallback((controls: MidiTransportControls) => {
     setTransport(controls);
@@ -132,17 +156,42 @@ export default function VoiceToPiano() {
     setIsTransportPlaying(false);
   }, []);
 
+  const clearMidiDownload = useCallback(() => {
+    if (midiDownloadUrlRef.current) {
+      URL.revokeObjectURL(midiDownloadUrlRef.current);
+      midiDownloadUrlRef.current = null;
+    }
+    setMidiDownload(null);
+  }, []);
+
+  const handleMidiReady = useCallback(
+    ({ blob, filename }: { blob: Blob; filename: string }) => {
+      clearMidiDownload();
+      const url = URL.createObjectURL(blob);
+      midiDownloadUrlRef.current = url;
+      setMidiDownload({ url, filename });
+    },
+    [clearMidiDownload]
+  );
+
+  useEffect(() => {
+    return () => {
+      clearMidiDownload();
+    };
+  }, [clearMidiDownload]);
+
   const handleTransportReset = useCallback(() => {
     setTransport(null);
     setTransportDuration(0);
     setTransportPosition(0);
     setIsTransportPlaying(false);
     setStatus("");
+    clearMidiDownload();
     noteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
     noteTimeoutsRef.current.clear();
     activeNotesRef.current.clear();
     forceRender((t) => t ^ 1);
-  }, [forceRender]);
+  }, [clearMidiDownload, forceRender]);
 
   const handleTogglePlayback = useCallback(() => {
     if (!transport) return;
@@ -164,9 +213,25 @@ export default function VoiceToPiano() {
     },
     [transport, transportDuration]
   );
+
+  const handleRewind = useCallback(() => {
+    if (!transport) return;
+    transport.seek(0, isTransportPlaying);
+    setTransportPosition(0);
+  }, [transport, isTransportPlaying]);
+
+  const handleDownloadMidi = useCallback(() => {
+    if (!midiDownload) return;
+    const link = document.createElement("a");
+    link.href = midiDownload.url;
+    link.download = midiDownload.filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }, [midiDownload]);
   // (여기까지 handle... 함수들)
 
-  // ✅ 3. 뒤로 가기 핸들러 함수
+  //  3. 뒤로 가기 핸들러 함수
   const handleGoBack = () => {
     router.back();
   };
@@ -196,6 +261,7 @@ export default function VoiceToPiano() {
           onStatusChange={setStatus}
           onTransportReady={handleTransportReady}
           onTransportReset={handleTransportReset}
+          onMidiReady={handleMidiReady}
         />
         {audioUrl && (
           <>
@@ -268,7 +334,7 @@ export default function VoiceToPiano() {
                     <p className="text-[12px] font-semilight">{pageSubtitle}</p>
                   </div>
                   
-                  {/* ✅ 4. 닫기 버튼 (오른쪽) - onClick 추가 */}
+                  {/*  4. 닫기 버튼 (오른쪽) - onClick 추가 */}
                   <CloseButton onClick={handleGoBack} /> 
                 </header>
 
@@ -298,6 +364,9 @@ export default function VoiceToPiano() {
                       position={transportPosition}
                       onTogglePlay={handleTogglePlayback}
                       onSeek={handleSeek}
+                      onRewind={handleRewind}
+                      onDownload={handleDownloadMidi}
+                      canDownload={Boolean(midiDownload)}
                       disabled={!hasTransport || transportDuration <= 0}
                       className="max-w-xl" 
                     />
@@ -317,6 +386,9 @@ export default function VoiceToPiano() {
               position={transportPosition}
               onTogglePlay={handleTogglePlayback}
               onSeek={handleSeek}
+              onRewind={handleRewind}
+              onDownload={handleDownloadMidi}
+              canDownload={Boolean(midiDownload)}
               disabled={!hasTransport || transportDuration <= 0}
               className="max-w-4xl"
             />

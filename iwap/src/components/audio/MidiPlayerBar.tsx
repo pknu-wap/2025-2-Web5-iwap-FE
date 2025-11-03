@@ -8,6 +8,9 @@ type MidiPlayerBarProps = {
   position: number;
   onTogglePlay: () => void;
   onSeek: (seconds: number, resumePlayback: boolean) => void;
+  onRewind?: () => void;
+  onDownload?: () => void;
+  canDownload?: boolean;
   disabled?: boolean;
   className?: string;
 };
@@ -54,12 +57,38 @@ const PauseIcon = () => (
   </svg>
 );
 
+const RewindIcon = () => (
+  <svg
+    className="h-5 w-5 text-white"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M11.5 7.5 5 12l6.5 4.5V7.5Zm7 0L12 12l6.5 4.5V7.5Z" />
+  </svg>
+);
+
+const DownloadIcon = () => (
+  <svg
+    className="h-5 w-5 text-white"
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M11 3h2v9.17l2.59-2.58L17 11l-5 5-5-5 1.41-1.41L11 12.17V3Z" />
+    <path d="M5 18h14v2H5z" />
+  </svg>
+);
+
 export default function MidiPlayerBar({
   isPlaying,
   duration,
   position,
   onTogglePlay,
   onSeek,
+  onRewind,
+  onDownload,
+  canDownload = false,
   disabled = false,
   className = "",
 }: MidiPlayerBarProps) {
@@ -73,36 +102,69 @@ export default function MidiPlayerBar({
     [clampedPosition]
   );
 
-  const formattedDuration = useMemo(
-    () => formatTime(duration),
-    [duration]
-  );
+  const formattedDuration = useMemo(() => formatTime(duration), [duration]);
 
   const isSeekingDisabled =
     disabled || !Number.isFinite(duration) || duration <= 0;
+
+  const buttonClasses =
+    "flex h-12 w-12 items-center justify-center rounded-full transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40";
+  const rewindDisabled = disabled || !onRewind;
+  const downloadDisabled = disabled || !onDownload || !canDownload;
 
   return (
     <div className="fixed bottom-5 md:bottom-20 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
       <div
         className={`pointer-events-auto w-full max-w-2xl flex flex-col items-center p-4 text-white ${className}`}
       >
-        {/* 재생 버튼 */}
-        <button
-          type="button"
-          onClick={onTogglePlay}
-          disabled={disabled}
-          className="flex h-12 w-12 translate-y-7 md:translate-y-0 items-center justify-center rounded-full transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white disabled:cursor-not-allowed disabled:opacity-40"
-        >
-          {disabled ? <SpinnerIcon /> : isPlaying ? <PauseIcon /> : <PlayIcon />}
-        </button>
+        {/* transport controls */}
+        <div className="flex items-center gap-3 translate-y-7 md:translate-y-0">
+          {onRewind ? (
+            <button
+              type="button"
+              onClick={onRewind}
+              disabled={rewindDisabled}
+              aria-label="Rewind to start"
+              className={buttonClasses}
+            >
+              <RewindIcon />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={onTogglePlay}
+            disabled={disabled}
+            aria-label={isPlaying ? "Pause playback" : "Play MIDI"}
+            className={buttonClasses}
+          >
+            {disabled ? (
+              <SpinnerIcon />
+            ) : isPlaying ? (
+              <PauseIcon />
+            ) : (
+              <PlayIcon />
+            )}
+          </button>
+          {onDownload ? (
+            <button
+              type="button"
+              onClick={onDownload}
+              disabled={downloadDisabled}
+              aria-label="Download MIDI file"
+              className={buttonClasses}
+            >
+              <DownloadIcon />
+            </button>
+          ) : null}
+        </div>
 
-        {/* 시간 표시 (위로 이동) */}
+        {/* time labels */}
         <div className="w-full flex justify-between text-xs font-mono text-white/80 mb-1">
           <span>{formattedCurrent}</span>
           <span>{formattedDuration}</span>
         </div>
 
-        {/* 재생바 */}
+        {/* progress slider */}
         <div className="w-full flex items-center">
           <input
             type="range"
@@ -127,7 +189,7 @@ export default function MidiPlayerBar({
         </div>
       </div>
 
-      {/* range 진행 부분 흰색 표시 */}
+      {/* range track styling */}
       <style jsx global>{`
         input[type="range"]::-webkit-slider-runnable-track {
           height: 4px;

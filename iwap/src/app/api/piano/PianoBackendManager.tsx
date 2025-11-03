@@ -20,6 +20,7 @@ type PianoBackendManagerProps = {
   onStatusChange?: (status: string) => void;
   onTransportReady?: (controls: MidiTransportControls) => void;
   onTransportReset?: () => void;
+  onMidiReady?: (payload: { blob: Blob; filename: string }) => void;
 };
 
 let sharedSampler: Tone.Sampler | null = null;
@@ -34,8 +35,27 @@ const USE_FX = (() => {
   return v === "1" || v === "true" || v === "yes";
 })();
 
-const getOrCreateSampler = async () => {
+const getBackendUrl = (path: string) => {
+  const base = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  if (!base || base.trim().length === 0) {
+    return normalizedPath;
+  }
+  const normalizedBase = base.endsWith("/") ? base.slice(0, -1) : base;
+  return `${normalizedBase}${normalizedPath}`;
+};
 
+const describeFetchError = (err: unknown) => {
+  if (err instanceof TypeError) {
+    return "서버와 통신할 수 없어요. 네트워크나 백엔드 주소를 확인해 주세요.";
+  }
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+  return "알 수 없는 오류가 발생했어요.";
+};
+
+const getOrCreateSampler = async () => {
   if (Tone.context.state !== "running") {
     await Tone.start();
   }
@@ -81,16 +101,18 @@ const getOrCreateSampler = async () => {
     release: 1,
     baseUrl: "https://tonejs.github.io/audio/salamander/",
   });
-  
+
   if (USE_FX) {
-    // Optional FX chain (can be disabled via env)
     const mobile = isMobileDevice();
     const filter = new Tone.Filter({
       type: "lowpass",
       frequency: mobile ? 9000 : 12000,
       rolloff: -24,
     });
-    const reverb = new Tone.Reverb({ decay: mobile ? 1.6 : 2.2, wet: mobile ? 0.05 : 0.08 });
+    const reverb = new Tone.Reverb({
+      decay: mobile ? 1.6 : 2.2,
+      wet: mobile ? 0.05 : 0.08,
+    });
     sampler.chain(filter, reverb, Tone.Destination);
   } else {
     sampler.toDestination();
@@ -110,141 +132,180 @@ export default function PianoBackendManager({
   onStatusChange,
   onTransportReady,
   onTransportReset,
+  onMidiReady,
 }: PianoBackendManagerProps) {
-
   useEffect(() => {
-  if (!audioUrl) return;
+    if (!audioUrl) return;
 
-  let isCancelled = false;
-  let sampler: Tone.Sampler | null = null;
-  const activeMidiNotes = new Set<number>();
-  onStatusChange?.(""); // 초기화
-  onTransportReset?.();
+    let isCancelled = false;
+    let sampler: Tone.Sampler | null = null;
+    const activeMidiNotes = new Set<number>();
 
-  const flushActiveNotes = () => {
-    if (!activeMidiNotes.size) return;
-    activeMidiNotes.forEach((note) => onMidiEvent({ type: "off", note }));
-    activeMidiNotes.clear();
-  };
-
-  const disposeTransport = () => {
-    Tone.Transport.stop();
-    Tone.Transport.cancel();
-    Tone.Transport.seconds = 0;
-    sampler?.releaseAll();
-    flushActiveNotes();
-  };
-
-  const fetchAndPlayMidi = async () => {
-    try {
-      onStatusChange?.("MIDI 변환 중...");
-      const midiRes = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/piano/midi`
-      );
-      if (!midiRes.ok) throw new Error("MIDI 파일 다운로드 실패");
-
-      const midiArray = await midiRes.arrayBuffer();
-      const midi = new Midi(midiArray);
-
-      await Tone.start();
-      Tone.getDestination().volume.value = -20;
-
-      disposeTransport();
-      sampler = await getOrCreateSampler();
-
-      midi.tracks.forEach((track) => {
-        track.notes.forEach((note) => {
-          const midiNum = note.midi;
-          const start = note.time;
-          const duration = Math.max(note.duration, 0.05);
-
-          Tone.Transport.schedule((time) => {
-            if (isCancelled) return;
-            sampler?.triggerAttackRelease(note.name, duration, time, note.velocity ?? 0.8);
-            onMidiEvent({ type: "on", note: midiNum });
-            Tone.Transport.scheduleOnce(() => {
-              if (isCancelled) return;
-              onMidiEvent({ type: "off", note: midiNum });
-            }, start + duration);
-          }, start);
-        });
-      });
-
-      const duration =
-        midi.duration ||
-        midi.tracks.reduce((max, t) =>
-          Math.max(max, ...t.notes.map((n) => n.time + n.duration)), 0);
-
-      const controls: MidiTransportControls = {
-        duration,
-        start: async () => {
-          if (isCancelled) return;
-          await Tone.start();
-          if (Tone.Transport.state !== "started") {
-            Tone.Transport.start();
-          }
-        },
-        pause: () => {
-          Tone.Transport.pause();
-          sampler?.releaseAll();
-          flushActiveNotes();
-        },
-        stop: () => {
-          Tone.Transport.stop();
-          Tone.Transport.seconds = 0;
-          sampler?.releaseAll();
-          flushActiveNotes();
-        },
-        seek: (seconds: number, resume = false) => {
-          const clamped = Math.max(0, Math.min(duration, seconds));
-          Tone.Transport.seconds = clamped;
-          if (resume) Tone.Transport.start();
-        },
-        getPosition: () => Tone.Transport.seconds,
-        getState: () => Tone.Transport.state as "started" | "stopped" | "paused",
-      };
-
-      onStatusChange?.(""); // ✅ 완료 후 상태 문구 제거
-      onTransportReady?.(controls);
-    } catch (err) {
-      console.error("MIDI 변환 실패:", err);
-      if (!isCancelled) onStatusChange?.("MIDI 변환 중 오류가 발생했습니다.");
-    }
-  };
-
-  const sendAudioToBackend = async () => {
-    try {
-      onStatusChange?.("MIDI 변환 중...");
-
-      const res = await fetch(audioUrl);
-      const blob = await res.blob();
-
-      const formData = new FormData();
-      formData.append("voice", blob, "voice.webm");
-
-      const uploadRes = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_API_URL}/api/piano/`,
-        { method: "POST", body: formData }
-      );
-
-      if (!uploadRes.ok) throw new Error("오디오 업로드 실패");
-
-      await fetchAndPlayMidi();
-    } catch (err) {
-      console.error("오디오 업로드 실패:", err);
-      if (!isCancelled) onStatusChange?.("MIDI 변환 중 오류가 발생했습니다.");
-    }
-  };
-
-  sendAudioToBackend();
-
-  return () => {
-    isCancelled = true;
-    disposeTransport();
+    onStatusChange?.("");
     onTransportReset?.();
-  };
-}, [audioUrl, onMidiEvent, onStatusChange, onTransportReady, onTransportReset]);
 
+    const flushActiveNotes = () => {
+      if (activeMidiNotes.size === 0) return;
+      activeMidiNotes.forEach((note) =>
+        onMidiEvent({ type: "off", note })
+      );
+      activeMidiNotes.clear();
+    };
+
+    const disposeTransport = () => {
+      Tone.Transport.stop();
+      Tone.Transport.cancel();
+      Tone.Transport.seconds = 0;
+      sampler?.releaseAll();
+      flushActiveNotes();
+    };
+
+    const fetchAndPlayMidi = async () => {
+      try {
+        onStatusChange?.("MIDI 변환 중...");
+        const midiRes = await fetch(getBackendUrl("/api/piano/midi"));
+        if (!midiRes.ok) {
+          throw new Error("MIDI 파일 다운로드에 실패했습니다.");
+        }
+
+        const midiArray = await midiRes.arrayBuffer();
+        const midiBlob = new Blob([midiArray], { type: "audio/midi" });
+        onMidiReady?.({
+          blob: midiBlob,
+          filename: `piano-${new Date()
+            .toISOString()
+            .replace(/[:.]/g, "-")}.mid`,
+        });
+
+        const midi = new Midi(midiArray);
+
+        await Tone.start();
+        Tone.getDestination().volume.value = -20;
+
+        disposeTransport();
+        sampler = await getOrCreateSampler();
+
+        midi.tracks.forEach((track) => {
+          track.notes.forEach((note) => {
+            const midiNum = note.midi;
+            const start = note.time;
+            const duration = Math.max(note.duration, 0.05);
+
+            Tone.Transport.schedule((time) => {
+              if (isCancelled) return;
+              sampler?.triggerAttackRelease(
+                note.name,
+                duration,
+                time,
+                note.velocity ?? 0.8
+              );
+              activeMidiNotes.add(midiNum);
+              onMidiEvent({ type: "on", note: midiNum });
+              Tone.Transport.scheduleOnce(() => {
+                if (isCancelled) return;
+                activeMidiNotes.delete(midiNum);
+                onMidiEvent({ type: "off", note: midiNum });
+              }, start + duration);
+            }, start);
+          });
+        });
+
+        const duration =
+          midi.duration ||
+          midi.tracks.reduce(
+            (max, track) =>
+              Math.max(
+                max,
+                ...track.notes.map((n) => n.time + n.duration)
+              ),
+            0
+          );
+
+        const controls: MidiTransportControls = {
+          duration,
+          start: async () => {
+            if (isCancelled) return;
+            await Tone.start();
+            if (Tone.Transport.state !== "started") {
+              Tone.Transport.start();
+            }
+          },
+          pause: () => {
+            Tone.Transport.pause();
+            sampler?.releaseAll();
+            flushActiveNotes();
+          },
+          stop: () => {
+            Tone.Transport.stop();
+            Tone.Transport.seconds = 0;
+            sampler?.releaseAll();
+            flushActiveNotes();
+          },
+          seek: (seconds: number, resume = false) => {
+            const clamped = Math.max(0, Math.min(duration, seconds));
+            Tone.Transport.seconds = clamped;
+            if (resume) Tone.Transport.start();
+          },
+          getPosition: () => Tone.Transport.seconds,
+          getState: () =>
+            Tone.Transport.state as "started" | "stopped" | "paused",
+        };
+
+        onStatusChange?.("");
+        onTransportReady?.(controls);
+      } catch (err) {
+        console.error("MIDI 변환 실패:", err);
+        if (!isCancelled) {
+          onStatusChange?.(describeFetchError(err));
+        }
+      }
+    };
+
+    const sendAudioToBackend = async () => {
+      try {
+        onStatusChange?.("MIDI 변환 중...");
+
+        const res = await fetch(audioUrl);
+        const blob = await res.blob();
+
+        const formData = new FormData();
+        formData.append("voice", blob, "voice.webm");
+
+        const uploadRes = await fetch(getBackendUrl("/api/piano/"), {
+          method: "POST",
+          body: formData,
+        });
+
+        if (!uploadRes.ok) {
+          throw new Error(
+            "오디오 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요."
+          );
+        }
+
+        await fetchAndPlayMidi();
+      } catch (err) {
+        console.error("오디오 업로드 실패:", err);
+        if (!isCancelled) {
+          onStatusChange?.(describeFetchError(err));
+        }
+      }
+    };
+
+    void sendAudioToBackend();
+
+    return () => {
+      isCancelled = true;
+      disposeTransport();
+      onTransportReset?.();
+    };
+  }, [
+    audioUrl,
+    onMidiEvent,
+    onStatusChange,
+    onTransportReady,
+    onTransportReset,
+    onMidiReady,
+  ]);
 
   return null;
 }

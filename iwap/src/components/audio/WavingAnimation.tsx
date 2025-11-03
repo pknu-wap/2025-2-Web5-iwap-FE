@@ -1,11 +1,18 @@
 "use client";
 import { useRef, useEffect } from "react";
 
+const COLOR_SHIFTS = [
+  { x: 0.0, y: -5 },
+  { x: 3.6, y: 10 },
+  { x: 8.7, y: 20 },
+  { x: 11.5, y: 30 },
+] as const;
+
 export default function WavingAnimation() {
   const width = 180;
   const height = 180;
   const colors = ["#E3E7FF", "#EFC8FF", "#e599d0bf", "#97e9ff"];
-  const refs = Array.from({ length: 8 }, () => useRef<SVGPathElement>(null));
+  const pathRefs = useRef<(SVGPathElement | null)[]>([]);
   const tRef = useRef(0);
 
   const baseWave = (offsetX: number, offsetY: number, t: number) => {
@@ -29,15 +36,10 @@ export default function WavingAnimation() {
     const animate = () => {
       tRef.current += 0.03;
       const t = tRef.current;
-      const shifts = [
-        { x: 0.0, y: -5 },
-        { x: 3.6, y: 10},
-        { x: 8.7, y: 20 },
-        { x: 11.5, y: 30},
-      ];
-      refs.forEach((r, i) => {
-        if (r.current)
-          r.current.setAttribute("d", baseWave(shifts[i].x, shifts[i].y, t));
+      pathRefs.current.forEach((path, i) => {
+        if (!path) return;
+        const shift = COLOR_SHIFTS[i % COLOR_SHIFTS.length];
+        path.setAttribute("d", baseWave(shift.x, shift.y, t));
       });
       frame = requestAnimationFrame(animate);
     };
@@ -60,9 +62,22 @@ export default function WavingAnimation() {
         viewBox={`0 0 ${width} ${height}`}
         className="absolute top-0 left-0 md:translate-y-0 -translate-y-4"
       >
-        {colors.map((c, i) => (
-          <path key={i} ref={refs[i]} fill={c} opacity="0.6" className="mix-blend-multiply" />
-        ))}
+        {colors.map((c, i) => {
+          const shift = COLOR_SHIFTS[i % COLOR_SHIFTS.length];
+          const initialPath = baseWave(shift.x, shift.y, tRef.current);
+          return (
+            <path
+              key={i}
+              ref={(el) => {
+                pathRefs.current[i] = el;
+              }}
+              fill={c}
+              opacity="0.6"
+              className="mix-blend-multiply"
+              d={initialPath}
+            />
+          );
+        })}
       </svg>
 
       {/* 중앙 마이크 아이콘 */}
