@@ -54,10 +54,17 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
     const headerHeight = showHeader && isDesktop ? HEADER_HEIGHT : 0;
     const availableHeight = window.innerHeight - headerHeight;
     const verticalMargin = availableHeight * (isLandscape ? 0.25 : 0.15);
-    const newHeight = Math.min(availableHeight - verticalMargin, BASE_CARD_HEIGHT);
+    let newHeight = Math.min(availableHeight - verticalMargin, BASE_CARD_HEIGHT);
     
     const aspectRatio = BASE_CARD_WIDTH / BASE_CARD_HEIGHT;
-    const newWidth = newHeight * aspectRatio;
+    let newWidth = newHeight * aspectRatio;
+    
+
+  if (!isDesktop) {
+  const scale = 0.65; // 모바일 축소 비율
+  newWidth *= scale;
+  newHeight *= scale;
+}
 
     // 모든 카드를 기준으로 초기 스택 너비를 계산
     const stackedWidth = newWidth + (images.length > 1 ? images.length - 1 : 0) * VISIBLE_STACK_OFFSET;
