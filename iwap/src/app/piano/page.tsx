@@ -364,7 +364,7 @@ export default function VoiceToPiano() {
                       position={transportPosition}
                       onTogglePlay={handleTogglePlayback}
                       onSeek={handleSeek}
-                      onRewind={handleRewind}
+                      // onRewind={handleRewind}
                       // onDownload={handleDownloadMidi}
                       canDownload={Boolean(midiDownload)}
                       disabled={!hasTransport || transportDuration <= 0}
@@ -386,7 +386,7 @@ export default function VoiceToPiano() {
               position={transportPosition}
               onTogglePlay={handleTogglePlayback}
               onSeek={handleSeek}
-              onRewind={handleRewind}
+              // onRewind={handleRewind}
               // onDownload={handleDownloadMidi}
               canDownload={Boolean(midiDownload)}
               disabled={!hasTransport || transportDuration <= 0}
