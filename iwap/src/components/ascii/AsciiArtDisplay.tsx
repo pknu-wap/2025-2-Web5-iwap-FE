@@ -173,7 +173,7 @@ export default function AsciiArtDisplay({
         </div> {/* End Art Container */}
 
         {/* 3. 슬라이더 영역 (고정 크기) */}
-        <div className="w-full mt-4 mb-14">
+        <div className="w-full mt-4 mb-30">
           <div className="flex items-end gap-4">
             <div className="flex-1 min-w-0">
               <div className="flex items-center mb-1 h-5">
