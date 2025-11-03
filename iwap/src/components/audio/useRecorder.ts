@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import * as Tone from "tone";
 
 export function useRecorder() {
   const [isRecording, setIsRecording] = useState(false);

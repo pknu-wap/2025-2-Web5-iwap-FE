@@ -35,6 +35,11 @@ const USE_FX = (() => {
 })();
 
 const getOrCreateSampler = async () => {
+
+  if (Tone.context.state !== "running") {
+    await Tone.start();
+  }
+
   if (sharedSampler) {
     await sharedSampler.loaded;
     return sharedSampler;
@@ -108,10 +113,6 @@ export default function PianoBackendManager({
 }: PianoBackendManagerProps) {
 
   useEffect(() => {
-    Tone.getDestination().volume.value = -20; // dB 단위
-  }, []);
-
-  useEffect(() => {
   if (!audioUrl) return;
 
   let isCancelled = false;
@@ -146,6 +147,8 @@ export default function PianoBackendManager({
       const midi = new Midi(midiArray);
 
       await Tone.start();
+      Tone.getDestination().volume.value = -20;
+
       disposeTransport();
       sampler = await getOrCreateSampler();
 
