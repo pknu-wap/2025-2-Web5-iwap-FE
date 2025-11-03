@@ -7,8 +7,22 @@ import {
   WHITE_KEY_COUNT_MOBILE,
 } from "./PianoLayout";
 
+const detectIsMobile = () => {
+  if (typeof window === "undefined") return false;
+  const nav =
+    typeof navigator !== "undefined" ? navigator : undefined;
+  const uaMobile = nav ? /Android|iPhone|iPad|iPod/i.test(nav.userAgent) : false;
+  const hasTouch = nav ? nav.maxTouchPoints > 0 : false;
+  const coarse =
+    typeof window.matchMedia === "function"
+      ? window.matchMedia("(pointer: coarse)").matches
+      : false;
+  const narrow = window.innerWidth <= 1024;
+  return uaMobile || hasTouch || coarse || narrow;
+};
+
 export default function Piano({ activeNotes }: { activeNotes: Set<number> }) {
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState<boolean>(() => detectIsMobile());
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -16,7 +30,8 @@ export default function Piano({ activeNotes }: { activeNotes: Set<number> }) {
     const coarseQuery = window.matchMedia("(pointer: coarse)");
 
     const computeIsMobile = () => {
-      const nav = typeof navigator !== "undefined" ? navigator : undefined;
+      const nav =
+        typeof navigator !== "undefined" ? navigator : undefined;
       const uaMobile = nav ? /Android|iPhone|iPad|iPod/i.test(nav.userAgent) : false;
       const hasTouch = nav ? nav.maxTouchPoints > 0 : false;
       const coarse = coarseQuery.matches;

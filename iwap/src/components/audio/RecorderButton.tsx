@@ -8,11 +8,12 @@ export default function RecorderButton({
   stopRecording,
 }: {
   isRecording: boolean;
-  startRecording: () => void;
+  startRecording: () => Promise<void> | void;
   stopRecording: () => void;
 }) {
   const [elapsed, setElapsed] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [isPreppingRecording, setIsPreppingRecording] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -22,12 +23,13 @@ export default function RecorderButton({
   }, []);
 
   useEffect(() => {
-    if (!isRecording) {
-      setElapsed(0);
-      return;
+    if (isRecording) {
+      setIsPreppingRecording(false);
+      const timer = setInterval(() => setElapsed((t) => t + 1), 1000);
+      return () => clearInterval(timer);
     }
-    const timer = setInterval(() => setElapsed((t) => t + 1), 1000);
-    return () => clearInterval(timer);
+    setElapsed(0);
+    setIsPreppingRecording(false);
   }, [isRecording]);
 
   const formatTime = (s: number) =>
@@ -35,16 +37,32 @@ export default function RecorderButton({
       s % 60
     ).padStart(2, "0")}`;
 
+  const showRecordingUI = isRecording || isPreppingRecording;
+
+  const handleStart = async () => {
+    if (isRecording || isPreppingRecording) return;
+    setIsPreppingRecording(true);
+    try {
+      await startRecording();
+    } catch (error) {
+      setIsPreppingRecording(false);
+      console.error("녹음 시작 중 오류가 발생했습니다.", error);
+    }
+  };
+
+  const handleStop = () => {
+    setIsPreppingRecording(false);
+    stopRecording();
+  };
+
   return (
     <div className="relative flex flex-col items-center justify-center pb-28 ">
-      {/* 녹음 전 버튼 */}
-      {!isRecording ? (
+      {/* 녹음 준비 버튼 */}
+      {!showRecordingUI ? (
         <button
-          onClick={startRecording}
-          // (이전 수정) 전체 크기 130px / 170px
+          onClick={handleStart}
           className="relative w-[130px] h-[130px] md:w-[170px] md:h-[170px] rounded-full flex items-center justify-center bg-[#D9D9D9] transition-transform"
         >
-          {/* (이전 수정) 내부 원 여백 */}
           <div className="absolute inset-[4px] md:inset-[5px] rounded-full bg-gradient-to-b from-white to-[#F3F4F6]" />
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -92,9 +110,9 @@ export default function RecorderButton({
           </svg>
         </button>
       ) : (
-        // 녹음 중 버튼 (이전 수정 사항과 동일)
+        // 녹음 중 버튼
         <div
-          onClick={stopRecording}
+          onClick={handleStop}
           className="relative w-[130px] h-[130px] md:w-[170px] md:h-[170px] rounded-full bg-gradient-to-b from-[#d9d9d9] to-[#a2a2a2] flex items-center justify-center cursor-pointer"
         >
           <div className="absolute inset-[4px] z-10">
@@ -151,7 +169,7 @@ export default function RecorderButton({
         </div>
       )}
 
-      {/* 진행 바 */}
+      {/* 진행 막대 */}
       {isRecording && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 flex flex-col items-center -mt-12">
           <div className="w-[200px] md:w-[550px] h-[7px] md:h-[12px] bg-gray-200 rounded-full overflow-hidden">
