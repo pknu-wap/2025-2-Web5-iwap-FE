@@ -89,6 +89,8 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
  */
 export default function ImageGridLayers({ layersData }) {
   const [focusLayerIndex, setFocusLayerIndex] = useState(0);
+  // [수정] 실시간 인덱스 값을 저장할 state 추가
+  const [liveFocusIndex, setLiveFocusIndex] = useState(0); 
   const [focusAnimationConfig, setFocusAnimationConfig] = useState({ mass: 1, tension: 90, friction: 30, clamp: true });
   
   const [{ rotation, opacity }, api] = useSpring(() => ({
@@ -102,6 +104,12 @@ export default function ImageGridLayers({ layersData }) {
     config: focusAnimationConfig,
     onStart: () => api.start({ opacity: 0.5, immediate: true }),
     onRest: () => api.start({ opacity: 1 }),
+    // [수정] 스프링 값이 변경될 때마다 liveFocusIndex state 업데이트
+    onChange: (result) => {
+      if (result.value.animatedFocusIndex !== undefined) {
+        setLiveFocusIndex(result.value.animatedFocusIndex);
+      }
+    },
   });
 
   const { layers, sizeChangeIndices } = useMemo(() => {
@@ -204,10 +212,18 @@ export default function ImageGridLayers({ layersData }) {
       const indexSensitivity = 15;
       const newIndex = - (mx / indexSensitivity) + startFocusIndex.current;
       const clampedIndex = Math.max(0, Math.min(layers.length - 1, newIndex));
+
+      // 3D 씬을 위한 스프링 값 직접 설정
       animatedFocusIndex.set(clampedIndex);
+      
+      // [수정] ProgressBar를 위한 live state 실시간 업데이트
+      setLiveFocusIndex(clampedIndex); 
+
       if (last) {
         setFocusAnimationConfig({ mass: 1, tension: 90, friction: 15, clamp: true });
         setFocusLayerIndex(Math.round(clampedIndex));
+        // 드래그 종료 시 live 값도 최종 값으로 동기화
+        setLiveFocusIndex(Math.round(clampedIndex)); 
       }
     } else if (dragModeRef.current === 'vertical') {
       const rotSensitivity = 200;
@@ -255,7 +271,9 @@ export default function ImageGridLayers({ layersData }) {
 
       <div className="absolute bottom-8 left-4 right-4 md:bottom-10 md:left-10 md:right-10">
         <ProgressBar 
-          currentIndex={focusLayerIndex}
+          // --- [수정] props 변경 ---
+          liveIndex={liveFocusIndex} // 실시간 (소수점) 인덱스
+          displayIndex={Math.round(liveFocusIndex)} // 화면 표시용 (반올림) 인덱스
           totalLayers={layers.length}
           onSeek={handleSeek}
           sizeChangeIndices={sizeChangeIndices}

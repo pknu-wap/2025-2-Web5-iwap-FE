@@ -6,12 +6,19 @@ import { useDrag } from '@use-gesture/react';
 /**
  * 레이어 인덱스 탐색을 위한 프로그레스 바 컴포넌트
  * @param {object} props
- * @param {number} props.currentIndex - 현재 활성화된 레이어 인덱스
+ * @param {number} props.liveIndex - 현재 활성화된 레이어의 실시간 인덱스 (핸들 위치 계산용)
+ * @param {number} props.displayIndex - 화면에 표시될 반올림된 인덱스 (텍스트 표시용)
  * @param {number} props.totalLayers - 전체 레이어 수
  * @param {(index: number) => void} props.onSeek - 인덱스 변경 시 호출될 콜백 함수
  * @param {number[]} props.sizeChangeIndices - 크기 변경이 일어나는 레이어 인덱스 배열
  */
-export default function ProgressBar({ currentIndex, totalLayers, onSeek, sizeChangeIndices = [] }) {
+export default function ProgressBar({ 
+  liveIndex, 
+  displayIndex, 
+  totalLayers, 
+  onSeek, 
+  sizeChangeIndices = [] 
+}) {
   const barRef = useRef(null);
 
   // 경계값 계산 로직
@@ -115,7 +122,8 @@ export default function ProgressBar({ currentIndex, totalLayers, onSeek, sizeCha
     <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-[80%] max-w-4xl h-8 flex flex-col items-center justify-center z-10">
       {/* 인덱스 텍스트 */}
       <span className="absolute left-0 -top-5 text-white text-sm font-mono select-none">
-        {currentIndex} / {totalLayers - 1}
+        {/* --- [수정] displayIndex 사용 --- */}
+        {displayIndex} / {totalLayers - 1}
       </span>
       
       {/* 바 + 점 컨테이너 */}
@@ -164,30 +172,32 @@ export default function ProgressBar({ currentIndex, totalLayers, onSeek, sizeCha
 
               // --- (fillRatio 로직) ---
               const segmentLengthInIndices = endNode - startNode;
-              const progressInIndices = currentIndex - startNode;
+              // --- [수정] currentIndex -> liveIndex ---
+              const progressInIndices = liveIndex - startNode; 
               
               let fillRatio = 0;
               if (segmentLengthInIndices > 0) {
                 fillRatio = Math.max(0, Math.min(1, progressInIndices / segmentLengthInIndices));
-              } else if (currentIndex >= endNode) {
+              } else if (liveIndex >= endNode) { // --- [수정] ---
                 fillRatio = 1; 
               }
               
-              if (currentIndex > endNode) fillRatio = 1;
-              if (currentIndex < startNode) fillRatio = 0;
+              if (liveIndex > endNode) fillRatio = 1; // --- [수정] ---
+              if (liveIndex < startNode) fillRatio = 0; // --- [수정] ---
 
               const fillPercentForSegment = fillRatio * 100;
               // --- (fillRatio 로직 끝) ---
               
               // --- 핸들 위치 계산 ---
-              if (currentIndex >= startNode && currentIndex <= endNode) {
+              // --- [수정] currentIndex -> liveIndex ---
+              if (liveIndex >= startNode && liveIndex <= endNode) {
                  // 이 세그먼트가 활성 세그먼트
                  const visualProgressInSegment = fillRatio * segmentWidthPercent;
                  visualProgressPercent = visualLeftPercent + visualProgressInSegment;
-              } else if (currentIndex > endNode && isLastSegment) {
+              } else if (liveIndex > endNode && isLastSegment) { // --- [수정] ---
                  // 마지막 세그먼트를 지난 경우 (100%)
                  visualProgressPercent = 100;
-              } else if (currentIndex === 0) {
+              } else if (liveIndex === 0) { // --- [수정] ---
                  visualProgressPercent = 0;
               }
               // --- 핸들 위치 계산 끝 ---
