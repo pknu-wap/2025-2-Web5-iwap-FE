@@ -21,14 +21,31 @@ import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
 export default function VoiceToPiano() {
   const pageTitle = "P!ano";
   const pageSubtitle = "음성을 피아노로 변환하기";
-  const { isRecording, audioUrl, startRecording, stopRecording } = useRecorder();
+  const {
+    isRecording,
+    audioUrl,
+    audioFile,
+    startRecording,
+    stopRecording,
+    setAudioFromFile,
+  } = useRecorder();
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(max-width: 767px)").matches;
   });
   const activeNotesRef = useRef<Set<number>>(new Set());
   const noteTimeoutsRef = useRef<Map<number, number>>(new Map());
+  const animationFrameRef = useRef<number | null>(null);
   const [, forceRender] = useState(0);
+
+  const scheduleRender = useCallback(() => {
+    if (typeof window === "undefined") return;
+    if (animationFrameRef.current !== null) return;
+    animationFrameRef.current = window.requestAnimationFrame(() => {
+      animationFrameRef.current = null;
+      forceRender((t) => t ^ 1);
+    });
+  }, [forceRender]);
   const [status, setStatus] = useState("");
   const [transport, setTransport] = useState<MidiTransportControls | null>(null);
   const [transportDuration, setTransportDuration] = useState(0);
@@ -48,36 +65,37 @@ export default function VoiceToPiano() {
   
   // (여기부터 handleMidi)
   const handleMidi = useCallback(
-    ({ type, note }: { type: "on" | "off"; note: number }) => {
+    ({ type, note }: { type: "on" | "off"; note: number; velocity?: number }) => {
       const activeNotes = activeNotesRef.current;
-      const timeouts = noteTimeoutsRef.current;
+      const fallbackTimers = noteTimeoutsRef.current;
 
       if (type === "on") {
-        activeNotes.add(note);
-        const existingTimeout = timeouts.get(note);
+        const existingTimeout = fallbackTimers.get(note);
         if (existingTimeout !== undefined) {
           clearTimeout(existingTimeout);
         }
+        activeNotes.add(note);
         const timeoutId = window.setTimeout(() => {
-          activeNotes.delete(note);
-          timeouts.delete(note);
-          forceRender((t) => t ^ 1);
-        }, 600);
-        timeouts.set(note, timeoutId);
-        forceRender((t) => t ^ 1);
+          fallbackTimers.delete(note);
+          if (activeNotes.delete(note)) {
+            scheduleRender();
+          }
+        }, 12000);
+        fallbackTimers.set(note, timeoutId);
+        scheduleRender();
         return;
       }
 
-      const existingTimeout = timeouts.get(note);
+      const existingTimeout = fallbackTimers.get(note);
       if (existingTimeout !== undefined) {
         clearTimeout(existingTimeout);
-        timeouts.delete(note);
+        fallbackTimers.delete(note);
       }
       if (activeNotes.delete(note)) {
-        forceRender((t) => t ^ 1);
+        scheduleRender();
       }
     },
-    []
+    [scheduleRender]
   );
 
   useEffect(() => {
@@ -120,6 +138,15 @@ export default function VoiceToPiano() {
     return () => {
       noteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
       noteTimeoutsRef.current.clear();
+    };
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (animationFrameRef.current !== null) {
+        window.cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
     };
   }, []);
 
@@ -190,6 +217,10 @@ export default function VoiceToPiano() {
     noteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
     noteTimeoutsRef.current.clear();
     activeNotesRef.current.clear();
+    if (typeof window !== "undefined" && animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
     forceRender((t) => t ^ 1);
   }, [clearMidiDownload, forceRender]);
 
@@ -257,6 +288,7 @@ export default function VoiceToPiano() {
       >
         <PianoBackendManager
           audioUrl={audioUrl}
+          audioFile={audioFile}
           onMidiEvent={handleMidi}
           onStatusChange={setStatus}
           onTransportReady={handleTransportReady}
@@ -279,6 +311,7 @@ export default function VoiceToPiano() {
                 isRecording={isRecording}
                 startRecording={startRecording}
                 stopRecording={stopRecording}
+                onFileSelected={setAudioFromFile}
               />
             </div>
           ) : (
@@ -364,8 +397,8 @@ export default function VoiceToPiano() {
                       position={transportPosition}
                       onTogglePlay={handleTogglePlayback}
                       onSeek={handleSeek}
-                      // onRewind={handleRewind}
-                      // onDownload={handleDownloadMidi}
+                      onRewind={handleRewind}
+                      onDownload={handleDownloadMidi}
                       canDownload={Boolean(midiDownload)}
                       disabled={!hasTransport || transportDuration <= 0}
                       className="max-w-xl" 
@@ -386,8 +419,8 @@ export default function VoiceToPiano() {
               position={transportPosition}
               onTogglePlay={handleTogglePlayback}
               onSeek={handleSeek}
-              // onRewind={handleRewind}
-              // onDownload={handleDownloadMidi}
+              onRewind={handleRewind}
+              onDownload={handleDownloadMidi}
               canDownload={Boolean(midiDownload)}
               disabled={!hasTransport || transportDuration <= 0}
               className="max-w-4xl"
