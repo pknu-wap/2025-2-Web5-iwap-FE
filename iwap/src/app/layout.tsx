@@ -1,25 +1,28 @@
-// layout.tsx
 "use client";
 
 import "./globals.css";
-import localFont from "next/font/local";
-import { usePathname } from "next/navigation";
 import "@/components/lightswind.css";
 import Link from "next/link";
+import localFont from "next/font/local";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const Pretendard = localFont({
   src: "../../public/fonts/PretendardVariable.woff2",
   display: "swap",
 });
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
-  // 현재 경로 가져오기
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
-  // 메인 페이지가 아닌 경우 헤더 표시
   const [forceHideHeader, setForceHideHeader] = useState(false);
   const showHeader = pathname !== "/" && !forceHideHeader;
-  
+
   useEffect(() => {
     const isMobile = window.matchMedia("(max-width: 767px)").matches;
     if (isMobile) {
@@ -45,28 +48,40 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="ko">
-      <body className={`relative overflow-x-hidden ${Pretendard.className} text-black`}>
-        
-        {/* (메인페이지가 아닌 경우) 모바일(기본)에서는 숨기고, md 사이즈 이상일 때만 flex로 표시 */}
-        {showHeader && (
-          <header className="w-full h-[30px] md:h-[60px] bg-white flex md:flex flex-col items-center justify-center fixed top-0 left-0 z-50">
-            <Link href="/" className="select-none text-center">
-              <h1 className="text-black text-[21px] md:text-2xl font-semibold">
-                !WAP
-              </h1>
-              <p className="hidden md:block text-black text-base font-extralight -translate-y-0.5">
-                !nteractive Web Art Project
-              </p>
-            </Link>
-          </header>
-        )}
-        
-        {/* (메인페이지가 아닌 경우) md 사이즈 이상일 때만 헤더 높이만큼 상단 패딩 적용 */}
-        <main className={ showHeader
-      ? "pt-0 md:pt-0 h-dvh overflow-hidden fixed inset-0 top-[30px] md:top-[60px]"
-      : "h-dvh overflow-hidden"}>
-          {children}
-        </main>
+      <body
+        className={`relative overflow-x-hidden bg-white text-black transition-colors duration-300 dark:bg-neutral-900 dark:text-neutral-100 ${Pretendard.className}`}
+      >
+        <ThemeProvider>
+          {showHeader ? (
+            <header className="fixed top-0 left-0 z-50 flex h-[30px] w-full flex-col items-center justify-center bg-white text-black transition-colors duration-300 dark:bg-neutral-900 dark:text-neutral-100 md:h-[60px]">
+              <div className="relative flex w-full max-w-4xl items-center justify-center px-4">
+                <Link href="/" className="select-none text-center">
+                  <h1 className="text-[21px] font-semibold md:text-2xl">!WAP</h1>
+                  <p className="hidden text-base font-extralight -translate-y-0.5 md:block">
+                    !nteractive Web Art Project
+                  </p>
+                </Link>
+                <div className="absolute right-1 translate-y-1 md:right-6 md:translate-y-0">
+                  <ThemeToggle className="scale-75 md:scale-100" />
+                </div>
+              </div>
+            </header>
+          ) : (
+            <div className="fixed bottom-4 right-4 z-50 md:bottom-6 md:right-6">
+              <ThemeToggle className="scale-90 md:scale-100 shadow-lg shadow-black/10 dark:shadow-none" />
+            </div>
+          )}
+
+          <main
+            className={
+              showHeader
+                ? "fixed inset-0 top-[30px] h-dvh overflow-hidden pt-0 md:top-[60px] md:pt-0"
+                : "h-dvh overflow-hidden"
+            }
+          >
+            {children}
+          </main>
+        </ThemeProvider>
       </body>
     </html>
   );
