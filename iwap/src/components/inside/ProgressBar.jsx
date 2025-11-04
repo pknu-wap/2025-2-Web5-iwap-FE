@@ -114,7 +114,7 @@ export default function ProgressBar({
 
   if (totalLayers <= 1) return null;
 
-  // --- 렌더링 로직 수정 ---
+  // --- 렌더링 로직 ---
   let visualProgressPercent = 0; // 핸들의 최종 시각적 위치
   let cumulativeLeftPercent = 0; // 세그먼트가 그려질 시각적 left 위치
 
@@ -122,7 +122,6 @@ export default function ProgressBar({
     <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-[80%] max-w-4xl h-8 flex flex-col items-center justify-center z-10">
       {/* 인덱스 텍스트 */}
       <span className="absolute left-0 -top-5 text-white text-sm font-mono select-none">
-        {/* --- [수정] displayIndex 사용 --- */}
         {displayIndex} / {totalLayers - 1}
       </span>
       
@@ -144,7 +143,7 @@ export default function ProgressBar({
           {...bind()}
           className="relative flex-1 h-8 mx-2 flex items-center cursor-pointer touch-none"
         >
-          {/* 바 트랙 - 높이 조정 (h-2 -> h-3) */}
+          {/* 바 트랙 */}
           <div className="relative w-full h-3">
             
             {/* 1. 각 세그먼트를 개별적으로 렌더링 */}
@@ -172,32 +171,30 @@ export default function ProgressBar({
 
               // --- (fillRatio 로직) ---
               const segmentLengthInIndices = endNode - startNode;
-              // --- [수정] currentIndex -> liveIndex ---
               const progressInIndices = liveIndex - startNode; 
               
               let fillRatio = 0;
               if (segmentLengthInIndices > 0) {
                 fillRatio = Math.max(0, Math.min(1, progressInIndices / segmentLengthInIndices));
-              } else if (liveIndex >= endNode) { // --- [수정] ---
+              } else if (liveIndex >= endNode) {
                 fillRatio = 1; 
               }
               
-              if (liveIndex > endNode) fillRatio = 1; // --- [수정] ---
-              if (liveIndex < startNode) fillRatio = 0; // --- [수정] ---
+              if (liveIndex > endNode) fillRatio = 1;
+              if (liveIndex < startNode) fillRatio = 0;
 
               const fillPercentForSegment = fillRatio * 100;
               // --- (fillRatio 로직 끝) ---
               
               // --- 핸들 위치 계산 ---
-              // --- [수정] currentIndex -> liveIndex ---
               if (liveIndex >= startNode && liveIndex <= endNode) {
                  // 이 세그먼트가 활성 세그먼트
                  const visualProgressInSegment = fillRatio * segmentWidthPercent;
                  visualProgressPercent = visualLeftPercent + visualProgressInSegment;
-              } else if (liveIndex > endNode && isLastSegment) { // --- [수정] ---
+              } else if (liveIndex > endNode && isLastSegment) {
                  // 마지막 세그먼트를 지난 경우 (100%)
                  visualProgressPercent = 100;
-              } else if (liveIndex === 0) { // --- [수정] ---
+              } else if (liveIndex === 0) {
                  visualProgressPercent = 0;
               }
               // --- 핸들 위치 계산 끝 ---
@@ -214,8 +211,8 @@ export default function ProgressBar({
                   key={`segment-${startNode}`}
                   className="absolute top-0 h-full"
                   style={{
-                    left: `${visualLeftPercent}%`, // 수정: 시각적 left 사용
-                    width: `${segmentWidthPercent}%`, // 수정: 시각적 width 사용
+                    left: `${visualLeftPercent}%`, 
+                    width: `${segmentWidthPercent}%`,
                   }}
                 >
                   {/* 회색 배경 */}
@@ -235,8 +232,8 @@ export default function ProgressBar({
             <div 
               className="absolute -top-1 w-1 h-5 bg-white pointer-events-none z-20 rounded-full"
               style={{ 
-                left: `${visualProgressPercent}%`,  // 수정: 시각적 위치 사용
-                transform: `translateX(-50%)`
+                left: `${visualProgressPercent}%`,
+                transform: `translateX(-50%)`,
               }}
             />
           </div>

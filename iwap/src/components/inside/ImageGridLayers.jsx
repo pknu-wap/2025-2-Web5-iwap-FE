@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
-import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Canvas, useFrame } from '@react-three/fiber';
 import { useDrag } from '@use-gesture/react';
-import { useSpring, animated } from '@react-spring/three';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import ProgressBar from '@/components/inside/ProgressBar';
@@ -13,25 +12,29 @@ const RENDER_WINDOW_SIZE = 50;
 const MAX_VERTICAL_ROTATION = Math.PI / 4;
 const BASE_SPACING = 25;
 const INITIAL_ROTATION = [-0.125, 0.6, 0];
+const DAMP_FACTOR = 8; // 부드러움 계수 (낮을수록 빠름)
 
-// --- 내부 3D 컴포넌트: AnimatedPlane (단일 이미지 레이어) ---
-function AnimatedPlane({ texture, position, width, height, opacity }) {
+// --- 내부 3D 컴포넌트: Plane (단일 이미지 레이어) ---
+// 'AnimatedPlane' -> 'Plane', 'animated.' 제거
+function Plane({ texture, position, width, height, opacity }) {
   const geometry = useMemo(() => new THREE.PlaneGeometry(width, height), [width, height]);
   return (
-    <animated.mesh position={position} geometry={geometry}>
-      <animated.meshStandardMaterial map={texture} side={THREE.DoubleSide} transparent opacity={opacity} />
-    </animated.mesh>
+    <mesh position={position} geometry={geometry}>
+      <meshStandardMaterial map={texture} side={THREE.DoubleSide} transparent opacity={opacity} />
+    </mesh>
   );
 }
 
 // --- 내부 3D 컴포넌트: Scene (전체 3D 공간) ---
-function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
+// 'animatedFocusIndex' -> 'focusIndex' (숫자)
+function Scene({ layers, focusIndex, rotation, opacity }) {
   const [visibleLayers, setVisibleLayers] = useState([]);
   
   useFrame(() => {
     if (!layers || layers.length === 0) return;
     
-    const currentFocus = animatedFocusIndex.get();
+    // 'animatedFocusIndex.get()' -> 'focusIndex'
+    const currentFocus = focusIndex; 
     const startIndex = Math.max(0, Math.floor(currentFocus) - RENDER_WINDOW_SIZE);
     const endIndex = Math.min(layers.length, Math.ceil(currentFocus) + RENDER_WINDOW_SIZE + 1);
     
@@ -44,33 +47,35 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
     <>
       <ambientLight intensity={1.5} />
       <pointLight position={[0, 50, 50]} intensity={1} />
-      <animated.group rotation={rotation}>
+      {/* 'animated.group' -> 'group' */}
+      <group rotation={rotation}>
         {visibleLayers.map((layer) => {
-          const position = animatedFocusIndex.to(fi => {
-            if (!layers || layers.length < 2) return [0, 0, 0];
-            const floorIndex = Math.floor(fi);
-            const ceilIndex = Math.min(layers.length - 1, Math.ceil(fi));
-            const fraction = fi - floorIndex;
-            const x1 = layers[floorIndex].cumulativeX;
-            const x2 = layers[ceilIndex].cumulativeX;
-            const focusedX = x1 + (x2 - x1) * fraction;
-            const finalX = layer.cumulativeX - focusedX;
-            const distance = layer.originalIndex - fi;
-            const finalZ = -Math.abs(distance) * 10;
-            return [finalX, 0, finalZ];
-          });
+          
+          // 'animatedFocusIndex.to(...)' -> 직접 계산
+          const fi = focusIndex; 
+          if (!layers || layers.length < 2) return [0, 0, 0];
+          const floorIndex = Math.floor(fi);
+          const ceilIndex = Math.min(layers.length - 1, Math.ceil(fi));
+          const fraction = fi - floorIndex;
+          const x1 = layers[floorIndex].cumulativeX;
+          const x2 = layers[ceilIndex].cumulativeX;
+          const focusedX = x1 + (x2 - x1) * fraction;
+          const finalX = layer.cumulativeX - focusedX;
+          const distance = layer.originalIndex - fi;
+          const finalZ = -Math.abs(distance) * 10;
+          const position = [finalX, 0, finalZ];
           
           return layer.isTextLayer ? (
-            <animated.group position={position} key={layer.id}>
+            <group position={position} key={layer.id}>
               <Text 
                 font="/fonts/static/Pretendard-Thin.otf"
                 fontSize={100} color="white" anchorX="center" anchorY="middle">
                 {layer.text}
-                <animated.meshStandardMaterial color="white" opacity={opacity} transparent />
+                <meshStandardMaterial color="white" opacity={opacity} transparent />
               </Text>
-            </animated.group>
+            </group>
           ) : (
-            <AnimatedPlane
+            <Plane
               key={layer.id}
               texture={layer.texture}
               width={layer.width} height={layer.height}
@@ -78,39 +83,86 @@ function Scene({ layers, animatedFocusIndex, rotation, opacity }) {
             />
           );
         })}
-      </animated.group>
+      </group>
     </>
+  );
+}
+
+// --- [신규] useFrame 훅을 실행하고 Scene을 래핑하는 컴포넌트 ---
+function SceneWrapper({ 
+  layers, 
+  targetFocusIndex, 
+  targetRotation, 
+  targetOpacity, 
+  currentFocusIndexRef, 
+  currentRotationRef, 
+  currentOpacityRef, 
+  dragModeRef, 
+  onLiveIndexUpdate 
+}) {
+  
+  useFrame((state, delta) => {
+    const dragMode = dragModeRef.current;
+
+    // 1. 포커스 인덱스 보간 (수평 드래그 중이 아닐 때만)
+    if (dragMode !== 'horizontal') {
+      currentFocusIndexRef.current = THREE.MathUtils.damp(
+        currentFocusIndexRef.current,
+        targetFocusIndex,
+        DAMP_FACTOR,
+        delta
+      );
+    }
+
+    // 2. 로테이션 보간 (수직 드래그 중이 아닐 때만)
+    if (dragMode !== 'vertical') {
+      const [rx, ry, rz] = currentRotationRef.current;
+      const [tr, ty, tz] = targetRotation;
+      currentRotationRef.current = [
+        THREE.MathUtils.damp(rx, tr, DAMP_FACTOR, delta),
+        THREE.MathUtils.damp(ry, ty, DAMP_FACTOR, delta),
+        THREE.MathUtils.damp(rz, tz, DAMP_FACTOR, delta),
+      ];
+    }
+
+    // 3. 투명도 보간 (항상)
+    currentOpacityRef.current = THREE.MathUtils.damp(
+      currentOpacityRef.current,
+      targetOpacity,
+      DAMP_FACTOR,
+      delta
+    );
+
+    // 4. ProgressBar 업데이트를 위해 부모 컴포넌트에 현재 값 전달
+    onLiveIndexUpdate(currentFocusIndexRef.current);
+  });
+
+  return (
+    <Scene 
+      layers={layers}
+      focusIndex={currentFocusIndexRef.current}
+      rotation={currentRotationRef.current}
+      opacity={currentOpacityRef.current}
+    />
   );
 }
 
 /**
  * AI 모델의 각 레이어 데이터를 3D 공간에 시각화하는 메인 컴포넌트.
- * @param {{ layersData: object }} props - 백엔드에서 받은 AI 레이어 데이터 객체
  */
 export default function ImageGridLayers({ layersData }) {
-  const [focusLayerIndex, setFocusLayerIndex] = useState(0);
-  // [수정] 실시간 인덱스 값을 저장할 state 추가
-  const [liveFocusIndex, setLiveFocusIndex] = useState(0); 
-  const [focusAnimationConfig, setFocusAnimationConfig] = useState({ mass: 1, tension: 90, friction: 30, clamp: true });
+  // [수정] '목표값' state
+  const [targetFocusIndex, setTargetFocusIndex] = useState(0);
+  const [targetRotation, setTargetRotation] = useState(INITIAL_ROTATION);
+  const [targetOpacity, setTargetOpacity] = useState(1);
   
-  const [{ rotation, opacity }, api] = useSpring(() => ({
-    rotation: INITIAL_ROTATION,
-    opacity: 1,
-    config: { mass: 1, tension: 120, friction: 30 },
-  }));
+  // [수정] ProgressBar를 위한 실시간 '현재값' state
+  const [liveFocusIndex, setLiveFocusIndex] = useState(0);
 
-  const { animatedFocusIndex } = useSpring({
-    animatedFocusIndex: focusLayerIndex,
-    config: focusAnimationConfig,
-    onStart: () => api.start({ opacity: 0.5, immediate: true }),
-    onRest: () => api.start({ opacity: 1 }),
-    // [수정] 스프링 값이 변경될 때마다 liveFocusIndex state 업데이트
-    onChange: (result) => {
-      if (result.value.animatedFocusIndex !== undefined) {
-        setLiveFocusIndex(result.value.animatedFocusIndex);
-      }
-    },
-  });
+  // [수정] '현재값' ref (useFrame에서 직접 조작됨)
+  const currentFocusIndexRef = useRef(0);
+  const currentRotationRef = useRef(INITIAL_ROTATION);
+  const currentOpacityRef = useRef(1);
 
   const { layers, sizeChangeIndices } = useMemo(() => {
     try {
@@ -198,12 +250,14 @@ export default function ImageGridLayers({ layersData }) {
   const bind = useDrag(({ first, last, active, movement: [mx, my] }) => {
     const deadzone = 10;
     if (first) {
-      startRotation.current = rotation.get();
-      startFocusIndex.current = animatedFocusIndex.get();
+      // [수정] 현재값(ref)에서 시작
+      startRotation.current = currentRotationRef.current; 
+      startFocusIndex.current = currentFocusIndexRef.current; 
       dragModeRef.current = 'none';
     }
     if (active) {
-      api.start({ opacity: 0.5, immediate: true });
+      // [수정] 목표값(state) 설정
+      setTargetOpacity(0.5); 
     }
     if (dragModeRef.current === 'none' && (Math.abs(mx) > deadzone || Math.abs(my) > deadzone)) {
       dragModeRef.current = Math.abs(my) > Math.abs(mx) * 2 ? 'vertical' : 'horizontal';
@@ -212,43 +266,43 @@ export default function ImageGridLayers({ layersData }) {
       const indexSensitivity = 15;
       const newIndex = - (mx / indexSensitivity) + startFocusIndex.current;
       const clampedIndex = Math.max(0, Math.min(layers.length - 1, newIndex));
-
-      // 3D 씬을 위한 스프링 값 직접 설정
-      animatedFocusIndex.set(clampedIndex);
       
-      // [수정] ProgressBar를 위한 live state 실시간 업데이트
+      // [수정] 현재값(ref)을 즉시 업데이트
+      currentFocusIndexRef.current = clampedIndex; 
+      // [수정] ProgressBar를 위한 state 업데이트
       setLiveFocusIndex(clampedIndex); 
-
-      if (last) {
-        setFocusAnimationConfig({ mass: 1, tension: 90, friction: 15, clamp: true });
-        setFocusLayerIndex(Math.round(clampedIndex));
-        // 드래그 종료 시 live 값도 최종 값으로 동기화
-        setLiveFocusIndex(Math.round(clampedIndex)); 
-      }
+      
     } else if (dragModeRef.current === 'vertical') {
       const rotSensitivity = 200;
       const newRotationX = startRotation.current[0] - my / rotSensitivity;
       const clampedRotationX = Math.max(-MAX_VERTICAL_ROTATION, Math.min(MAX_VERTICAL_ROTATION, newRotationX));
-      api.start({ rotation: [clampedRotationX, startRotation.current[1], startRotation.current[2]], immediate: true });
+      
+      // [수정] 현재값(ref)을 즉시 업데이트
+      currentRotationRef.current = [clampedRotationX, startRotation.current[1], startRotation.current[2]]; 
     }
+
     if (last) {
-      if (Math.round(animatedFocusIndex.get()) === focusLayerIndex) {
-        api.start({ opacity: 1 });
+      // [수정] 목표값(state)을 설정하여 'damp'가 작동하도록 함
+      setTargetOpacity(1); 
+      
+      if (dragModeRef.current === 'horizontal') {
+        // 스냅
+        setTargetFocusIndex(Math.round(currentFocusIndexRef.current));
       }
       if (dragModeRef.current !== 'horizontal') {
-        api.start({ rotation: INITIAL_ROTATION });
+        // 회전 복귀
+        setTargetRotation(INITIAL_ROTATION); 
       }
+      dragModeRef.current = 'none';
     }
   });
 
   const handleNavClick = (targetIndex) => {
-    setFocusAnimationConfig({ mass: 1, tension: 30, friction: 26 });
-    setFocusLayerIndex(targetIndex);
+    setTargetFocusIndex(targetIndex);
   };
   
   const handleSeek = (targetIndex) => {
-    setFocusAnimationConfig({ mass: 1, tension: 120, friction: 40 });
-    setFocusLayerIndex(targetIndex);
+    setTargetFocusIndex(targetIndex);
   };
   
   if (!layers || layers.length === 0) return null;
@@ -265,15 +319,26 @@ export default function ImageGridLayers({ layersData }) {
           camera={{ position: [0, 20, 150], fov: 60 }}
           onCreated={({ scene }) => { scene.background = null; }}
         >
-          <Scene layers={layers} animatedFocusIndex={animatedFocusIndex} rotation={rotation} opacity={opacity}/>
+          {/* [수정] SceneWrapper가 3D 객체와 useFrame 로직을 관리 */}
+          <SceneWrapper
+            layers={layers}
+            targetFocusIndex={targetFocusIndex}
+            targetRotation={targetRotation}
+            targetOpacity={targetOpacity}
+            currentFocusIndexRef={currentFocusIndexRef}
+            currentRotationRef={currentRotationRef}
+            currentOpacityRef={currentOpacityRef}
+            dragModeRef={dragModeRef}
+            onLiveIndexUpdate={setLiveFocusIndex}
+          />
         </Canvas>
       </div>
 
       <div className="absolute bottom-8 left-4 right-4 md:bottom-10 md:left-10 md:right-10">
         <ProgressBar 
-          // --- [수정] props 변경 ---
-          liveIndex={liveFocusIndex} // 실시간 (소수점) 인덱스
-          displayIndex={Math.round(liveFocusIndex)} // 화면 표시용 (반올림) 인덱스
+          // [수정] 'liveFocusIndex' state 전달
+          liveIndex={liveFocusIndex}
+          displayIndex={Math.round(liveFocusIndex)}
           totalLayers={layers.length}
           onSeek={handleSeek}
           sizeChangeIndices={sizeChangeIndices}
