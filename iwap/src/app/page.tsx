@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useLayoutEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation"; // next/navigation에서 useRouter를 가져옵니다.
@@ -11,29 +11,168 @@ const fadeStyles = [
   { color: "rgba(255,255,255,0.30)", weight: 100 },
 ];
 
-function FadedLetters({ letters }: { letters: string }) {
+const headlineLetterClassName =
+  "text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px]";
+const letterTransition =
+  "font-weight 220ms ease, transform 260ms cubic-bezier(0.22, 1, 0.36, 1)";
+const maxScaleDelta = 0.05;
+const hoverRadius = 30;
+const maxLetterWeight = 800;
+const minLetterWeight = 100;
+
+const getLetterIntensity = (
+  mousePosition: { x: number; y: number } | null,
+  element: HTMLSpanElement | null
+) => {
+  if (!mousePosition || !element) return 0;
+  const rect = element.getBoundingClientRect();
+  const dx =
+    mousePosition.x < rect.left
+      ? rect.left - mousePosition.x
+      : mousePosition.x > rect.right
+      ? mousePosition.x - rect.right
+      : 0;
+  const dy =
+    mousePosition.y < rect.top
+      ? rect.top - mousePosition.y
+      : mousePosition.y > rect.bottom
+      ? mousePosition.y - rect.bottom
+      : 0;
+  const distance = Math.hypot(dx, dy);
+  const normalized = Math.max(0, 1 - distance / hoverRadius);
+  return Math.pow(normalized, 1.2);
+};
+
+function HoverBoldLetters({ letters, baseWeight }: { letters: string; baseWeight: number }) {
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
+  const letterRefs = useRef<(HTMLSpanElement | null)[]>([]);
+
+  letterRefs.current.length = letters.length;
+
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    letterRefs.current.forEach((node) => {
+      if (!node) return;
+      const prevTransition = node.style.transition;
+      const prevWeight = node.style.fontWeight;
+      node.style.transition = "none";
+      node.style.fontWeight = `${maxLetterWeight}`;
+      const width = node.getBoundingClientRect().width;
+      node.style.minWidth = `${width}px`;
+      node.style.fontWeight = prevWeight;
+      node.style.transition = prevTransition;
+      node.style.textAlign = "center";
+    });
+  }, [letters]);
+
   return (
-    <>
-      {letters.split("").map((char, i) => (
-        <span
-          key={i}
-          className="text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px]"
-          style={{
-            color: fadeStyles[i % fadeStyles.length].color,
-            fontWeight: fadeStyles[i % fadeStyles.length].weight,
-            fontFamily: "Pretendard",
-            letterSpacing: "-3.2px",
-          }}
-        >
-          {char}
-        </span>
-      ))}
-    </>
+    <span
+      className="inline-flex"
+      style={{ alignItems: "baseline" }}
+      onMouseMove={(event) => setMousePosition({ x: event.clientX, y: event.clientY })}
+      onMouseLeave={() => setMousePosition(null)}
+    >
+      {letters.split("").map((char, i) => {
+        const intensity = getLetterIntensity(mousePosition, letterRefs.current[i] ?? null);
+        const computedWeight = Math.round(
+          Math.max(
+            minLetterWeight,
+            baseWeight - (baseWeight - minLetterWeight) * intensity
+          )
+        );
+
+        return (
+          <span
+            key={`hover-${char}-${i}`}
+            ref={(node) => {
+              letterRefs.current[i] = node;
+            }}
+            className={headlineLetterClassName}
+            style={{
+              display: "inline-block",
+              fontFamily: "Pretendard",
+              fontWeight: computedWeight,
+              transform: `scale(${1 - maxScaleDelta * intensity})`,
+              transformOrigin: "center bottom",
+              textAlign: "center",
+              transition: letterTransition,
+            }}
+          >
+            {char}
+          </span>
+        );
+      })}
+    </span>
+  );
+}
+
+function FadedLetters({ letters }: { letters: string }) {
+  const [mousePosition, setMousePosition] = useState<{ x: number; y: number } | null>(null);
+  const letterRefs = useRef<(HTMLSpanElement | null)[]>([]);
+
+  letterRefs.current.length = letters.length;
+
+  useLayoutEffect(() => {
+    if (typeof window === "undefined") return;
+    letterRefs.current.forEach((node) => {
+      if (!node) return;
+      const prevTransition = node.style.transition;
+      const prevWeight = node.style.fontWeight;
+      node.style.transition = "none";
+      node.style.fontWeight = `${maxLetterWeight}`;
+      const width = node.getBoundingClientRect().width;
+      node.style.minWidth = `${width}px`;
+      node.style.fontWeight = prevWeight;
+      node.style.transition = prevTransition;
+      node.style.textAlign = "center";
+    });
+  }, [letters]);
+
+  return (
+    <span
+      className="inline-flex"
+      style={{ alignItems: "baseline" }}
+      onMouseMove={(event) => setMousePosition({ x: event.clientX, y: event.clientY })}
+      onMouseLeave={() => setMousePosition(null)}
+    >
+      {letters.split("").map((char, i) => {
+        const fadeIndex = i % fadeStyles.length;
+        const { color, weight: baseWeight } = fadeStyles[fadeIndex];
+        const intensity = getLetterIntensity(mousePosition, letterRefs.current[i] ?? null);
+        const computedWeight = Math.round(
+          Math.max(
+            minLetterWeight,
+            baseWeight - (baseWeight - minLetterWeight) * intensity
+          )
+        );
+
+        return (
+          <span
+            key={i}
+            ref={(node) => {
+              letterRefs.current[i] = node;
+            }}
+            className={headlineLetterClassName}
+            style={{
+              display: "inline-block",
+              color,
+              fontWeight: computedWeight,
+              fontFamily: "Pretendard",
+              transform: `scale(${1 + maxScaleDelta * intensity})`,
+              transformOrigin: "center bottom",
+              textAlign: "center",
+              transition: letterTransition,
+            }}
+          >
+            {char}
+          </span>
+        );
+      })}
+    </span>
   );
 }
 
 export default function Home() {
-  const [pos, setPos] = useState({ x: 0, y: 0 });
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const h1Ref = useRef<HTMLHeadingElement>(null);
@@ -100,22 +239,9 @@ export default function Home() {
     letterSpacing: "-3.2px",
   };
   
-  if (!isMobile) {
-    h1Style.WebkitMaskImage = `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`;
-    h1Style.maskImage = `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`;
-  }
-
   return (
     <main
       className="relative w-full h-dvh overflow-hidden select-none"
-      onMouseMove={(e) => {
-        if (!h1Ref.current) return;
-        const rect = h1Ref.current.getBoundingClientRect();
-        setPos({
-          x: e.clientX - rect.left,
-          y: e.clientY - rect.top,
-        });
-      }}
     >
       {/* 배경 이미지 */}
       <Image src="/images/home_background.jpg" alt="Background Light" fill priority className="object-cover dark:hidden" />
@@ -135,16 +261,29 @@ export default function Home() {
         >
           {/* 텍스트 블록 (그룹 좌측) */}
           <div className="flex flex-col items-start">
-            <Image src="/images/home/wap.svg" alt="images/home/wap" width={148} height={45} className="w-[80px] h-auto md:w-[148px] md:h-[45px] mb-4" />
+            <Image
+              src="/images/home/wap.svg"
+              alt="images/home/wap"
+              width={148}
+              height={45}
+              className="mb-4 h-auto w-[80px] md:h-[45px] md:w-[148px]"
+            />
             <h1
               ref={h1Ref}
               className="relative text-white text-left whitespace-pre-line text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px] cursor-default pb-2"
               style={h1Style}
             >
-              !nteractive<FadedLetters letters="eee" />{"\n"}
-              Web<FadedLetters letters="bbb" />{"\n"}
-              Art<FadedLetters letters="ttt" />{"\n"}
-              Project<FadedLetters letters="ttt" />
+              <HoverBoldLetters letters="!nteractive" baseWeight={700} />
+              <FadedLetters letters="eee" />
+              {"\n"}
+              <HoverBoldLetters letters="Web" baseWeight={700} />
+              <FadedLetters letters="bbb" />
+              {"\n"}
+              <HoverBoldLetters letters="Art" baseWeight={700} />
+              <FadedLetters letters="ttt" />
+              {"\n"}
+              <HoverBoldLetters letters="Project" baseWeight={700} />
+              <FadedLetters letters="ttt" />
             </h1>
           </div>
 

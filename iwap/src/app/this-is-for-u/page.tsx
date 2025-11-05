@@ -1,209 +1,396 @@
-﻿"use client";
+"use client";
 
-import { useState, useMemo, useEffect } from "react";
-import dynamic from "next/dynamic";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useResizeDetector } from "react-resize-detector";
-import { type Data, type Layout } from "plotly.js";
+import { useSearchParams } from "next/navigation";
 import FullScreenView from "@/components/ui/FullScreenView";
 
-const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
+type ActionStatus =
+  | { type: "success"; message: string }
+  | { type: "error"; message: string }
+  | null;
+
+const HEART_COLOR_STOPS = [
+  ["#fb6f92", 0],
+  ["#ff8ba7", 0.5],
+  ["#ffb3c6", 1],
+] as const;
+
+const BACKGROUND_GRADIENT = [
+  "rgba(16, 8, 24, 0.9)",
+  "rgba(45, 13, 47, 0.95)",
+  "rgba(94, 24, 68, 1)",
+];
 
 export default function FunctionsPage() {
-  const [index, setIndex] = useState(1);
-  const [a, setA] = useState(1);
+  const searchParams = useSearchParams();
+  const initialRecipient = useMemo(
+    () => searchParams.get("name") ?? "",
+    [searchParams]
+  );
+  const initialMessage = useMemo(
+    () => searchParams.get("message") ?? "",
+    [searchParams]
+  );
+
+  const [recipient, setRecipient] = useState(initialRecipient);
+  const [customMessage, setCustomMessage] = useState(initialMessage);
+  const [actionStatus, setActionStatus] = useState<ActionStatus>(null);
   const { width, height, ref } = useResizeDetector();
-  const [debouncedSize, setDebouncedSize] = useState({ width: 0, height: 0 });
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
 
   useEffect(() => {
-    const handler = setTimeout(() => {
-      if (width && height) {
-        setDebouncedSize({ width, height });
+    setRecipient(initialRecipient);
+  }, [initialRecipient]);
+
+  useEffect(() => {
+    setCustomMessage(initialMessage);
+  }, [initialMessage]);
+
+  const displayName = recipient.trim() || "you";
+  const finalMessage =
+    customMessage.trim() || `This heart is generated for ${displayName}.`;
+
+  const fileSafeName = useMemo(
+    () => displayName.replace(/[^\w-]+/g, "-").toLowerCase(),
+    [displayName]
+  );
+
+  const drawHeart = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !width || !height) {
+      return;
+    }
+    const context = canvas.getContext("2d");
+    if (!context) {
+      return;
+    }
+
+    const dpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+    canvas.width = Math.floor(width * dpr);
+    canvas.height = Math.floor(height * dpr);
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    if (typeof context.resetTransform === "function") {
+      context.resetTransform();
+    } else {
+      context.setTransform(1, 0, 0, 1, 0, 0);
+    }
+    context.scale(dpr, dpr);
+
+    context.clearRect(0, 0, width, height);
+
+    const backgroundGradient = context.createLinearGradient(
+      0,
+      0,
+      0,
+      height
+    );
+    BACKGROUND_GRADIENT.forEach((color, index) => {
+      backgroundGradient.addColorStop(
+        index / (BACKGROUND_GRADIENT.length - 1),
+        color
+      );
+    });
+    context.fillStyle = backgroundGradient;
+    context.fillRect(0, 0, width, height);
+
+    context.save();
+    const scale = Math.min(width, height) / 32;
+    context.translate(width / 2, height * 0.42);
+
+    context.beginPath();
+    const steps = 720;
+    for (let i = 0; i <= steps; i++) {
+      const t = (Math.PI * 2 * i) / steps;
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y =
+        -(
+          13 * Math.cos(t) -
+          5 * Math.cos(2 * t) -
+          2 * Math.cos(3 * t) -
+          Math.cos(4 * t)
+        );
+      const px = x * scale;
+      const py = y * scale;
+      if (i === 0) {
+        context.moveTo(px, py);
+      } else {
+        context.lineTo(px, py);
       }
-    }, 150);
-    return () => clearTimeout(handler);
-  }, [width, height]);
-
-  const kVals = useMemo(() => Array.from({ length: 2500 }, (_, i) => i + 1), []);
-
-// [수정] 1번 그래프: 선의 두께에 따라 trace를 2개로 분리하여 촘촘함 복원
-const singleTrace1 = useMemo((): Data[] => {
-  const aVals = kVals.map((k) => (-3 / 2) * Math.pow(Math.sin((2 * Math.PI * k) / 2500), 3) + (3 / 10) * Math.pow(Math.sin((2 * Math.PI * k) / 2500), 7));
-  const bVals = kVals.map((k) => Math.sin((2 * Math.PI * k) / 1875 + Math.PI / 6) + 0.25 * Math.pow(Math.sin((2 * Math.PI * k) / 1875 + Math.PI / 6), 3));
-  const cVals = kVals.map((k) => 2 / 15 - (1 / 8) * Math.cos((Math.PI * k) / 625));
-  
-  const l1 = kVals.map((k, i) => {
-    const theta = (68 * Math.PI * k) / 2500;
-    return { re: aVals[i] + cVals[i] * Math.cos(theta), im: bVals[i] + cVals[i] * Math.sin(theta) };
-  });
-  const l2 = kVals.map((k, i) => {
-    const theta = (68 * Math.PI * k) / 2500;
-    return { re: aVals[i] - cVals[i] * Math.cos(theta), im: bVals[i] - cVals[i] * Math.sin(theta) };
-  });
-
-  // 가는 선과 굵은 선의 좌표를 분리해서 저장
-  const thinLinesX: (number | null)[] = [];
-  const thinLinesY: (number | null)[] = [];
-  const thickLinesX: (number | null)[] = [];
-  const thickLinesY: (number | null)[] = [];
-
-  for (let i = 0; i < kVals.length - 1; i++) {
-    // 가는 선 (l1, l2 경로)
-    thinLinesX.push(l1[i].re, l1[i + 1].re, null);
-    thinLinesY.push(l1[i].im, l1[i + 1].im, null);
-    thinLinesX.push(l2[i].re, l2[i + 1].re, null);
-    thinLinesY.push(l2[i].im, l2[i + 1].im, null);
-    
-    // 굵은 선 (l1과 l2를 잇는 선)
-    thickLinesX.push(l1[i].re, l2[i].re, null);
-    thickLinesY.push(l1[i].im, l2[i].im, null);
-  }
-
-  // 2개의 trace 객체를 배열로 반환
-  return [
-    { // 가는 선 trace
-      x: thinLinesX,
-      y: thinLinesY,
-      mode: "lines",
-      type: "scatter",
-      line: { color: "rgba(0,0,0,0.5)", width: 0.3 },
-      showlegend: false,
-      hoverinfo: 'none'
-    },
-    { // 굵은 선 trace
-      x: thickLinesX,
-      y: thickLinesY,
-      mode: "lines",
-      type: "scatter",
-      line: { color: "rgba(0,0,0,0.5)", width: 1 },
-      showlegend: false,
-      hoverinfo: 'none'
     }
-  ];
-}, [kVals]);
-  
-  const xVals = useMemo(() => Array.from({ length: 200 }, (_, i) => -Math.sqrt(Math.PI) + (2 * Math.sqrt(Math.PI) * i) / 200), []);
-  const fVals = xVals.map((x) => Math.pow(Math.abs(x), 2 / 3) + Math.sqrt(Math.max(0, Math.PI - x * x)) * Math.sin(a * Math.PI * x));
-  
-  const xRange = useMemo(() => Array.from({ length: 50 }, (_, i) => -1 + (2 * i) / 49), []);
-  const yRange = useMemo(() => Array.from({ length: 60 }, (_, j) => -1 + (2.5 * j) / 59), []);
-  const zGrid: (number | null)[][] = useMemo(() => yRange.map((y) => xRange.map((x) => {
-    const inside = 1 - x * x - Math.pow(y - Math.abs(x), 2);
-    return inside < 0 ? null : 5 - Math.sqrt(inside) * Math.cos(30 * inside);
-  })), [xRange, yRange]);
 
-  const uRange = useMemo(() => Array.from({ length: 50 }, (_, i) => (2 * Math.PI * i) / 49), []);
-  const vRange = useMemo(() => Array.from({ length: 50 }, (_, j) => (Math.PI * j) / 49), []);
-  const surfX: number[][] = useMemo(() => vRange.map((v) => uRange.map((u) => Math.sin(v) * (15 * Math.sin(u) - 4 * Math.sin(3 * u)))), [uRange, vRange]);
-  const surfY: number[][] = useMemo(() => vRange.map((v) => uRange.map(() => 8 * Math.cos(v))), [uRange, vRange]);
-  const surfZ: number[][] = useMemo(() => vRange.map((v) => uRange.map((u) => Math.sin(v) * (15 * Math.cos(u) - 6 * Math.cos(2 * u) - 2 * Math.cos(3 * u)))), [uRange, vRange]);
+    const heartGradient = context.createLinearGradient(
+      -16 * scale,
+      -18 * scale,
+      16 * scale,
+      18 * scale
+    );
+    HEART_COLOR_STOPS.forEach(([color, stop]) => {
+      heartGradient.addColorStop(stop, color);
+    });
+    context.fillStyle = heartGradient;
+    context.fill();
 
-  const tVals = useMemo(() => Array.from({ length: 2000 }, (_, i) => (Math.PI * i) / 1999), []);
-  const xHeart = useMemo(() => tVals.map((t) => (4 / 9) * Math.sin(2 * t) + (1 / 3) * Math.pow(Math.sin(t), 8) * Math.cos(3 * t) + (1 / 8) * Math.sin(2 * t) * Math.pow(Math.cos(247 * t), 4)), [tVals]);
-  const yHeart = useMemo(() => tVals.map((t) => Math.sin(t) + (1 / 3) * Math.pow(Math.sin(t), 8) * Math.sin(3 * t) + (1 / 8) * Math.sin(2 * t) * Math.pow(Math.sin(247 * t), 4)), [tVals]);
+    context.lineWidth = Math.max(2, scale * 0.8);
+    context.strokeStyle = "rgba(255, 255, 255, 0.65)";
+    context.stroke();
 
-  const singleTrace6 = useMemo((): Data[] => {
-    const nLines = 601;
-    const iVals = Array.from({ length: nLines }, (_, i) => i + 1);
-    const xStart = iVals.map((i) => Math.sin((10 * Math.PI * (i + 699)) / 2000));
-    const yStart = iVals.map((i) => Math.cos((8 * Math.PI * (i + 699)) / 2000));
-    const xEnd = iVals.map((i) => Math.sin((12 * Math.PI * (i + 699)) / 2000));
-    const yEnd = iVals.map((i) => Math.cos((10 * Math.PI * (i + 699)) / 2000));
-    const xCoords = iVals.flatMap((_, idx) => [xStart[idx], xEnd[idx], null]);
-    const yCoords = iVals.flatMap((_, idx) => [yStart[idx], yEnd[idx], null]);
-    return [{
-      x: xCoords, y: yCoords, mode: "lines", type: "scatter",
-      line: { color: '#000000', width: 0.3 },
-      showlegend: false, hoverinfo: 'none',
-    }];
-  }, []);
+    context.globalCompositeOperation = "lighter";
+    const glowGradient = context.createRadialGradient(
+      -6 * scale,
+      -6 * scale,
+      scale,
+      0,
+      0,
+      24 * scale
+    );
+    glowGradient.addColorStop(0, "rgba(255,255,255,0.7)");
+    glowGradient.addColorStop(1, "rgba(255,255,255,0)");
+    context.fillStyle = glowGradient;
+    context.fill();
+    context.globalCompositeOperation = "source-over";
+    context.restore();
 
-  const singleTrace7 = useMemo((): Data[] => {
-    const xCoords: (number | null)[] = [];
-    const yCoords: (number | null)[] = [];
-    for (let i = 0; i < 2000; i++) {
-        const idx = i + 1;
-        xCoords.push(Math.sin((10 * Math.PI * idx) / 2000), 0.5 * Math.sin((2 * Math.PI * idx) / 2000), null);
-        yCoords.push(0.5 * Math.cos((2 * Math.PI * idx) / 2000), Math.cos((10 * Math.PI * idx) / 2000), null);
+    const drawWrappedText = (
+      ctx: CanvasRenderingContext2D,
+      text: string,
+      x: number,
+      y: number,
+      maxWidth: number,
+      lineHeight: number,
+      font: string
+    ) => {
+      ctx.font = font;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      const words = text.split(" ");
+      const lines: string[] = [];
+      let currentLine = "";
+
+      words.forEach((word) => {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        const metrics = ctx.measureText(testLine);
+        if (metrics.width > maxWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      });
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+
+      lines.forEach((line, idx) => {
+        ctx.fillText(line, x, y + idx * lineHeight);
+      });
+    };
+
+    context.fillStyle = "rgba(255,255,255,0.92)";
+    drawWrappedText(
+      context,
+      `for ${displayName}`,
+      width / 2,
+      height * 0.72,
+      width * 0.6,
+      Math.max(28, width / 24),
+      `600 ${Math.max(28, width / 18)}px "Pretendard", "Inter", sans-serif`
+    );
+
+    context.fillStyle = "rgba(245,238,250,0.9)";
+    drawWrappedText(
+      context,
+      finalMessage,
+      width / 2,
+      height * 0.82,
+      width * 0.7,
+      Math.max(22, width / 26),
+      `400 ${Math.max(18, width / 28)}px "Pretendard", "Inter", sans-serif`
+    );
+  }, [width, height, displayName, finalMessage]);
+
+  useEffect(() => {
+    drawHeart();
+  }, [drawHeart]);
+
+  useEffect(() => {
+    if (!actionStatus) {
+      return;
     }
-    return [{
-        x: xCoords, y: yCoords, mode: "lines", type: "scatter",
-        line: { color: 'rgba(50, 50, 50, 0.7)', width: 0.4 },
-        showlegend: false, hoverinfo: 'none',
-    }];
-  }, []);
+    const id = window.setTimeout(() => setActionStatus(null), 2500);
+    return () => window.clearTimeout(id);
+  }, [actionStatus]);
 
-  // [타입 수정] 'plots'의 타입 정의를 원래대로 'Data[]'로 복구
-  const plots: Record<string, { data: Data[]; title: string }> = {
-    "1": { data: singleTrace1, title: "1. Line Segment Pattern" },
-    "2": { data: [{ x: xVals, y: fVals, type: "scatter", mode: "lines", line: { color: 'red' } }], title: `2. f(x), a=${a.toFixed(2)}` },
-    "3": { data: [{ x: xRange, y: yRange, z: zGrid, type: "surface", colorscale: [[0, '#444444'], [1, '#C35858']], showscale: false }], title: "3. Abstract 3D Surface" },
-    "4": { data: [{ x: surfX, y: surfY, z: surfZ, type: "surface", colorscale: [[0, 'pink'], [1, 'red']], showscale: false }], title: "4. 3D Parametric Surface (u, v)" },
-    "5": { data: [{ x: xHeart, y: yHeart, mode: "lines", line: { color: 'red', width: 1 }, type: 'scatter' }], title: "5. Parametric Heart Curve" },
-    "6": { data: singleTrace6, title: "6. Heart Shape from 601 Line Segments" },
-    "7": { data: singleTrace7, title: "7. 2000 Line Segments Pattern" },
-  };
+  const handleDownload = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = canvas.toDataURL("image/png");
+    link.download = `heart-for-${fileSafeName || "you"}.png`;
+    link.click();
+    setActionStatus({
+      type: "success",
+      message: "PNG 이미지로 저장했어요.",
+    });
+  }, [fileSafeName]);
 
-  const selectedPlot = plots[index.toString()];
+  const handleShare = useCallback(async () => {
+    if (typeof window === "undefined") {
+      return;
+    }
+    const shareUrl = new URL(window.location.href);
+    shareUrl.searchParams.set("name", recipient.trim());
+    if (customMessage.trim()) {
+      shareUrl.searchParams.set("message", customMessage.trim());
+    } else {
+      shareUrl.searchParams.delete("message");
+    }
 
-  const handlePrev = () => setIndex((prev) => (prev === 1 ? 7 : prev - 1));
-  const handleNext = () => setIndex((prev) => (prev === 7 ? 1 : prev + 1));
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Th!s !s for u",
+          text: finalMessage,
+          url: shareUrl.toString(),
+        });
+        setActionStatus({
+          type: "success",
+          message: "공유 창을 열었어요!",
+        });
+        return;
+      }
 
-  const plotLayout = useMemo<Partial<Layout>>(() => ({
-    width: debouncedSize.width,
-    height: debouncedSize.height,
-    margin: index === 2 ? { t: 100, l: 40, r: 20, b: 40 } : { t: 80, l: 40, r: 20, b: 40 },
-    paper_bgcolor: "rgba(0,0,0,0)",
-    plot_bgcolor: "rgba(0,0,0,0)",
-    xaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
-    yaxis: { visible: false, scaleanchor: "x", scaleratio: 1, showgrid: false, showticklabels: false, zeroline: false },
-    scene: {
-        xaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
-        yaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
-        zaxis: { visible: false, showgrid: false, showticklabels: false, zeroline: false },
-    },
-  }), [debouncedSize.width, debouncedSize.height, index]);
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(shareUrl.toString());
+        setActionStatus({
+          type: "success",
+          message: "공유 링크를 클립보드에 복사했어요.",
+        });
+        return;
+      }
 
-    const pageBackgroundStyle = {
-    backgroundImage: "url('/images/this-is-for-u_background.jpg')",
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundAttachment: 'fixed',
-  };
+      setActionStatus({
+        type: "error",
+        message: "이 브라우저에서는 공유가 제한돼요. 다른 브라우저를 사용해 주세요.",
+      });
+    } catch (error) {
+      setActionStatus({
+        type: "error",
+        message: "공유에 실패했어요. 잠시 후 다시 시도해 주세요.",
+      });
+    }
+  }, [recipient, customMessage, finalMessage]);
 
   return (
-    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)] overflow-hidden">
+    <div className="relative h-dvh w-full overflow-hidden md:h-[calc(100dvh-60px)]">
       <FullScreenView
         title="Th!s !s for u"
-        subtitle="함수로 하트 그리기"
-        goBack={true}
-        onPrev={handlePrev}
-        onNext={handleNext}
+        subtitle="감정으로 이어지는 맞춤형 하트 생성기"
+        goBack
         backgroundUrl="/images/this-is-for-u_background.jpg"
-        titleClassName="translate-y-[60px] translate-x-[9px] md:translate-x-0 md:translate-y-0 font-semibold"
-        subtitleClassName="translate-y-[60px] translate-x-[10px] md:translate-x-0 md:translate-y-0 font-semilight"
-        closeButtonClassName="translate-y-[60px] md:translate-y-0"
+        titleClassName="md:translate-y-0 md:translate-x-0 translate-x-[10px] translate-y-[60px] font-semibold"
+        subtitleClassName="md:translate-y-0 md:translate-x-0 translate-x-[12px] translate-y-[60px] font-light"
+        closeButtonClassName="md:translate-y-0 translate-y-[60px]"
       >
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-black/95 to-black"></div>
-        <div className="relative z-20 md:mt-20 w-[85vw] max-w-[1501px] h-[45vh] md:h-[65vh] max-h-[700px] bg-white flex flex-col items-center justify-center">
-          <div ref={ref} className="w-full flex-grow min-h-0">
-            {debouncedSize.width > 0 && debouncedSize.height > 0 && (
-              <Plot
-                data={selectedPlot.data}
-                layout={plotLayout}
-                config={{ responsive: true }}
-                style={{ width: '100%', height: '100%' }}
-              />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/55 to-black/90" />
+        <div className="relative z-20 mx-auto flex w-[90vw] max-w-5xl flex-col items-center gap-8 py-10 md:py-14">
+          <div
+            ref={ref}
+            className="relative aspect-[4/3] w-full overflow-hidden rounded-[32px] border border-white/10 shadow-[0_60px_160px_rgba(251,111,146,0.45)] backdrop-blur-md"
+          >
+            <canvas
+              ref={canvasRef}
+              className="h-full w-full"
+              aria-label={`Personalised heart for ${displayName}`}
+            />
+            <div className="pointer-events-none absolute inset-0 rounded-[32px] border border-white/20" />
+          </div>
+
+          <div className="w-full max-w-3xl rounded-3xl border border-white/10 bg-white/85 p-6 shadow-xl backdrop-blur">
+            <div className="grid gap-5 md:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <label
+                  htmlFor="recipient"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-500"
+                >
+                  To
+                </label>
+                <input
+                  id="recipient"
+                  type="text"
+                  value={recipient}
+                  onChange={(event) => setRecipient(event.target.value)}
+                  placeholder="누구에게 보내고 싶나요?"
+                  className="rounded-xl border border-rose-200 bg-white/80 px-4 py-3 text-base text-rose-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+                />
+                <p className="text-xs text-rose-400">
+                  이름이나 닉네임을 입력하면 메시지가 맞춤형으로 바뀝니다.
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label
+                  htmlFor="message"
+                  className="text-xs font-semibold uppercase tracking-[0.2em] text-rose-500"
+                >
+                  Message
+                </label>
+                <textarea
+                  id="message"
+                  rows={3}
+                  value={customMessage}
+                  onChange={(event) => setCustomMessage(event.target.value)}
+                  placeholder="감정을 담은 메시지를 적어보세요."
+                  className="resize-none rounded-xl border border-rose-200 bg-white/80 px-4 py-3 text-base text-rose-700 outline-none transition focus:border-rose-400 focus:ring-2 focus:ring-rose-200"
+                />
+                <p className="text-xs text-rose-400">
+                  비워두면 "This heart is generated for {displayName}."로 표시돼요.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-col gap-3 md:flex-row">
+              <button
+                type="button"
+                onClick={handleDownload}
+                className="inline-flex items-center justify-center rounded-xl bg-rose-500 px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-white transition hover:bg-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 focus:ring-offset-rose-100"
+              >
+                Download Heart
+              </button>
+              <button
+                type="button"
+                onClick={handleShare}
+                className="inline-flex items-center justify-center rounded-xl border border-rose-400 px-6 py-3 text-sm font-semibold uppercase tracking-[0.2em] text-rose-500 transition hover:border-rose-500 hover:text-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-200 focus:ring-offset-2 focus:ring-offset-rose-100"
+              >
+                Share Link
+              </button>
+            </div>
+
+            {actionStatus ? (
+              <p
+                className={`mt-4 text-sm ${
+                  actionStatus.type === "success"
+                    ? "text-rose-500"
+                    : "text-rose-600"
+                }`}
+              >
+                {actionStatus.message}
+              </p>
+            ) : (
+              <p className="mt-4 text-sm text-rose-400">
+                하트를 저장하거나 공유해서 감정을 전해주세요.
+              </p>
             )}
           </div>
-          {index === 2 && (
-            <div className="w-[80%] max-w-xl my-4 flex-shrink-0">
-              <input
-                type="range" min="-10" max="10" step="0.1" value={a}
-                onChange={(e) => setA(parseFloat(e.target.value))}
-                className="w-full accent-red-500"
-              />
-            </div>
-          )}
         </div>
       </FullScreenView>
     </div>
