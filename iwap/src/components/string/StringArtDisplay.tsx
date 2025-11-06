@@ -140,7 +140,7 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
 
   // --- 렌더링 ---
   const backgroundStyle = {
-    backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113), url('/images/string_background.jpg')`,
+    backgroundImage: "url('/images/string_background.png')",
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',

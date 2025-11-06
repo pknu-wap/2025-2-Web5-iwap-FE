@@ -43,6 +43,7 @@ export default function Home() {
   const [buttonRect, setButtonRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
   // 시각적 버튼을 가리킬 ref
   const buttonRef = useRef<HTMLDivElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   // 위치를 계산하고 업데이트하는 함수
   const handleResize = () => {
@@ -57,34 +58,52 @@ export default function Home() {
     }
   };
 
-  useEffect(() => {
-    // --- 1. 초기 위치 설정 ---
-    // 컴포넌트가 마운트될 때 한 번 실행하여 초기 위치를 잡습니다.
-    handleResize();
+    useEffect(() => {
+    // 위치와 모바일 상태를 계산하고 업데이트하는 함수
+    const handleResize = () => {
+      // 버튼 위치 계산 (기존 로직)
+      if (buttonRef.current) {
+        const rect = buttonRef.current.getBoundingClientRect();
+        setButtonRect({ top: rect.top, left: rect.left, width: rect.width, height: rect.height });
+      }
+      // 모바일 여부 체크 (추가된 로직)
+      // 768px을 기준으로 데스크톱/모바일을 나눕니다. (Tailwind의 'md' 기준)
+      setIsMobile(window.innerWidth < 768); 
+    };
 
-    // --- 2. 리사이즈 이벤트 리스너 등록 ---
-    // window 객체에 'resize' 이벤트가 발생할 때마다 handleResize 함수를 호출합니다.
+    handleResize(); // 컴포넌트 마운트 시 한 번 실행
+
     window.addEventListener("resize", handleResize);
 
-    // --- 3. 클린업 함수 ---
-    // 컴포넌트가 언마운트될 때(사라질 때) 이벤트 리스너를 제거합니다.
-    // 이를 통해 메모리 누수를 방지할 수 있습니다.
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, []); // 의존성 배열은 비워두어 마운트/언마운트 시에만 실행되도록 합니다.
+  }, []);; // 의존성 배열은 비워두어 마운트/언마운트 시에만 실행되도록 합니다.
 
   // 페이지 이동을 처리하는 함수
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault(); // 기본 링크 이동 동작을 막습니다.
     setIsOpen(true); // 애니메이션 상태를 활성화합니다.
+    if (typeof window !== "undefined" && window.innerWidth >= 768) {
     setIsHovered(true); // 호버 상태를 활성화하여 시각적 효과를 줍니다.
+    }
 
     // 700ms(애니메이션 시간) 후에 페이지를 이동시킵니다.
     setTimeout(() => {
       router.push("/slides");
     }, 700);
   };
+
+  const h1Style: React.CSSProperties = {
+    fontFamily: "Pretendard",
+    fontWeight: isMobile ? 500 : 700,
+    letterSpacing: "-3.2px",
+  };
+  
+  if (!isMobile) {
+    h1Style.WebkitMaskImage = `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`;
+    h1Style.maskImage = `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`;
+  }
 
   return (
     <main
@@ -116,17 +135,11 @@ export default function Home() {
         >
           {/* 텍스트 블록 (그룹 좌측) */}
           <div className="flex flex-col items-start">
-            <Image src="/images/home/wap.png" alt="images/home/wap" width={148} height={45} className="w-[148px] h-[45px] mb-4" />
+            <Image src="/images/home/wap.svg" alt="images/home/wap" width={148} height={45} className="w-[80px] h-auto md:w-[148px] md:h-[45px] mb-4" />
             <h1
               ref={h1Ref}
               className="relative text-white text-left whitespace-pre-line text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px] cursor-default pb-2"
-              style={{
-                fontFamily: "Pretendard",
-                fontWeight: 700,
-                letterSpacing: "-3.2px",
-                WebkitMaskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`,
-                maskImage: `radial-gradient(40px at ${pos.x}px ${pos.y}px, transparent 10%, black 80%)`,
-              }}
+              style={h1Style}
             >
               !nteractive<FadedLetters letters="eee" />{"\n"}
               Web<FadedLetters letters="bbb" />{"\n"}
@@ -174,15 +187,15 @@ export default function Home() {
           <Link
             href="/slides"
             className="absolute inset-0 cursor-pointer"
-            onMouseEnter={() => { setIsOpen(true); setIsHovered(true); }}
-            onMouseLeave={() => { setIsOpen(false); setIsHovered(false); }}
+            onMouseEnter={() => { if (typeof window !== "undefined" && window.innerWidth >= 768) {setIsOpen(true); setIsHovered(true);}}}
+            onMouseLeave={() => { if (typeof window !== "undefined" && window.innerWidth >= 768) {setIsOpen(false); setIsHovered(false);}}}
             onClick={handleLinkClick}
           />
         </div>
       )}
 
       {/* 페이지 전환 효과를 위한 그라데이션 오버레이 */}
-      <div className={`absolute inset-y-0 right-0 bg-gradient-to-l from-white to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${isOpen ? "w-full" : "w-0"}`}></div>
+      <div className={`absolute inset-y-0 right-0 bg-gradient-to-l from-white to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${isOpen ? "w-[90vw]" : "w-0"}`}></div>
     </main>
   );
 }

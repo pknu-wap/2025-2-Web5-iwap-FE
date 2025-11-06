@@ -54,10 +54,17 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
     const headerHeight = showHeader && isDesktop ? HEADER_HEIGHT : 0;
     const availableHeight = window.innerHeight - headerHeight;
     const verticalMargin = availableHeight * (isLandscape ? 0.25 : 0.15);
-    const newHeight = Math.min(availableHeight - verticalMargin, BASE_CARD_HEIGHT);
+    let newHeight = Math.min(availableHeight - verticalMargin, BASE_CARD_HEIGHT);
     
     const aspectRatio = BASE_CARD_WIDTH / BASE_CARD_HEIGHT;
-    const newWidth = newHeight * aspectRatio;
+    let newWidth = newHeight * aspectRatio;
+    
+
+  if (!isDesktop) {
+  const scale = 0.65; // 모바일 축소 비율
+  newWidth *= scale;
+  newHeight *= scale;
+}
 
     // 모든 카드를 기준으로 초기 스택 너비를 계산
     const stackedWidth = newWidth + (images.length > 1 ? images.length - 1 : 0) * VISIBLE_STACK_OFFSET;
@@ -171,7 +178,7 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
   return (
     <div
       ref={scrollContainerRef}
-      className={`w-full ${isExpanded ? 'overflow-x-auto' : 'overflow-hidden'} [scrollbar-width:none] [&::-webkit-scrollbar]:hidden`}
+      className={`w-full ${isExpanded ? 'overflow-x-auto' : 'overflow-hidden'} slider-no-scrollbar`}
       style={{
         height: `${cardDimensions.height}px`,
         opacity: isInitialized ? 1 : 0,
@@ -191,19 +198,14 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
           {images.map((item, index) => {
             const isActive = activeIndex === index;
             const cardWidth = isExpanded && isActive ? cardDimensions.focusedWidth : cardDimensions.width;
-            const collapsedMargin = !isExpanded && index > 0 ? -(cardDimensions.width - VISIBLE_STACK_OFFSET) : GAP;
-            const expandedExtraSpacing =
-              isExpanded && activeIndex !== null && index > activeIndex
-                ? cardDimensions.focusedWidth - cardDimensions.width
-                : 0;
-            const marginLeft = isExpanded ? GAP + expandedExtraSpacing : collapsedMargin;
+            const marginLeft = !isExpanded && index > 0 ? -(cardDimensions.width - VISIBLE_STACK_OFFSET) : GAP;
 
             const cardStyle: React.CSSProperties = {
               width: `${cardWidth}px`,
               height: '100%',
               zIndex: index,
               marginLeft: index > 0 ? `${marginLeft}px` : (isExpanded ? `${GAP}px` : '0'),
-              transition: 'width 0.5s ease-in-out, margin-left 0.6s ease-in-out',
+              transition: 'width 0.5s ease-in-out, margin-left 1s ease-in-out',
             };
 
             return (
@@ -221,12 +223,7 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
           <div
             className="flex-shrink-0"
             style={{
-              width:
-                isExpanded
-                  ? activeIndex !== null && activeIndex === images.length - 1
-                    ? cardDimensions.focusedWidth
-                    : cardDimensions.width
-                  : 0,
+              width: isExpanded ? cardDimensions.width : 0,
               height: '100%',
               marginLeft: isExpanded ? `${GAP}px` : '0',
               transition: 'width 1s ease-in-out, margin-left 1s ease-in-out',
