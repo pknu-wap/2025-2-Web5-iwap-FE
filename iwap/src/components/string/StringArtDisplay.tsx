@@ -3,18 +3,26 @@
 
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
-import { Point } from './StringArtProcessor';
 import ProgressBar from './ProgressBar';
+
+// [수정] Point 타입을 컴포넌트 내부에 정의
+type Point = [number, number];
 
 // --- PROPS & CONSTANTS ---
 interface StringArtDisplayProps {
-  coordinates: Point[];
+  coordinates: number[]; // [수정] props 타입을 number[] (핀 인덱스 배열)로 변경
   onClose: () => void;
 }
 
 const CANVAS_WIDTH = 500;
 const CANVAS_HEIGHT = 500;
 const TARGET_ANIMATION_DURATION_MS = 15000; // 15초
+
+// [추가] 핀 좌표 계산을 위한 상수
+const TOTAL_PINS = 211; // 0-210 범위
+const CENTER_X = CANVAS_WIDTH / 2;
+const CENTER_Y = CANVAS_HEIGHT / 2;
+const RADIUS = (CANVAS_WIDTH / 2) - 5; // 캔버스 가장자리에서 5px 여유
 
 // --- HELPER ICONS ---
 const PlayIcon = () => (
@@ -38,7 +46,25 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
   const [isPlaying, setIsPlaying] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1); // 1: normal, 2: fast-forward, -2: rewind
 
-  const totalCoordinates = useMemo(() => coordinates?.length || 0, [coordinates]);
+  // [수정] 핀 인덱스 배열을 캔버스 [x, y] 좌표 배열로 변환
+  const canvasCoordinates: Point[] = useMemo(() => {
+    if (!coordinates) return [];
+
+    // 헬퍼 함수: 핀 인덱스를 [x, y] 좌표로 변환
+    const getPointFromIndex = (index: number): Point => {
+      // 각도를 계산 (12시 방향( -Math.PI / 2 )에서 시작)
+      const angle = (index / TOTAL_PINS) * 2 * Math.PI - Math.PI ;
+      const x = CENTER_X + RADIUS * Math.cos(angle);
+      const y = CENTER_Y + RADIUS * Math.sin(angle);
+      return [x, y];
+    };
+
+    // props로 받은 모든 핀 인덱스를 [x, y] 좌표로 매핑
+    return coordinates.map(getPointFromIndex);
+  }, [coordinates]);
+
+  // [수정] totalCoordinates가 props.coordinates 대신 canvasCoordinates를 기반으로 계산되도록 변경
+  const totalCoordinates = useMemo(() => canvasCoordinates.length, [canvasCoordinates]);
 
   // --- 일반 재생 속도 기준, 프레임당 그릴 라인 수 계산 ---
   const linesPerFrame = useMemo(() => {
@@ -49,7 +75,8 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
   
   // --- 그리기 로직 ---
   useEffect(() => {
-    if (!coordinates || totalCoordinates <= 1 || !canvasRef.current) return;
+    // [수정] props.coordinates 대신 변환된 canvasCoordinates를 사용
+    if (totalCoordinates <= 1 || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
@@ -57,19 +84,21 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.strokeStyle = "black";
-    ctx.lineWidth = 0.5;
-    ctx.globalAlpha = 0.3;
+    ctx.lineWidth = 0.25;
+    ctx.globalAlpha = 1.0;
 
     ctx.beginPath();
-    ctx.moveTo(coordinates[0][0], coordinates[0][1]);
+    // [수정] canvasCoordinates 사용
+    ctx.moveTo(canvasCoordinates[0][0], canvasCoordinates[0][1]);
     
     const limit = Math.min(currentIndex + 1, totalCoordinates);
     for (let i = 1; i < limit; i++) {
-        const [x, y] = coordinates[i];
+        // [수정] canvasCoordinates 사용
+        const [x, y] = canvasCoordinates[i];
         ctx.lineTo(x, y);
     }
     ctx.stroke();
-  }, [coordinates, currentIndex, totalCoordinates]);
+  }, [canvasCoordinates, currentIndex, totalCoordinates]); // [수정] 의존성 배열 변경
 
 
   // --- 애니메이션 루프 로직 ---
@@ -183,6 +212,9 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
             <div className="flex-1 flex items-center relative h-full">
                 {/* 진행률 텍스트 */}
                 <span className="absolute -top-1 left-0 text-white text-sm font-mono select-none">
+                    {/*                         currentIndex는 0부터 (totalCoordinates - 1)까지 증가합니다. 
+                        따라서 최대값은 (totalCoordinates - 1)이 맞습니다.
+                    */}
                     {currentIndex} / {totalCoordinates > 0 ? totalCoordinates - 1 : 0}
                 </span>
 
@@ -197,7 +229,8 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
                     {totalCoordinates > 1 && (
                         <ProgressBar
                             currentStep={currentIndex}
-                            totalSteps={totalCoordinates}
+                            // [수정] totalSteps는 currentStep의 최대값인 (totalCoordinates - 1)이 되어야 함
+                            totalSteps={totalCoordinates - 1} 
                             onSeek={handleSeek}
                         />
                     )}

@@ -1,17 +1,14 @@
 // src/components/string/stringArtProcessor.tsx
 
-export type Point = [number, number];
-
 interface ApiResponse {
-  coordinates: Point[];
+  coordinates: number[];
 }
 
-export const processImageToStringArt = async (imageFile: File): Promise<Point[]> => {
+export const processImageToStringArt = async (imageFile: File): Promise<number[]> => { // [수정] 반환 타입 변경
   const formData = new FormData();
   formData.append("image", imageFile);
 
   try {
-    // [수정] API 요청 주소를 '/api/v1/string-art'에서 '/api/string'으로 변경합니다.
     const res = await fetch("/api/string", {
       method: "POST",
       body: formData,
