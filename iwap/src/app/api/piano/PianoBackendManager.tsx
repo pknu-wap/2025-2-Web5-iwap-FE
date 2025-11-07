@@ -4,89 +4,6 @@ import { useEffect } from "react";
 import * as Tone from "tone";
 import { Midi } from "@tonejs/midi";
 
-const DEBUG_PIANO = (() => {
-  const v = (process.env.NEXT_PUBLIC_PIANO_DEBUG || "").toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
-})();
-
-const logDebug = (...args: unknown[]) => {
-  if (!DEBUG_PIANO) return;
-  console.log("[PianoBackend]", ...args);
-};
-
-const SUSTAIN_CC = 64;
-const SUSTAIN_THRESHOLD = 64;
-const MIN_RELEASE_GUARD = 0.02;
-
-type SustainInterval = {
-  start: number;
-  end: number;
-};
-
-const clampVelocity = (velocity?: number | null) => {
-  if (typeof velocity !== "number" || Number.isNaN(velocity)) {
-    return 0.8;
-  }
-  return Math.max(0, Math.min(1, velocity));
-};
-
-const buildSustainIntervals = (
-  track: Midi["tracks"][number],
-  fallbackEnd: number
-): SustainInterval[] => {
-  const sustainEvents = track.controlChanges?.[SUSTAIN_CC];
-  if (!sustainEvents || sustainEvents.length === 0) {
-    return [];
-  }
-
-  const sorted = [...sustainEvents].sort((a, b) => a.time - b.time);
-  const intervals: SustainInterval[] = [];
-  let currentStart: number | null = null;
-
-  for (const event of sorted) {
-    const isDown = (event.value ?? 0) >= SUSTAIN_THRESHOLD;
-    if (isDown) {
-      if (currentStart === null) {
-        currentStart = event.time;
-      }
-      continue;
-    }
-
-    if (currentStart !== null) {
-      const end = Math.max(event.time, currentStart);
-      intervals.push({ start: currentStart, end });
-      currentStart = null;
-    }
-  }
-
-  if (currentStart !== null) {
-    intervals.push({ start: currentStart, end: Math.max(fallbackEnd, currentStart) });
-  }
-
-  return intervals;
-};
-
-const computeSustainRelease = (
-  noteStart: number,
-  naturalRelease: number,
-  intervals: SustainInterval[],
-  fallbackEnd: number
-) => {
-  let releaseTime = naturalRelease;
-  for (const { start, end } of intervals) {
-    const effectiveEnd = Math.max(end, start + MIN_RELEASE_GUARD);
-    if (naturalRelease <= start) {
-      continue;
-    }
-    if (noteStart >= effectiveEnd) {
-      continue;
-    }
-    releaseTime = Math.max(releaseTime, effectiveEnd);
-    return Math.min(releaseTime, fallbackEnd);
-  }
-  return Math.min(Math.max(releaseTime, noteStart + MIN_RELEASE_GUARD), fallbackEnd);
-};
-
 export type MidiTransportControls = {
   duration: number;
   start: () => Promise<void>;
@@ -99,8 +16,7 @@ export type MidiTransportControls = {
 
 type PianoBackendManagerProps = {
   audioUrl: string | null;
-  audioFile: File | null;
-  onMidiEvent: (event: { type: "on" | "off"; note: number; velocity?: number }) => void;
+  onMidiEvent: (event: { type: "on" | "off"; note: number }) => void;
   onStatusChange?: (status: string) => void;
   onTransportReady?: (controls: MidiTransportControls) => void;
   onTransportReset?: () => void;
@@ -182,16 +98,9 @@ const getOrCreateSampler = async () => {
       A7: "A7.mp3",
       C8: "C8.mp3",
     },
+    release: 1,
     baseUrl: "https://tonejs.github.io/audio/salamander/",
   });
-
-  sampler.set({
-    attack: 0.002,
-    decay: 0.25,
-    sustain: 0.85,
-    release: 1.4,
-  });
-  sampler.volume.value = -3;
 
   if (USE_FX) {
     const mobile = isMobileDevice();
@@ -219,7 +128,6 @@ const getOrCreateSampler = async () => {
  */
 export default function PianoBackendManager({
   audioUrl,
-  audioFile,
   onMidiEvent,
   onStatusChange,
   onTransportReady,
@@ -232,19 +140,15 @@ export default function PianoBackendManager({
     let isCancelled = false;
     let sampler: Tone.Sampler | null = null;
     const activeMidiNotes = new Set<number>();
-    const scheduledReleaseEvents = new Map<number, number>();
 
     onStatusChange?.("");
     onTransportReset?.();
 
-    const flushActiveNotes = (time?: number) => {
+    const flushActiveNotes = () => {
       if (activeMidiNotes.size === 0) return;
-      activeMidiNotes.forEach((note) => {
-        Tone.Draw.schedule(
-          () => onMidiEvent({ type: "off", note }),
-          time ?? Tone.now()
-        );
-      });
+      activeMidiNotes.forEach((note) =>
+        onMidiEvent({ type: "off", note })
+      );
       activeMidiNotes.clear();
     };
 
@@ -253,7 +157,6 @@ export default function PianoBackendManager({
       Tone.Transport.cancel();
       Tone.Transport.seconds = 0;
       sampler?.releaseAll();
-      scheduledReleaseEvents.clear();
       flushActiveNotes();
     };
 
@@ -266,12 +169,30 @@ export default function PianoBackendManager({
         }
 
         const midiArray = await midiRes.arrayBuffer();
-        const midiBlob = new Blob([midiArray], { type: "audio/midi" });
+        const downloadBaseName = new Date().toISOString().replace(/[:.]/g, "-");
+        let downloadBlob: Blob = new Blob([midiArray], {
+          type: "audio/midi",
+        });
+        let downloadExtension = "mid";
+
+        try {
+          const mp3Res = await fetch(getBackendUrl("/api/piano/midi_to_mp3"));
+          if (!mp3Res.ok) {
+            throw new Error("MP3 파일 다운로드에 실패했습니다.");
+          }
+          const mp3Array = await mp3Res.arrayBuffer();
+          downloadBlob = new Blob([mp3Array], { type: "audio/mpeg" });
+          downloadExtension = "mp3";
+        } catch (mp3Error) {
+          console.warn(
+            "MP3 변환 파일을 가져오지 못해 MIDI로 대체합니다.",
+            mp3Error
+          );
+        }
+
         onMidiReady?.({
-          blob: midiBlob,
-          filename: `piano-${new Date()
-            .toISOString()
-            .replace(/[:.]/g, "-")}.mid`,
+          blob: downloadBlob,
+          filename: `piano-${downloadBaseName}.${downloadExtension}`,
         });
 
         const midi = new Midi(midiArray);
@@ -282,7 +203,32 @@ export default function PianoBackendManager({
         disposeTransport();
         sampler = await getOrCreateSampler();
 
-        const baseDuration =
+        midi.tracks.forEach((track) => {
+          track.notes.forEach((note) => {
+            const midiNum = note.midi;
+            const start = note.time;
+            const duration = Math.max(note.duration, 0.05);
+
+            Tone.Transport.schedule((time) => {
+              if (isCancelled) return;
+              sampler?.triggerAttackRelease(
+                note.name,
+                duration,
+                time,
+                note.velocity ?? 0.8
+              );
+              activeMidiNotes.add(midiNum);
+              onMidiEvent({ type: "on", note: midiNum });
+              Tone.Transport.scheduleOnce(() => {
+                if (isCancelled) return;
+                activeMidiNotes.delete(midiNum);
+                onMidiEvent({ type: "off", note: midiNum });
+              }, start + duration);
+            }, start);
+          });
+        });
+
+        const duration =
           midi.duration ||
           midi.tracks.reduce(
             (max, track) =>
@@ -293,82 +239,8 @@ export default function PianoBackendManager({
             0
           );
 
-        const fallbackEnd = baseDuration + 4;
-        let maxReleaseTime = 0;
-
-        midi.tracks.forEach((track, trackIndex) => {
-          const sustainIntervals = buildSustainIntervals(track, fallbackEnd);
-
-          track.notes.forEach((note, noteIndex) => {
-            const midiNum = note.midi;
-            const attack = note.time;
-            const naturalRelease = note.time + Math.max(note.duration, MIN_RELEASE_GUARD);
-            const releaseTime = computeSustainRelease(
-              attack,
-              naturalRelease,
-              sustainIntervals,
-              fallbackEnd
-            );
-            const safeRelease = Math.max(attack + MIN_RELEASE_GUARD, releaseTime);
-            maxReleaseTime = Math.max(maxReleaseTime, safeRelease);
-            const velocity = clampVelocity(note.velocity);
-
-            if (DEBUG_PIANO && noteIndex < 12) {
-              logDebug("scheduleNote", {
-                trackIndex,
-                midi: midiNum,
-                attack,
-                naturalRelease,
-                release: safeRelease,
-                velocity,
-                sustainIntervals: sustainIntervals.length,
-              });
-            }
-
-            Tone.Transport.schedule((time) => {
-              if (isCancelled) return;
-
-              const prevReleaseEvent = scheduledReleaseEvents.get(midiNum);
-              if (prevReleaseEvent !== undefined) {
-                Tone.Transport.clear(prevReleaseEvent);
-                scheduledReleaseEvents.delete(midiNum);
-                sampler?.triggerRelease(note.name, time);
-                if (activeMidiNotes.delete(midiNum)) {
-                  Tone.Draw.schedule(
-                    () => onMidiEvent({ type: "off", note: midiNum }),
-                    time
-                  );
-                }
-              }
-
-              sampler?.triggerAttack(note.name, time, velocity);
-              activeMidiNotes.add(midiNum);
-              Tone.Draw.schedule(
-                () => onMidiEvent({ type: "on", note: midiNum, velocity }),
-                time
-              );
-            }, attack);
-
-            const releaseEventId = Tone.Transport.schedule((time) => {
-              if (isCancelled) return;
-              sampler?.triggerRelease(note.name, time);
-              if (activeMidiNotes.delete(midiNum)) {
-                Tone.Draw.schedule(
-                  () => onMidiEvent({ type: "off", note: midiNum }),
-                  time
-                );
-              }
-              scheduledReleaseEvents.delete(midiNum);
-            }, safeRelease);
-
-            scheduledReleaseEvents.set(midiNum, releaseEventId);
-          });
-        });
-
-        const playbackDuration = Math.max(baseDuration, maxReleaseTime);
-
         const controls: MidiTransportControls = {
-          duration: playbackDuration,
+          duration,
           start: async () => {
             if (isCancelled) return;
             await Tone.start();
@@ -388,12 +260,11 @@ export default function PianoBackendManager({
             flushActiveNotes();
           },
           seek: (seconds: number, resume = false) => {
-            const clamped = Math.max(0, Math.min(playbackDuration, seconds));
+            const clamped = Math.max(0, Math.min(duration, seconds));
             Tone.Transport.seconds = clamped;
             if (resume) Tone.Transport.start();
           },
-          getPosition: () =>
-            Math.min(playbackDuration, Tone.Transport.seconds),
+          getPosition: () => Tone.Transport.seconds,
           getState: () =>
             Tone.Transport.state as "started" | "stopped" | "paused",
         };
@@ -412,22 +283,11 @@ export default function PianoBackendManager({
       try {
         onStatusChange?.("MIDI 변환 중...");
 
+        const res = await fetch(audioUrl);
+        const blob = await res.blob();
+
         const formData = new FormData();
-        if (audioFile) {
-          formData.append("voice", audioFile, audioFile.name || "voice.webm");
-        } else if (audioUrl) {
-          const res = await fetch(audioUrl);
-          const blob = await res.blob();
-          const inferredName =
-            (blob.type && `voice.${blob.type.split("/")[1]?.split(";")[0] || "webm"}`) ||
-            "voice.webm";
-          const fallbackFile = new File([blob], inferredName, {
-            type: blob.type || "audio/webm",
-          });
-          formData.append("voice", fallbackFile, fallbackFile.name);
-        } else {
-          throw new Error("업로드할 음성 파일을 찾을 수 없습니다.");
-        }
+        formData.append("voice", blob, "voice.webm");
 
         const uploadRes = await fetch(getBackendUrl("/api/piano/"), {
           method: "POST",
@@ -458,7 +318,6 @@ export default function PianoBackendManager({
     };
   }, [
     audioUrl,
-    audioFile,
     onMidiEvent,
     onStatusChange,
     onTransportReady,
@@ -468,4 +327,3 @@ export default function PianoBackendManager({
 
   return null;
 }
-963

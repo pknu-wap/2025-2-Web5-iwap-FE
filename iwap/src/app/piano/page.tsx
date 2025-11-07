@@ -6,6 +6,7 @@ import {
   useEffect,
   useLayoutEffect,
   useCallback,
+  type ChangeEvent,
 } from "react";
 import { useRouter } from "next/navigation"; //  1. useRouter import
 import FullScreenView from "@/components/ui/FullScreenView";
@@ -24,7 +25,6 @@ export default function VoiceToPiano() {
   const {
     isRecording,
     audioUrl,
-    audioFile,
     startRecording,
     stopRecording,
     setAudioFromFile,
@@ -35,17 +35,7 @@ export default function VoiceToPiano() {
   });
   const activeNotesRef = useRef<Set<number>>(new Set());
   const noteTimeoutsRef = useRef<Map<number, number>>(new Map());
-  const animationFrameRef = useRef<number | null>(null);
   const [, forceRender] = useState(0);
-
-  const scheduleRender = useCallback(() => {
-    if (typeof window === "undefined") return;
-    if (animationFrameRef.current !== null) return;
-    animationFrameRef.current = window.requestAnimationFrame(() => {
-      animationFrameRef.current = null;
-      forceRender((t) => t ^ 1);
-    });
-  }, [forceRender]);
   const [status, setStatus] = useState("");
   const [transport, setTransport] = useState<MidiTransportControls | null>(null);
   const [transportDuration, setTransportDuration] = useState(0);
@@ -65,37 +55,36 @@ export default function VoiceToPiano() {
   
   // (여기부터 handleMidi)
   const handleMidi = useCallback(
-    ({ type, note }: { type: "on" | "off"; note: number; velocity?: number }) => {
+    ({ type, note }: { type: "on" | "off"; note: number }) => {
       const activeNotes = activeNotesRef.current;
-      const fallbackTimers = noteTimeoutsRef.current;
+      const timeouts = noteTimeoutsRef.current;
 
       if (type === "on") {
-        const existingTimeout = fallbackTimers.get(note);
+        activeNotes.add(note);
+        const existingTimeout = timeouts.get(note);
         if (existingTimeout !== undefined) {
           clearTimeout(existingTimeout);
         }
-        activeNotes.add(note);
         const timeoutId = window.setTimeout(() => {
-          fallbackTimers.delete(note);
-          if (activeNotes.delete(note)) {
-            scheduleRender();
-          }
-        }, 12000);
-        fallbackTimers.set(note, timeoutId);
-        scheduleRender();
+          activeNotes.delete(note);
+          timeouts.delete(note);
+          forceRender((t) => t ^ 1);
+        }, 600);
+        timeouts.set(note, timeoutId);
+        forceRender((t) => t ^ 1);
         return;
       }
 
-      const existingTimeout = fallbackTimers.get(note);
+      const existingTimeout = timeouts.get(note);
       if (existingTimeout !== undefined) {
         clearTimeout(existingTimeout);
-        fallbackTimers.delete(note);
+        timeouts.delete(note);
       }
       if (activeNotes.delete(note)) {
-        scheduleRender();
+        forceRender((t) => t ^ 1);
       }
     },
-    [scheduleRender]
+    []
   );
 
   useEffect(() => {
@@ -141,16 +130,38 @@ export default function VoiceToPiano() {
     };
   }, []);
 
-  useEffect(() => {
-    return () => {
-      if (animationFrameRef.current !== null) {
-        window.cancelAnimationFrame(animationFrameRef.current);
-        animationFrameRef.current = null;
-      }
-    };
+  const headerHiddenRef = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handlePickUpload = useCallback(() => {
+    fileInputRef.current?.click();
   }, []);
 
-  const headerHiddenRef = useRef(false);
+  const handleFileSelected = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      const file = files && files[0];
+      if (!file) return;
+
+      const allowedTypes = new Set([
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/webm",
+        "audio/wav",
+      ]);
+
+      if (!allowedTypes.has(file.type)) {
+        setStatus("MP3, WAV, WEBM 파일만 업로드할 수 있습니다.");
+        event.target.value = "";
+        return;
+      }
+
+      setStatus("파일 업로드 준비 중...");
+      setAudioFromFile(file);
+      event.target.value = "";
+    },
+    [setAudioFromFile, setStatus]
+  );
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
@@ -217,10 +228,6 @@ export default function VoiceToPiano() {
     noteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
     noteTimeoutsRef.current.clear();
     activeNotesRef.current.clear();
-    if (typeof window !== "undefined" && animationFrameRef.current !== null) {
-      window.cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
     forceRender((t) => t ^ 1);
   }, [clearMidiDownload, forceRender]);
 
@@ -288,7 +295,6 @@ export default function VoiceToPiano() {
       >
         <PianoBackendManager
           audioUrl={audioUrl}
-          audioFile={audioFile}
           onMidiEvent={handleMidi}
           onStatusChange={setStatus}
           onTransportReady={handleTransportReady}
@@ -307,13 +313,26 @@ export default function VoiceToPiano() {
             // === '녹음' 뷰 (변경 없음) ===
             <div className="flex flex-col items-center justify-center gap-8">
               <h1 className="text-2xl md:text-3xl font-bold text-center">음성을 입력해주세요</h1>
-              <RecorderButton
-                isRecording={isRecording}
-                startRecording={startRecording}
-                stopRecording={stopRecording}
-                onFileSelected={setAudioFromFile}
-              />
-            </div>
+                <RecorderButton
+                  isRecording={isRecording}
+                  startRecording={startRecording}
+                  stopRecording={stopRecording}
+                />
+                <button
+                  type="button"
+                  onClick={handlePickUpload}
+                  className="rounded-full border border-black px-6 py-2 text-sm font-light text-black transition hover:border-black hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-black"
+                >
+                  MP3 업로드
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="audio/mpeg,audio/mp3,audio/webm,audio/wav"
+                  className="hidden"
+                  onChange={handleFileSelected}
+                />
+              </div>
           ) : (
             // === '피아노/재생' 뷰 ===
             <>
