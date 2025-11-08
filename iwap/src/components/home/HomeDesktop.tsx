@@ -10,7 +10,11 @@ import { HomeHeadline, desktopFadePalette } from "./HomeHeadline";
 const headlineLetterClassName =
   "text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px]";
 
-export default function HomeDesktop() {
+type HomeDesktopProps = {
+  isDarkTheme: boolean;
+};
+
+export default function HomeDesktop({ isDarkTheme }: HomeDesktopProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const buttonRef = useRef<HTMLDivElement>(null);
@@ -65,14 +69,14 @@ export default function HomeDesktop() {
         alt="Background Light"
         fill
         priority
-        className="object-cover dark:hidden"
+        className={`object-cover ${isDarkTheme ? "hidden" : "block"}`}
       />
       <Image
         src="/images/home-black_background.jpg"
         alt="Background Dark"
         fill
         priority
-        className="object-cover hidden dark:block"
+        className={`object-cover ${isDarkTheme ? "block" : "hidden"}`}
       />
 
       <div className="absolute inset-0 z-20 flex items-center justify-center -translate-y-5 px-6 sm:px-8 md:px-12">
@@ -183,7 +187,9 @@ export default function HomeDesktop() {
       )}
 
       <div
-        className={`absolute inset-y-0 right-0 bg-gradient-to-l from-white to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${
+        className={`absolute inset-y-0 right-0 bg-gradient-to-l ${
+          isDarkTheme ? "from-white/80" : "from-white"
+        } to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${
           isOpen ? "w-[90vw]" : "w-0"
         }`}
       ></div>

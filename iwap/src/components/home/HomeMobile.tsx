@@ -46,7 +46,11 @@ const finalLetterTargets: Record<number, { x: number; y: number }> = {
   3: { x: 0, y: -263 },
 };
 
-export default function HomeMobile() {
+type HomeMobileProps = {
+  isDarkTheme: boolean;
+};
+
+export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
   const [phase, setPhase] = useState<Phase>("initial");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [shouldDetachHighlights, setShouldDetachHighlights] = useState(false);
@@ -280,13 +284,26 @@ export default function HomeMobile() {
     <main className="relative h-dvh w-full select-none overflow-hidden">
       <Image
         src="/images/home_background.jpg"
-        alt="Background"
+        alt="Background Light"
         fill
         priority
-        className="object-cover"
+        className={`object-cover ${isDarkTheme ? "hidden" : "block"}`}
+      />
+      <Image
+        src="/images/home-black_background.jpg"
+        alt="Background Dark"
+        fill
+        priority
+        className={`object-cover ${isDarkTheme ? "block" : "hidden"}`}
       />
 
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-white/15 to-white/70" />
+      <div
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-b ${
+          isDarkTheme
+            ? "from-transparent via-white/10 to-white/60"
+            : "from-transparent via-white/15 to-white/70"
+        }`}
+      />
 
       <div
         ref={linesContainerRef}
