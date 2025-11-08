@@ -52,7 +52,7 @@ export default function RootLayout({
         className={`relative overflow-x-hidden bg-white text-black transition-colors duration-300 dark:bg-neutral-900 dark:text-neutral-100 ${Pretendard.className}`}
       >
         <ThemeProvider>
-          {showHeader ? (
+          {showHeader && (
             <header className="fixed top-0 left-0 z-50 flex h-[30px] w-full flex-col items-center justify-center bg-white text-black transition-colors duration-300 dark:bg-neutral-900 dark:text-neutral-100 md:h-[60px]">
               <div className="relative flex w-full max-w-4xl items-center justify-center px-4">
                 <Link href="/" className="select-none text-center">
@@ -61,16 +61,13 @@ export default function RootLayout({
                     !nteractive Web Art Project
                   </p>
                 </Link>
-                <div className="absolute right-1 translate-y-1 md:right-6 md:translate-y-0">
-                  <ThemeToggle className="scale-75 md:scale-100" />
-                </div>
               </div>
             </header>
-          ) : (
-            <div className="fixed bottom-4 right-4 z-50 md:bottom-6 md:right-6">
-              <ThemeToggle className="scale-90 md:scale-100 shadow-lg shadow-black/10 dark:shadow-none" />
-            </div>
           )}
+
+          <div className="fixed bottom-4 right-4 z-50 md:bottom-6 md:right-6">
+            <ThemeToggle className="scale-90 md:scale-100 shadow-lg shadow-black/10 dark:shadow-none" />
+          </div>
 
           <main
             className={

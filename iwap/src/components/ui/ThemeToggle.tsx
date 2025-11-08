@@ -15,6 +15,9 @@ export default function ThemeToggle({
 
   const isDark = theme === "dark";
 
+  const knobPositionClass =
+    mounted && isDark ? "translate-x-8" : "translate-x-0";
+
   return (
     <button
       type="button"
@@ -23,9 +26,7 @@ export default function ThemeToggle({
       aria-label="Toggle dark mode"
     >
       <span
-        className={`absolute top-1 left-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white shadow transition-transform duration-300 dark:bg-neutral-500 ${
-          isDark ? "translate-x-8" : "translate-x-0"
-        }`}
+        className={`absolute top-1 left-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white shadow transition-transform duration-300 dark:bg-neutral-500 ${knobPositionClass}`}
       >
         {mounted ? (
           isDark ? (

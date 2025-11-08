@@ -41,6 +41,13 @@ export default function Home() {
   const router = useRouter(); // useRouter 훅을 사용합니다.
   const { theme } = useTheme();
   const isDarkTheme = theme === "dark";
+  const [isThemeReady, setIsThemeReady] = useState(false);
+
+  useEffect(() => {
+    setIsThemeReady(true);
+  }, []);
+
+  const shouldUseDarkTheme = isThemeReady && isDarkTheme;
 
   // 시각적 버튼의 위치와 크기를 저장할 state
   const [buttonRect, setButtonRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
@@ -126,14 +133,14 @@ export default function Home() {
         alt="Background Light"
         fill
         priority
-        className={`object-cover ${isDarkTheme ? "hidden" : "block"}`}
+        className={`object-cover ${shouldUseDarkTheme ? "hidden" : "block"}`}
       />
       <Image
         src="/images/home-black_background.jpg"
         alt="Background Dark"
         fill
         priority
-        className={`object-cover ${isDarkTheme ? "block" : "hidden"}`}
+        className={`object-cover ${shouldUseDarkTheme ? "block" : "hidden"}`}
       />
 
       {/* padding 설정 컨테이너 */}
@@ -211,7 +218,7 @@ export default function Home() {
 
       {/* 페이지 전환 효과를 위한 그라데이션 오버레이 */}
       <div
-        className={`absolute inset-y-0 right-0 bg-gradient-to-l ${isDarkTheme ? "from-white/80" : "from-white"} to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${isOpen ? "w-[90vw]" : "w-0"}`}
+          className={`absolute inset-y-0 right-0 bg-gradient-to-l ${shouldUseDarkTheme ? "from-white/80" : "from-white"} to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${isOpen ? "w-[90vw]" : "w-0"}`}
       ></div>
     </main>
   );
