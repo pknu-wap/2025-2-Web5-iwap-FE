@@ -211,7 +211,7 @@ export default function Home() {
 
       {/* 페이지 전환 효과를 위한 그라데이션 오버레이 */}
       <div
-        className={`absolute inset-y-0 right-0 bg-gradient-to-l ${isDarkTheme ? "from-black/80" : "from-white"} to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${isOpen ? "w-[90vw]" : "w-0"}`}
+        className={`absolute inset-y-0 right-0 bg-gradient-to-l ${isDarkTheme ? "from-white/80" : "from-white"} to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${isOpen ? "w-[90vw]" : "w-0"}`}
       ></div>
     </main>
   );
