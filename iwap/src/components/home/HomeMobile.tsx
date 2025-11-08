@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { CSSProperties } from "react";
 import Image from "next/image";
 import { defaultFadePalette } from "./HomeHeadline";
 
 type Phase = "initial" | "animating" | "final";
 
-const transitionDurationMs = 700;
+const transitionDurationMs = 1200;
 
 type MobileHeadlineLine = {
   leadingFade?: string;
@@ -32,9 +39,23 @@ const initialLines: MobileHeadlineLine[] = [
   { core: "Project", trailingFade: "tttt", highlightIndices: [0] },
 ];
 
+const finalLetterTargets: Record<number, { x: number; y: number }> = {
+  0: { x: -7, y: -455 },
+  1: { x: 0, y: -363 },
+  2: { x: 0, y: -313 },
+  3: { x: 0, y: -263 },
+};
+
 export default function HomeMobile() {
   const [phase, setPhase] = useState<Phase>("initial");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [shouldDetachHighlights, setShouldDetachHighlights] = useState(false);
+  const [centerHighlights, setCenterHighlights] = useState(false);
+  const [highlightLayouts, setHighlightLayouts] = useState<
+    Record<string, { top: number; left: number }>
+  >({});
+  const linesContainerRef = useRef<HTMLDivElement | null>(null);
+  const highlightRefs = useRef<Record<string, HTMLSpanElement | null>>({});
 
   useEffect(() => {
     if (phase === "animating") {
@@ -52,13 +73,58 @@ export default function HomeMobile() {
     };
   }, [phase]);
 
+  useLayoutEffect(() => {
+    if (phase !== "animating") return;
+
+    const container = linesContainerRef.current;
+    if (!container) return;
+
+    const containerRect = container.getBoundingClientRect();
+    const layouts: Record<string, { top: number; left: number }> = {};
+
+    Object.entries(highlightRefs.current).forEach(([key, element]) => {
+      if (!element) return;
+      const rect = element.getBoundingClientRect();
+      layouts[key] = {
+        top: rect.top - containerRect.top,
+        left: rect.left - containerRect.left,
+      };
+    });
+
+    setHighlightLayouts(layouts);
+    setShouldDetachHighlights(true);
+    setCenterHighlights(false);
+
+    const frame = requestAnimationFrame(() => {
+      setCenterHighlights(true);
+    });
+
+    return () => cancelAnimationFrame(frame);
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase === "initial") {
+      setShouldDetachHighlights(false);
+      setCenterHighlights(false);
+      setHighlightLayouts({});
+    }
+  }, [phase]);
+
   const handleArrowClick = () => {
     if (phase !== "initial") return;
     setPhase("animating");
   };
 
   const fadePalette = useMemo(() => defaultFadePalette, []);
-  const isFinal = phase === "final";
+
+  const registerHighlightRef =
+    (key: string) => (element: HTMLSpanElement | null) => {
+      if (element) {
+        highlightRefs.current[key] = element;
+      } else {
+        delete highlightRefs.current[key];
+      }
+    };
 
   const renderFadeSegment = (
     text: string | undefined,
@@ -98,32 +164,98 @@ export default function HomeMobile() {
       const isHighlight = highlightIndices.includes(index);
       const identifierKey = `${lineIndex}-${index}`;
       const shouldFade = !isHighlight && phase !== "initial";
+      const layout = highlightLayouts[identifierKey];
+      const shouldFloat = shouldDetachHighlights && !!layout;
+      const target = finalLetterTargets[lineIndex] ?? { x: 0, y: 0 };
       const isTransformingI =
         isHighlight && lineIndex === 0 && char.toLowerCase() === "i";
 
       if (isTransformingI) {
-        const rotateClass = phase !== "initial" ? "rotate-180" : "rotate-0";
+        const rotationDegrees = phase === "initial" ? 0 : 180;
+        const transforms: string[] = [];
+
+        if (shouldFloat && centerHighlights) {
+          transforms.push("translateX(-50%)");
+        }
+
+        transforms.push(`rotate(${rotationDegrees}deg)`);
+
+        const style: CSSProperties = {
+          minWidth: "0.75ch",
+          transformOrigin: "center bottom",
+          transition:
+            "transform 1200ms ease, top 1200ms ease, left 1200ms ease, opacity 600ms ease",
+        };
+
+        if (shouldFloat) {
+          style.position = "absolute";
+          style.left = centerHighlights
+            ? `calc(50% + ${target.x}px)`
+            : `${layout.left}px`;
+          style.top = centerHighlights
+            ? `calc(50% + ${target.y}px)`
+            : `${layout.top}px`;
+          style.zIndex = 20;
+        }
+
+        style.transform = transforms.join(" ");
+
         return (
           <span
             key={identifierKey}
-            className={`${baseLetterClasses} ${headlineTextClasses} relative ${rotateClass}`}
-            style={{ minWidth: "0.75ch", transformOrigin: "center bottom" }}
+            ref={registerHighlightRef(identifierKey)}
+            className={`${baseLetterClasses} ${headlineTextClasses} relative`}
+            style={style}
           >
             <span
-              className={`absolute transition-opacity duration-500 ${
+              className={`absolute transition-opacity duration-700 ${
                 phase !== "initial" ? "opacity-0" : "opacity-100"
               }`}
             >
               i
             </span>
             <span
-              className={`transition-opacity duration-500 ${
+              className={`transition-opacity duration-700 ${
                 phase !== "initial" ? "opacity-100" : "opacity-0"
               }`}
             >
               !
             </span>
             <span className="opacity-0">!</span>
+          </span>
+        );
+      }
+
+      if (isHighlight) {
+        const style: CSSProperties = {
+          color: "#ffffff",
+          minWidth: "0.05ch",
+          transition:
+            "transform 1100ms ease, top 1100ms ease, left 1100ms ease, opacity 600ms ease",
+        };
+
+        if (shouldFloat) {
+          style.position = "absolute";
+          style.left = centerHighlights
+            ? `calc(50% + ${target.x}px)`
+            : `${layout.left}px`;
+          style.top = centerHighlights
+            ? `calc(50% + ${target.y}px)`
+            : `${layout.top}px`;
+          style.transform = centerHighlights ? "translateX(-50%)" : "translateX(0)";
+          style.zIndex = 15;
+        } else {
+          style.transform = undefined;
+        }
+
+        return (
+          <span
+            key={identifierKey}
+            ref={registerHighlightRef(identifierKey)}
+            className={`${baseLetterClasses} ${headlineTextClasses}`}
+            style={style}
+          >
+            {char}
           </span>
         );
       }
@@ -156,12 +288,11 @@ export default function HomeMobile() {
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-transparent via-white/15 to-white/70" />
 
-      <div className="relative z-10 flex h-full flex-col items-center justify-center px-6 text-center text-white">
-        <div
-          className={`space-y-3 pointer-events-none transition-opacity duration-500 ${
-            isFinal ? "opacity-0" : "opacity-100"
-          }`}
-        >
+      <div
+        ref={linesContainerRef}
+        className="relative z-10 flex h-full flex-col items-center translate-y-30 px-6 text-center text-white"
+      >
+        <div className="pointer-events-none space-y-3">
           {initialLines.map((line, lineIndex) => (
             <div
               key={`${line.core}-${lineIndex}`}
@@ -184,23 +315,6 @@ export default function HomeMobile() {
               )}
             </div>
           ))}
-        </div>
-
-        <div
-          className={`pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-4 transition-opacity duration-500 ${
-            isFinal ? "opacity-100" : "opacity-0"
-          }`}
-        >
-          <div className="flex flex-col items-center gap-6 text-white">
-            {["!", "W", "A", "P"].map((letter) => (
-              <span
-                key={letter}
-                className="text-6xl font-bold tracking-[0.3em]"
-              >
-                {letter}
-              </span>
-            ))}
-          </div>
         </div>
       </div>
 
