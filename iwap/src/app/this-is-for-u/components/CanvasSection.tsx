@@ -75,6 +75,7 @@ export function CanvasSection({
           className={`absolute inset-0 h-full w-full rounded-[28px] transition-opacity duration-300 ${
             activeSide === "back" ? "opacity-100" : "pointer-events-none opacity-0"
           }`}
+          style={{ backgroundColor: frontBackgroundColor }}
         />
       </div>
     </div>

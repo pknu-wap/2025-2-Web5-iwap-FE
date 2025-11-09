@@ -225,10 +225,13 @@ export default function ThisIsForUPage() {
   const [brushSize, setBrushSize] = useState(6);
   const [brushColor, setBrushColor] = useState(template.accentColor);
   const [brushPalette, setBrushPalette] = useState(BRUSH_COLORS);
+  const [textColor, setTextColor] = useState(template.textColor);
+  const [textPalette, setTextPalette] = useState(BRUSH_COLORS);
   const [frontBackgroundColor, setFrontBackgroundColor] = useState(
     template.frontColor,
   );
   const [customBrushHex, setCustomBrushHex] = useState(template.accentColor);
+  const [customTextHex, setCustomTextHex] = useState(template.textColor);
   const [backgroundHexInput, setBackgroundHexInput] = useState(
     template.frontColor,
   );
@@ -283,6 +286,8 @@ export default function ThisIsForUPage() {
   const normalizedBackgroundHex = normalizeHex(backgroundHexInput);
   const isCustomBrushHexValid = HEX_PATTERN.test(normalizedBrushHex);
   const isBackgroundHexValid = HEX_PATTERN.test(normalizedBackgroundHex);
+  const normalizedTextHex = normalizeHex(customTextHex);
+  const isCustomTextHexValid = HEX_PATTERN.test(normalizedTextHex);
   const applyBackgroundColor = useCallback((color: string) => {
     const normalized = normalizeHex(color);
     if (!HEX_PATTERN.test(normalized)) return;
@@ -301,6 +306,13 @@ export default function ThisIsForUPage() {
         : [...prev, normalizedBrushHex],
     );
   }, [isCustomBrushHexValid, normalizedBrushHex]);
+  const applyCustomTextHex = useCallback(() => {
+    if (!isCustomTextHexValid) return;
+    setTextColor(normalizedTextHex);
+    setTextPalette((prev) =>
+      prev.includes(normalizedTextHex) ? prev : [...prev, normalizedTextHex],
+    );
+  }, [isCustomTextHexValid, normalizedTextHex]);
   const applyCustomBackgroundHex = useCallback(() => {
     if (!isBackgroundHexValid) return;
     applyBackgroundColor(normalizedBackgroundHex);
@@ -316,6 +328,18 @@ export default function ThisIsForUPage() {
   const handleBrushPaletteSelect = useCallback((color: string) => {
     setBrushColor(color);
     setCustomBrushHex(color);
+  }, []);
+  const handleTextColorPicked = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const value = normalizeHex(event.target.value);
+      if (!HEX_PATTERN.test(value)) return;
+      setCustomTextHex(value);
+    },
+    [],
+  );
+  const handleTextPaletteSelect = useCallback((color: string) => {
+    setTextColor(color);
+    setCustomTextHex(color);
   }, []);
   const handleBackgroundColorPicked = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
@@ -494,6 +518,13 @@ export default function ThisIsForUPage() {
         : [...prev, template.frontColor],
     );
   }, [template.frontColor]);
+  useEffect(() => {
+    setTextColor(template.textColor);
+    setCustomTextHex(template.textColor);
+    setTextPalette((prev) =>
+      prev.includes(template.textColor) ? prev : [...prev, template.textColor],
+    );
+  }, [template.textColor]);
 
 
   const updateCanvasDimensions = useCallback(() => {
@@ -867,7 +898,7 @@ export default function ThisIsForUPage() {
 
 
 
-    ctx.fillStyle = template.backColor;
+    ctx.fillStyle = frontBackgroundColor;
 
     ctx.fillRect(0, 0, widthPx, heightPx);
 
@@ -905,7 +936,7 @@ export default function ThisIsForUPage() {
 
     ctx.font = `${20 * dpr}px ${fontOption.css}`;
 
-    ctx.fillStyle = template.textColor;
+    ctx.fillStyle = textColor;
 
     ctx.textBaseline = "top";
 
@@ -939,7 +970,7 @@ export default function ThisIsForUPage() {
 
       ctx.font = `${18 * dpr}px ${fontOption.css}`;
 
-      ctx.fillStyle = template.textColor;
+      ctx.fillStyle = textColor;
 
       ctx.textBaseline = "top";
 
@@ -953,7 +984,7 @@ export default function ThisIsForUPage() {
 
       ctx.font = `${fontSize}px ${fontOption.css}`;
 
-      ctx.fillStyle = template.textColor;
+      ctx.fillStyle = textColor;
 
       ctx.textBaseline = "top";
 
@@ -993,14 +1024,17 @@ export default function ThisIsForUPage() {
 
       let textY = margin;
 
+      const signatureReserve = signature.trim()
+        ? Math.max(fontSize * 0.85, 16 * dpr) + lineHeight * 0.6
+        : 0;
+      const availableHeight = Math.max(heightPx - margin * 2 - signatureReserve, 0);
+      const maxLines = Math.max(Math.floor(availableHeight / lineHeight), 0);
 
+      const linesToRender = lines.slice(0, maxLines);
 
-      lines.forEach((line) => {
-
+      linesToRender.forEach((line) => {
         ctx.fillText(line, textX, textY);
-
         textY += lineHeight;
-
       });
 
 
@@ -1037,13 +1071,13 @@ export default function ThisIsForUPage() {
 
     signature,
 
-    template.backColor,
+    frontBackgroundColor,
 
     template.lineColor,
 
     template.stampColor,
 
-    template.textColor,
+    textColor,
 
   ]);
 
@@ -1054,6 +1088,57 @@ export default function ThisIsForUPage() {
     renderBackSide();
 
   }, [renderBackSide]);
+
+  // On message input, accept only if it fits inside the postcard area
+  const handleMessageChange = useCallback(
+    (next: string) => {
+      const canvas = backCanvasRef.current;
+      if (!canvas) {
+        setMessage(next);
+        return;
+      }
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        setMessage(next);
+        return;
+      }
+
+      const dpr = dprRef.current;
+      const widthPx = Math.floor(canvasSize.width * dpr);
+      const heightPx = Math.floor(canvasSize.height * dpr);
+      const margin = 48 * dpr;
+      const fontOption =
+        FONT_OPTIONS.find((option) => option.id === fontFamily) ?? FONT_OPTIONS[0];
+      const fontSize = 24 * dpr;
+      const lineHeight = fontSize * 1.4;
+      const writingWidth = widthPx - margin * 2;
+
+      ctx.font = `${fontSize}px ${fontOption.css}`;
+
+      const signatureReserve = signature.trim()
+        ? Math.max(fontSize * 0.85, 16 * dpr) + lineHeight * 0.6
+        : 0;
+      const availableHeight = Math.max(heightPx - margin * 2 - signatureReserve, 0);
+      const maxLines = Math.max(Math.floor(availableHeight / lineHeight), 0);
+
+      const fittingPrefix = computeFittingPrefixLength(
+        ctx,
+        next,
+        writingWidth,
+        maxLines,
+      );
+
+      if (fittingPrefix >= next.length && next.length <= MESSAGE_LIMIT) {
+        setMessage(next);
+      } // else ignore extra input
+    },
+    [
+      canvasSize.height,
+      canvasSize.width,
+      fontFamily,
+      signature,
+    ],
+  );
 
 
 
@@ -1101,37 +1186,193 @@ export default function ThisIsForUPage() {
 
     const canvas = frontCanvasRef.current;
 
-    if (!canvas || canvas.width === 0 || canvas.height === 0) return null;
+    if (!canvas) return null;
 
-
+    const baseWidthPx = Math.max(1, Math.floor(canvasSize.width * dprRef.current));
+    const baseHeightPx = Math.max(1, Math.floor(canvasSize.height * dprRef.current));
+    const scale = 3; // export at 3x resolution to reduce blur
+    const exportWidth = baseWidthPx * scale;
+    const exportHeight = baseHeightPx * scale;
 
     const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = exportWidth;
+    exportCanvas.height = exportHeight;
 
-    exportCanvas.width = canvas.width;
+    const ctx = exportCanvas.getContext("2d");
+    if (!ctx) return null;
 
-    exportCanvas.height = canvas.height;
+    // Fill background
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, exportWidth, exportHeight);
+    ctx.fillStyle = frontBackgroundColor;
+    ctx.fillRect(0, 0, exportWidth, exportHeight);
 
+    // Redraw strokes at high resolution using normalized points
+    strokesRef.current.forEach((stroke) => {
+      const lineWidth = stroke.sizeRatio * exportWidth;
+      let prev: { x: number; y: number } | null = null;
 
+      const drawPoint = (p: { x: number; y: number }) => {
+        ctx.save();
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        ctx.lineWidth = lineWidth;
+        if (stroke.mode === "erase") {
+          ctx.globalCompositeOperation = "destination-out";
+          ctx.strokeStyle = "rgba(0,0,0,1)";
+          ctx.fillStyle = "rgba(0,0,0,1)";
+        } else {
+          ctx.globalCompositeOperation = "source-over";
+          ctx.strokeStyle = stroke.color;
+          ctx.fillStyle = stroke.color;
+        }
 
-    const exportCtx = exportCanvas.getContext("2d");
+        if (!prev) {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, lineWidth / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(prev.x, prev.y);
+          ctx.lineTo(p.x, p.y);
+          ctx.stroke();
+        }
 
-    if (!exportCtx) return null;
+        ctx.restore();
+        prev = p;
+      };
 
-
-
-    exportCtx.fillStyle = frontBackgroundColor;
-
-    exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-
-    exportCtx.drawImage(canvas, 0, 0);
-
-
+      stroke.points.forEach((np) => {
+        const abs = { x: np.x * exportWidth, y: np.y * exportHeight };
+        drawPoint(abs);
+      });
+    });
 
     return exportCanvas;
 
-  }, [frontBackgroundColor]);
+  }, [canvasSize.height, canvasSize.width, frontBackgroundColor]);
 
 
+
+  const createBackExportSnapshot = useCallback(() => {
+    const baseWidthPx = Math.max(1, Math.floor(canvasSize.width * dprRef.current));
+    const baseHeightPx = Math.max(1, Math.floor(canvasSize.height * dprRef.current));
+    const scale = 3; // match front export scale
+    const widthPx = baseWidthPx * scale;
+    const heightPx = baseHeightPx * scale;
+
+    const canvas = document.createElement("canvas");
+    canvas.width = widthPx;
+    canvas.height = heightPx;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+
+    // Reconstruct back side rendering at export scale
+    const dpr = dprRef.current * scale;
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.clearRect(0, 0, widthPx, heightPx);
+
+    ctx.fillStyle = frontBackgroundColor;
+    ctx.fillRect(0, 0, widthPx, heightPx);
+
+    const margin = 48 * dpr;
+    ctx.strokeStyle = template.lineColor;
+    ctx.lineWidth = 2 * dpr;
+
+    // Stamp
+    ctx.save();
+    ctx.globalAlpha = 0.18;
+    const stampSize = 96 * dpr;
+    ctx.fillStyle = template.stampColor;
+    ctx.fillRect(widthPx - margin - stampSize, margin, stampSize, stampSize);
+    ctx.restore();
+
+    const fontOption =
+      FONT_OPTIONS.find((option) => option.id === fontFamily) ?? FONT_OPTIONS[0];
+    const fontSize = 24 * dpr;
+    const lineHeight = fontSize * 1.4;
+    const writingWidth = widthPx - margin * 2;
+
+    ctx.save();
+    ctx.font = `${20 * dpr}px ${fontOption.css}`;
+    ctx.fillStyle = textColor;
+    ctx.textBaseline = "top";
+    ctx.textAlign = "left";
+
+    const recipientLabelX = margin;
+    const recipientLabelY = margin * 0.2;
+    if (recipient.trim()) {
+      ctx.fillText(`To. ${recipient.trim()}`, recipientLabelX, recipientLabelY);
+    } else {
+      ctx.globalAlpha = 0.3;
+      ctx.fillText("받는 사람 이름", recipientLabelX, recipientLabelY);
+    }
+    ctx.restore();
+
+    if (!message.trim()) {
+      ctx.save();
+      ctx.globalAlpha = 0.35;
+      ctx.font = `${18 * dpr}px ${fontOption.css}`;
+      ctx.fillStyle = textColor;
+      ctx.textBaseline = "top";
+      ctx.textAlign = "left";
+      ctx.fillText("여기에 메시지를 적어볼까요?", margin, margin);
+      ctx.restore();
+    } else {
+      ctx.font = `${fontSize}px ${fontOption.css}`;
+      ctx.fillStyle = textColor;
+      ctx.textBaseline = "top";
+      if (backAlignment === "center") {
+        ctx.textAlign = "center";
+      } else if (backAlignment === "right") {
+        ctx.textAlign = "right";
+      } else {
+        ctx.textAlign = "left";
+      }
+
+      let textX = margin;
+      if (backAlignment === "center") {
+        textX = margin + writingWidth / 2;
+      } else if (backAlignment === "right") {
+        textX = margin + writingWidth;
+      }
+
+      const lines = buildWrappedLines(ctx, message, writingWidth);
+      let textY = margin;
+
+      const signatureReserve = signature.trim()
+        ? Math.max(fontSize * 0.85, 16 * dpr) + lineHeight * 0.6
+        : 0;
+      const availableHeight = Math.max(heightPx - margin * 2 - signatureReserve, 0);
+      const maxLines = Math.max(Math.floor(availableHeight / lineHeight), 0);
+      const linesToRender = lines.slice(0, maxLines);
+
+      linesToRender.forEach((line) => {
+        ctx.fillText(line, textX, textY);
+        textY += lineHeight;
+      });
+
+      if (signature.trim()) {
+        ctx.textAlign = "right";
+        ctx.font = `${Math.max(fontSize * 0.85, 16 * dpr)}px ${fontOption.css}`;
+        ctx.fillText(`from.${signature.trim()}`, margin + writingWidth, heightPx - margin);
+      }
+    }
+
+    return canvas;
+  }, [
+    backAlignment,
+    canvasSize.height,
+    canvasSize.width,
+    fontFamily,
+    frontBackgroundColor,
+    message,
+    recipient,
+    signature,
+    template.lineColor,
+    template.stampColor,
+    textColor,
+  ]);
 
   const downloadSide = useCallback(
 
@@ -1139,7 +1380,7 @@ export default function ThisIsForUPage() {
 
       const canvas =
 
-        side === "front" ? createFrontExportSnapshot() : backCanvasRef.current;
+        side === "front" ? createFrontExportSnapshot() : createBackExportSnapshot();
 
       if (!canvas) return;
 
@@ -1165,7 +1406,7 @@ export default function ThisIsForUPage() {
 
     },
 
-    [createFrontExportSnapshot, showStatus],
+    [createBackExportSnapshot, createFrontExportSnapshot, showStatus],
 
   );
 
@@ -1175,7 +1416,7 @@ export default function ThisIsForUPage() {
 
     const frontCanvas = createFrontExportSnapshot();
 
-    const backCanvas = backCanvasRef.current;
+    const backCanvas = createBackExportSnapshot();
 
     if (!frontCanvas || !backCanvas) return;
 
@@ -1257,7 +1498,7 @@ export default function ThisIsForUPage() {
 
     }
 
-  }, [createFrontExportSnapshot, showStatus]);
+  }, [createBackExportSnapshot, createFrontExportSnapshot, showStatus]);
 
 
 
@@ -1431,6 +1672,16 @@ export default function ThisIsForUPage() {
 
                 onBrushColorPicked={handleBrushColorPicked}
 
+                textColor={textColor}
+                textPalette={textPalette}
+                onTextColorSelect={handleTextPaletteSelect}
+                customTextHex={customTextHex}
+                normalizedTextHex={normalizedTextHex}
+                onTextHexChange={setCustomTextHex}
+                onApplyTextHex={applyCustomTextHex}
+                isTextHexValid={isCustomTextHexValid}
+                onTextColorPicked={handleTextColorPicked}
+
                 frontBackgroundColor={frontBackgroundColor}
 
                 backgroundPalette={backgroundPalette}
@@ -1463,7 +1714,7 @@ export default function ThisIsForUPage() {
 
                 messageLimit={MESSAGE_LIMIT}
 
-                onMessageChange={setMessage}
+                onMessageChange={handleMessageChange}
 
                 recipient={recipient}
 
@@ -1635,5 +1886,52 @@ function buildWrappedLines(
 
   return lines;
 
+}
+
+function computeFittingPrefixLength(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+  maxLines: number,
+): number {
+  let used = 0;
+  let lines = 0;
+  const paragraphs = text.split("\n");
+
+  for (let p = 0; p < paragraphs.length; p += 1) {
+    const paragraph = paragraphs[p];
+    if (!paragraph.trim()) {
+      // empty line consumes one line
+      lines += 1;
+      if (lines > maxLines) return used;
+      used += 1; // counts the newline
+      continue;
+    }
+
+    const words = paragraph.trim().split(/\s+/);
+    let currentLine = "";
+    for (let w = 0; w < words.length; w += 1) {
+      const word = words[w];
+      const candidate = currentLine ? `${currentLine} ${word}` : word;
+      if (ctx.measureText(candidate).width > maxWidth && currentLine) {
+        // commit current line
+        lines += 1;
+        if (lines > maxLines) return used; // do not include this word
+        currentLine = word;
+        used += word.length + 1; // +1 for the space/newline between words
+      } else {
+        // keep building the line
+        used += currentLine ? word.length + 1 : word.length; // +1 for space
+        currentLine = candidate;
+      }
+    }
+    if (currentLine) {
+      lines += 1;
+      if (lines > maxLines) return used;
+    }
+    // account for explicit newline between paragraphs
+    if (p < paragraphs.length - 1) used += 1;
+  }
+  return text.length;
 }
 

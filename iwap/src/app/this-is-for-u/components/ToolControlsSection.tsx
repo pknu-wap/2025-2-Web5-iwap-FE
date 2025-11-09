@@ -18,6 +18,15 @@ type ToolControlsSectionProps = {
   onApplyCustomBrushHex: () => void;
   isCustomBrushHexValid: boolean;
   onBrushColorPicked: (event: ChangeEvent<HTMLInputElement>) => void;
+  textColor: string;
+  textPalette: string[];
+  onTextColorSelect: (color: string) => void;
+  customTextHex: string;
+  normalizedTextHex: string;
+  onTextHexChange: (value: string) => void;
+  onApplyTextHex: () => void;
+  isTextHexValid: boolean;
+  onTextColorPicked: (event: ChangeEvent<HTMLInputElement>) => void;
   frontBackgroundColor: string;
   backgroundPalette: string[];
   onBackgroundColorSelect: (color: string) => void;
@@ -45,6 +54,15 @@ export function ToolControlsSection({
   onApplyCustomBrushHex,
   isCustomBrushHexValid,
   onBrushColorPicked,
+  textColor,
+  textPalette,
+  onTextColorSelect,
+  customTextHex,
+  normalizedTextHex,
+  onTextHexChange,
+  onApplyTextHex,
+  isTextHexValid,
+  onTextColorPicked,
   frontBackgroundColor,
   backgroundPalette,
   onBackgroundColorSelect,
@@ -59,6 +77,7 @@ export function ToolControlsSection({
 }: ToolControlsSectionProps) {
   const [showBrushCustomizer, setShowBrushCustomizer] = useState(false);
   const [showBackgroundCustomizer, setShowBackgroundCustomizer] = useState(false);
+  const [showTextCustomizer, setShowTextCustomizer] = useState(false);
 
   return (
     <section className="space-y-4">
@@ -183,6 +202,76 @@ export function ToolControlsSection({
                 }`}
               >
                 확인
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          <div className="flex items-center justify-between text-xs font-medium text-slate-500">
+            <span>Text color</span>
+            <button
+              type="button"
+              onClick={() => setShowTextCustomizer((previous) => !previous)}
+              className="text-rose-500 transition hover:text-rose-400"
+            >
+              {showTextCustomizer ? "닫기" : "직접 입력"}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {textPalette.map((color) => {
+              const isActive = color === textColor;
+              return (
+                <button
+                  key={color}
+                  type="button"
+                  onClick={() => onTextColorSelect(color)}
+                  className={`h-9 w-9 rounded-full border transition ${
+                    isActive
+                      ? "border-slate-900 ring-2 ring-offset-2 ring-slate-900/70"
+                      : "border-slate-200 hover:border-slate-400"
+                  }`}
+                  style={{ background: color }}
+                >
+                  <span className="sr-only">{color}</span>
+                </button>
+              );
+            })}
+            <button
+              type="button"
+              onClick={() => setShowTextCustomizer(true)}
+              className="flex h-9 w-9 items-center justify-center rounded-full border border-dashed border-slate-300 text-lg text-slate-400 transition hover:border-rose-300 hover:text-rose-400"
+            >
+              +
+            </button>
+          </div>
+          {showTextCustomizer && (
+            <div className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white/80 p-3 text-xs text-slate-600">
+              <input
+                type="text"
+                value={customTextHex}
+                onChange={(event) => onTextHexChange(event.target.value)}
+                placeholder="#333333"
+                className="min-w-[120px] flex-1 rounded-full border border-slate-200 px-3 py-2 text-sm text-slate-700 outline-none focus:border-rose-300 focus:ring-2 focus:ring-rose-100"
+              />
+              <input
+                type="color"
+                value={normalizedTextHex || "#333333"}
+                onChange={onTextColorPicked}
+                className="h-10 w-10 cursor-pointer rounded-full border border-slate-200 bg-white"
+                aria-label="텍스트 색상 선택"
+              />
+              <button
+                type="button"
+                onClick={onApplyTextHex}
+                disabled={!isTextHexValid}
+                className={`rounded-full px-4 py-2 text-xs font-semibold text-white transition ${
+                  isTextHexValid
+                    ? "bg-rose-500 hover:bg-rose-500/90"
+                    : "bg-slate-300 text-slate-500"
+                }`}
+              >
+                적용
               </button>
             </div>
           )}
