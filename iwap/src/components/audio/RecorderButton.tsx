@@ -1,23 +1,19 @@
 "use client";
-import { useState, useEffect, useRef, type ChangeEvent } from "react";
+import { useState, useEffect } from "react";
 import WavingAnimation from "./WavingAnimation";
 
 export default function RecorderButton({
   isRecording,
   startRecording,
   stopRecording,
-  onFileSelected,
 }: {
   isRecording: boolean;
   startRecording: () => Promise<void> | void;
   stopRecording: () => void;
-  onFileSelected?: (file: File | null) => void;
 }) {
   const [elapsed, setElapsed] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isPreppingRecording, setIsPreppingRecording] = useState(false);
-  const [showModeChoice, setShowModeChoice] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
@@ -35,12 +31,6 @@ export default function RecorderButton({
     setElapsed(0);
     setIsPreppingRecording(false);
   }, [isRecording]);
-
-  useEffect(() => {
-    if (isRecording || isPreppingRecording) {
-      setShowModeChoice(false);
-    }
-  }, [isRecording, isPreppingRecording]);
 
   const formatTime = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(
@@ -67,25 +57,7 @@ export default function RecorderButton({
 
   const handlePrimaryClick = () => {
     if (showRecordingUI) return;
-    setShowModeChoice((prev) => !prev);
-  };
-
-  const handleRecordChoice = async () => {
-    setShowModeChoice(false);
-    await handleStart();
-  };
-
-  const handleUploadChoice = () => {
-    setShowModeChoice(false);
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0] ?? null;
-    if (file && onFileSelected) {
-      onFileSelected(file);
-    }
-    event.target.value = "";
+    void handleStart();
   };
 
   return (
@@ -202,23 +174,6 @@ export default function RecorderButton({
         </div>
       )}
 
-      {!showRecordingUI && showModeChoice && (
-        <div className="absolute top-full mt-6 flex flex-col items-stretch gap-2 text-center">
-          <button
-            onClick={handleRecordChoice}
-            className="rounded-full bg-gradient-to-r from-[#89C7E6] to-[#DD78E0] px-6 py-3 text-white shadow-md transition hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#89C7E6]"
-          >
-            녹음하기
-          </button>
-          <button
-            onClick={handleUploadChoice}
-            className="rounded-full bg-white/90 px-6 py-3 text-black shadow-md ring-1 ring-[#D9D9D9] transition hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#89C7E6]"
-          >
-            파일 업로드하기
-          </button>
-        </div>
-      )}
-
       {/* 진행 막대 */}
       {isRecording && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 flex flex-col items-center -mt-12">
@@ -233,14 +188,6 @@ export default function RecorderButton({
           </p>
         </div>
       )}
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept="audio/*"
-        className="hidden"
-        onChange={handleFileChange}
-      />
     </div>
   );
 }

@@ -16,6 +16,7 @@ import RecorderButton from "@/components/audio/RecorderButton";
 import Piano from "@/components/piano/Piano";
 import PianoBackendManager, {
   type MidiTransportControls,
+  getBackendUrl,
 } from "@/app/api/piano/PianoBackendManager";
 import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
 
@@ -48,6 +49,7 @@ export default function VoiceToPiano() {
   } | null>(null);
 
   const router = useRouter(); //  2. router 선언
+  const mp3AudioRef = useRef<HTMLAudioElement | null>(null);
 
   // ... (handleMidi 및 기타 useEffect, useCallback 함수들은 이전과 동일) ...
   // (생략된 코드는 이전 답변과 동일하게 유지해 주세요)
@@ -187,13 +189,6 @@ export default function VoiceToPiano() {
     };
   }, []);
 
-  const handleTransportReady = useCallback((controls: MidiTransportControls) => {
-    setTransport(controls);
-    setTransportDuration(controls.duration);
-    setTransportPosition(0);
-    setIsTransportPlaying(false);
-  }, []);
-
   const clearMidiDownload = useCallback(() => {
     if (midiDownloadUrlRef.current) {
       URL.revokeObjectURL(midiDownloadUrlRef.current);
@@ -201,6 +196,54 @@ export default function VoiceToPiano() {
     }
     setMidiDownload(null);
   }, []);
+
+  const disposeMp3Audio = useCallback(() => {
+    const audio = mp3AudioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.src = "";
+    mp3AudioRef.current = null;
+  }, []);
+
+  const syncMp3Position = useCallback(
+    (nextPosition?: number) => {
+      const audio = mp3AudioRef.current;
+      if (!audio) return;
+      const fallbackPosition = transport?.getPosition() ?? 0;
+      const target =
+        typeof nextPosition === "number" ? nextPosition : fallbackPosition;
+      if (!Number.isFinite(target)) return;
+      if (Math.abs(audio.currentTime - target) > 0.05) {
+        audio.currentTime = target;
+      }
+    },
+    [transport]
+  );
+
+  const handleTransportReady = useCallback(
+    (controls: MidiTransportControls) => {
+      setTransport(controls);
+      setTransportDuration(controls.duration);
+      setTransportPosition(0);
+      setIsTransportPlaying(false);
+      disposeMp3Audio();
+
+      const localSource =
+        audioUrl && (audioUrl.startsWith("blob:") || audioUrl.startsWith("data:"))
+          ? audioUrl
+          : null;
+      const source = localSource ?? getBackendUrl("/api/piano/mp3");
+
+      const mp3 = new Audio(source);
+      mp3.preload = "auto";
+      if (!localSource) {
+        mp3.crossOrigin = "anonymous";
+      }
+      mp3.volume = 0.2; // keep slightly under the MIDI sampler
+      mp3AudioRef.current = mp3;
+    },
+    [audioUrl, disposeMp3Audio]
+  );
 
   const handleMidiReady = useCallback(
     ({ blob, filename }: { blob: Blob; filename: string }) => {
@@ -215,8 +258,9 @@ export default function VoiceToPiano() {
   useEffect(() => {
     return () => {
       clearMidiDownload();
+      disposeMp3Audio();
     };
-  }, [clearMidiDownload]);
+  }, [clearMidiDownload, disposeMp3Audio]);
 
   const handleTransportReset = useCallback(() => {
     setTransport(null);
@@ -225,22 +269,35 @@ export default function VoiceToPiano() {
     setIsTransportPlaying(false);
     setStatus("");
     clearMidiDownload();
+    disposeMp3Audio();
     noteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
     noteTimeoutsRef.current.clear();
     activeNotesRef.current.clear();
     forceRender((t) => t ^ 1);
-  }, [clearMidiDownload, forceRender]);
+  }, [clearMidiDownload, disposeMp3Audio, forceRender]);
 
   const handleTogglePlayback = useCallback(() => {
     if (!transport) return;
     if (isTransportPlaying) {
       transport.pause();
+      mp3AudioRef.current?.pause();
       setIsTransportPlaying(false);
-    } else {
-      void transport.start();
-      setIsTransportPlaying(true);
+      return;
     }
-  }, [transport, isTransportPlaying]);
+    setIsTransportPlaying(true);
+    void (async () => {
+      await transport.start();
+      const audio = mp3AudioRef.current;
+      if (audio) {
+        syncMp3Position();
+        try {
+          await audio.play();
+        } catch (err) {
+          console.warn("MP3 playback failed", err);
+        }
+      }
+    })();
+  }, [transport, isTransportPlaying, syncMp3Position]);
 
   const handleSeek = useCallback(
     (seconds: number, resume: boolean) => {
@@ -248,6 +305,17 @@ export default function VoiceToPiano() {
       const clamped = Math.max(0, Math.min(transportDuration, seconds));
       transport.seek(clamped, resume);
       setTransportPosition(clamped);
+      const audio = mp3AudioRef.current;
+      if (audio) {
+        audio.currentTime = clamped;
+        if (resume) {
+          void audio.play().catch((err) => {
+            console.warn("MP3 resume failed", err);
+          });
+        } else {
+          audio.pause();
+        }
+      }
     },
     [transport, transportDuration]
   );
@@ -256,6 +324,17 @@ export default function VoiceToPiano() {
     if (!transport) return;
     transport.seek(0, isTransportPlaying);
     setTransportPosition(0);
+    const audio = mp3AudioRef.current;
+    if (audio) {
+      audio.currentTime = 0;
+      if (isTransportPlaying) {
+        void audio.play().catch((err) => {
+          console.warn("MP3 rewind failed", err);
+        });
+      } else {
+        audio.pause();
+      }
+    }
   }, [transport, isTransportPlaying]);
 
   const handleDownloadMidi = useCallback(() => {
@@ -318,20 +397,24 @@ export default function VoiceToPiano() {
                   startRecording={startRecording}
                   stopRecording={stopRecording}
                 />
-                <button
-                  type="button"
-                  onClick={handlePickUpload}
-                  className="rounded-full border border-black px-6 py-2 text-sm font-light text-black transition hover:border-black hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-black"
-                >
-                  MP3 업로드
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="audio/mpeg,audio/mp3,audio/webm,audio/wav"
-                  className="hidden"
-                  onChange={handleFileSelected}
-                />
+                {!isRecording ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handlePickUpload}
+                      className="rounded-full border border-black px-6 py-2 text-sm font-light text-black transition hover:border-black hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-black"
+                    >
+                      MP3 업로드
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="audio/mpeg,audio/mp3,audio/webm,audio/wav"
+                      className="hidden"
+                      onChange={handleFileSelected}
+                    />
+                  </>
+                ) : null}
               </div>
           ) : (
             // === '피아노/재생' 뷰 ===

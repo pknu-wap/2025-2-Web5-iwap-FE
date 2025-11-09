@@ -35,7 +35,7 @@ const USE_FX = (() => {
   return v === "1" || v === "true" || v === "yes";
 })();
 
-const getBackendUrl = (path: string) => {
+export const getBackendUrl = (path: string) => {
   const base = process.env.NEXT_PUBLIC_BACKEND_API_URL;
   const normalizedPath = path.startsWith("/") ? path : `/${path}`;
   if (!base || base.trim().length === 0) {
