@@ -875,60 +875,16 @@ export default function ThisIsForUPage() {
 
     const margin = 48 * dpr;
 
-    const dividerX = widthPx / 2;
-
-
-
+    // Keep style for decorative lines (no divider drawn)
     ctx.strokeStyle = template.lineColor;
-
     ctx.lineWidth = 2 * dpr;
 
-    ctx.beginPath();
-
-    ctx.moveTo(dividerX, margin * 0.7);
-
-    ctx.lineTo(dividerX, heightPx - margin * 0.7);
-
-    ctx.stroke();
-
-
-
+    // Stamp design (restored)
     ctx.save();
-
     ctx.globalAlpha = 0.18;
-
     const stampSize = 96 * dpr;
-
     ctx.fillStyle = template.stampColor;
-
     ctx.fillRect(widthPx - margin - stampSize, margin, stampSize, stampSize);
-
-    ctx.restore();
-
-
-
-    ctx.save();
-
-    ctx.globalAlpha = 0.4;
-
-    ctx.lineWidth = 1.2 * dpr;
-
-    let guideY = margin * 2;
-
-    for (let i = 0; i < 4; i += 1) {
-
-      ctx.beginPath();
-
-      ctx.moveTo(dividerX + margin * 0.5, guideY);
-
-      ctx.lineTo(widthPx - margin, guideY);
-
-      ctx.stroke();
-
-      guideY += 30 * dpr;
-
-    }
-
     ctx.restore();
 
 
@@ -943,7 +899,7 @@ export default function ThisIsForUPage() {
 
     const lineHeight = fontSize * 1.4;
 
-    const writingWidth = dividerX - margin * 1.4;
+    const writingWidth = widthPx - margin * 2;
 
     ctx.save();
 
@@ -955,7 +911,7 @@ export default function ThisIsForUPage() {
 
     ctx.textAlign = "left";
 
-    const recipientLabelX = dividerX + margin * 0.5;
+    const recipientLabelX = margin;
 
     const recipientLabelY = margin * 0.2;
 
@@ -1056,13 +1012,9 @@ export default function ThisIsForUPage() {
         ctx.font = `${Math.max(fontSize * 0.85, 16 * dpr)}px ${fontOption.css}`;
 
         ctx.fillText(
-
-          `- ${signature.trim()}`,
-
+          `from.${signature.trim()}`,
           margin + writingWidth,
-
           heightPx - margin,
-
         );
 
       }
