@@ -9,11 +9,15 @@ import {
 } from "react";
 import type { CSSProperties } from "react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { defaultFadePalette } from "./HomeHeadline";
 
 type Phase = "initial" | "animating" | "final";
+type FinalLayout = "vertical" | "horizontal";
 
 const transitionDurationMs = 1200;
+const horizontalHoldMs = 1000; // hold time after horizontal layout
+const flyOutDurationMs = 900; // flight duration before navigating
 
 type MobileHeadlineLine = {
   leadingFade?: string;
@@ -39,11 +43,22 @@ const initialLines: MobileHeadlineLine[] = [
   { core: "Project", trailingFade: "tttt", highlightIndices: [0] },
 ];
 
-const finalLetterTargets: Record<number, { x: number; y: number }> = {
-  0: { x: -7, y: -455 },
-  1: { x: 0, y: -363 },
-  2: { x: 0, y: -313 },
-  3: { x: 0, y: -263 },
+// Anchor final positions from the TOP of the container (px) so
+// the letters don't drift vertically with varying aspect ratios.
+// This is the initial vertical stack.
+const finalLetterTargets: Record<number, { x: number; top: number }> = {
+  0: { x: -13, top: -40 },
+  1: { x: -13, top: 58 },
+  2: { x: -10, top: 118 },
+  3: { x: -9, top: 178 },
+};
+
+// Horizontal layout targets for IWAP (same top, spaced x)
+const horizontalTargets: Record<number, { x: number; top: number }> = {
+  0: { x: -55, top: -40 },
+  1: { x: -20, top: 0 },
+  2: { x: 20, top: 0 },
+  3: { x: 52, top: 0 },
 };
 
 type HomeMobileProps = {
@@ -51,10 +66,15 @@ type HomeMobileProps = {
 };
 
 export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
+  const router = useRouter();
   const [phase, setPhase] = useState<Phase>("initial");
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const alignTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [shouldDetachHighlights, setShouldDetachHighlights] = useState(false);
   const [centerHighlights, setCenterHighlights] = useState(false);
+  const [finalLayout, setFinalLayout] = useState<FinalLayout>("vertical");
+  const [leaving, setLeaving] = useState(false);
+  const leaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [highlightLayouts, setHighlightLayouts] = useState<
     Record<string, { top: number; left: number }>
   >({});
@@ -76,6 +96,44 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
       }
     };
   }, [phase]);
+
+  // After the first animation reaches final, keep vertical for ~2s then switch to horizontal
+  useEffect(() => {
+    if (phase !== "final") return;
+    alignTimerRef.current = setTimeout(() => {
+      setFinalLayout("horizontal");
+      alignTimerRef.current = null;
+    }, 1000);
+    return () => {
+      if (alignTimerRef.current) {
+        clearTimeout(alignTimerRef.current);
+        alignTimerRef.current = null;
+      }
+    };
+  }, [phase]);
+
+  // After we become horizontal, wait ~1s, then fly out and navigate to /slides
+  useEffect(() => {
+    if (phase !== "final" || finalLayout !== "horizontal") return;
+    if (leaveTimerRef.current) {
+      clearTimeout(leaveTimerRef.current);
+      leaveTimerRef.current = null;
+    }
+    leaveTimerRef.current = setTimeout(() => {
+      setLeaving(true);
+      leaveTimerRef.current = null;
+      setTimeout(() => {
+        router.push("/slides");
+      }, flyOutDurationMs);
+    }, horizontalHoldMs);
+
+    return () => {
+      if (leaveTimerRef.current) {
+        clearTimeout(leaveTimerRef.current);
+        leaveTimerRef.current = null;
+      }
+    };
+  }, [phase, finalLayout, router]);
 
   useLayoutEffect(() => {
     if (phase !== "animating") return;
@@ -111,6 +169,8 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
       setShouldDetachHighlights(false);
       setCenterHighlights(false);
       setHighlightLayouts({});
+      setLeaving(false);
+      setFinalLayout("vertical");
     }
   }, [phase]);
 
@@ -170,7 +230,8 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
       const shouldFade = !isHighlight && phase !== "initial";
       const layout = highlightLayouts[identifierKey];
       const shouldFloat = shouldDetachHighlights && !!layout;
-      const target = finalLetterTargets[lineIndex] ?? { x: 0, y: 0 };
+      const targets = finalLayout === "horizontal" ? horizontalTargets : finalLetterTargets;
+      const target = targets[lineIndex] ?? { x: 0, top: 0 };
       const isTransformingI =
         isHighlight && lineIndex === 0 && char.toLowerCase() === "i";
 
@@ -178,9 +239,7 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
         const rotationDegrees = phase === "initial" ? 0 : 180;
         const transforms: string[] = [];
 
-        if (shouldFloat && centerHighlights) {
-          transforms.push("translateX(-50%)");
-        }
+        // When anchoring from top/absolute left, no need to translateX.
 
         transforms.push(`rotate(${rotationDegrees}deg)`);
 
@@ -193,12 +252,22 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
 
         if (shouldFloat) {
           style.position = "absolute";
-          style.left = centerHighlights
-            ? `calc(50% + ${target.x}px)`
-            : `${layout.left}px`;
-          style.top = centerHighlights
-            ? `calc(50% + ${target.y}px)`
-            : `${layout.top}px`;
+          const cw = linesContainerRef.current?.getBoundingClientRect().width ?? 0;
+          if (centerHighlights) {
+            if (leaving) {
+              const leftSide = lineIndex <= 1;
+              const xFly = leftSide ? -cw * 0.4 : cw * 1.4;
+              const baseTop = horizontalTargets[1]?.top ?? horizontalTargets[2]?.top ?? target.top;
+              style.left = `${xFly}px`;
+              style.top = `${baseTop - 35}px`;
+            } else {
+              style.left = `${target.x + cw / 2}px`;
+              style.top = `${target.top}px`;
+            }
+          } else {
+            style.left = `${layout.left}px`;
+            style.top = `${layout.top}px`;
+          }
           style.zIndex = 20;
         }
 
@@ -240,13 +309,23 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
 
         if (shouldFloat) {
           style.position = "absolute";
-          style.left = centerHighlights
-            ? `calc(50% + ${target.x}px)`
-            : `${layout.left}px`;
-          style.top = centerHighlights
-            ? `calc(50% + ${target.y}px)`
-            : `${layout.top}px`;
-          style.transform = centerHighlights ? "translateX(-50%)" : "translateX(0)";
+          const cw = linesContainerRef.current?.getBoundingClientRect().width ?? 0;
+          if (centerHighlights) {
+            if (leaving) {
+              const leftSide = lineIndex <= 1;
+              const xFly = leftSide ? -cw * 0.4 : cw * 1.4;
+              const baseTop = horizontalTargets[1]?.top ?? horizontalTargets[2]?.top ?? target.top;
+              style.left = `${xFly}px`;
+              style.top = `${baseTop}px`;
+            } else {
+              style.left = `${target.x + cw / 2}px`;
+              style.top = `${target.top}px`;
+            }
+          } else {
+            style.left = `${layout.left}px`;
+            style.top = `${layout.top}px`;
+          }
+          style.transform = centerHighlights ? undefined : "translateX(0)";
           style.zIndex = 15;
         } else {
           style.transform = undefined;
@@ -302,6 +381,13 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
           isDarkTheme
             ? "from-transparent via-white/10 to-white/60"
             : "from-transparent via-white/15 to-white/70"
+        }`}
+      />
+
+      {/* Intensified white gradient overlay during fly-out */}
+      <div
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-white/20 via-white/100 to-white transition-opacity duration-700 ${
+          leaving ? "opacity-100" : "opacity-0"
         }`}
       />
 
