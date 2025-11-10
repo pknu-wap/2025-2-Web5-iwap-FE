@@ -10,7 +10,7 @@ import ProgressBar from '@/components/inside/ProgressBar';
 // --- 설정 상수 ---
 
 // 렌더링 최적화: 현재 포커스된 레이어 주변으로 몇 개까지 미리 렌더링할지 결정
-const RENDER_WINDOW_SIZE = 75;
+const RENDER_WINDOW_SIZE = 50;
 // 사용자 드래그: 세로 드래그 시 최대 회전 각도 (라디안)
 const MAX_VERTICAL_ROTATION = Math.PI / 4;
 // 레이어 배치: Z축(깊이) 방향으로 레이어 사이의 기본 간격
@@ -18,7 +18,7 @@ const Z_OFFSET = 15;
 // 초기 카메라 각도: [x, y, z] (오른쪽 위에서 내려다보는 사선)
 const INITIAL_ROTATION = [0.45, -0.35, 0];
 // 포커스 애니메이션: 현재 선택된 레이어의 확대 배율
-const FOCUS_SCALE = 1.5;
+const FOCUS_SCALE = 2.0;
 // 최소 투명도
 const minOpacity = 0.65;
 
