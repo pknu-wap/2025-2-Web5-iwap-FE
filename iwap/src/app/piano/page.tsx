@@ -402,9 +402,11 @@ export default function VoiceToPiano() {
                     <button
                       type="button"
                       onClick={handlePickUpload}
-                      className="rounded-full border border-black px-6 py-2 text-sm font-light text-black transition hover:border-black hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-black"
+                      className="w-[144px] h-[32px] md:w-[180px] md:h-[40px] rounded-[6px] text-[16px] md:text-[20px] font-SemiBold border-[1px] border-[#9D9DC5] bg-white text-[#9D9DC5] transition hover:border-[#9D9DC5] hover:bg-[#9D9DC5] hover:text-white -translate-y-20 inline-flex items-center justify-center gap-2 group"
                     >
-                      MP3 업로드
+                      <img src="/icons/Upload.svg" alt="" className="w-5 h-5 block group-hover:hidden" aria-hidden="true" />
+                      <img src="/icons/Upload_white.svg" alt="" className="w-5 h-5 hidden group-hover:block" aria-hidden="true" />
+                      <span className="relative top-[1px]">MP3 업로드</span>
                     </button>
                     <input
                       ref={fileInputRef}
