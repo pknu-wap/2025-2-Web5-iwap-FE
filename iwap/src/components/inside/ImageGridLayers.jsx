@@ -14,11 +14,11 @@ const RENDER_WINDOW_SIZE = 75;
 // 사용자 드래그: 세로 드래그 시 최대 회전 각도 (라디안)
 const MAX_VERTICAL_ROTATION = Math.PI / 4;
 // 레이어 배치: Z축(깊이) 방향으로 레이어 사이의 기본 간격
-const Z_OFFSET = 25;
+const Z_OFFSET = 15;
 // 초기 카메라 각도: [x, y, z] (오른쪽 위에서 내려다보는 사선)
-const INITIAL_ROTATION = [0.5, -0.5, 0];
+const INITIAL_ROTATION = [0.45, -0.35, 0];
 // 포커스 애니메이션: 현재 선택된 레이어의 확대 배율
-const FOCUS_SCALE = 1.25;
+const FOCUS_SCALE = 1.5;
 // 최소 투명도
 const minOpacity = 0.65;
 
@@ -28,11 +28,11 @@ const minOpacity = 0.65;
 // (1) '재생' 속도: 로딩 시, 프로그레스 바의 시작/끝 클릭 시 레이어 이동 속도
 const DAMP_FACTOR_AUTOPLAY = 0.25;
 // (2) '탐색' 속도: 프로그레스 바의 중간 지점 클릭 또는 드래그 스냅 시 이동 속도
-const DAMP_FACTOR_SEEK = 8;
+const DAMP_FACTOR_SEEK = 16;
 // (3) '확대/축소' 속도: 레이어가 포커스될 때 확대/축소되는 속도
 const DAMP_FACTOR_SCALE = 4;
 // (4) '레이어 투명도' 속도: 주변 레이어의 투명도가 변경되는 속도
-const DAMP_FACTOR_LAYER_OPACITY = 6;
+const DAMP_FACTOR_LAYER_OPACITY = 8;
 // (5) '회전 복귀' 속도: 사용자가 세로 드래그를 놓았을 때 원래 각도로 돌아오는 속도
 const DAMP_FACTOR_ROTATION = 8;
 // (6) '전역 투명도' 속도: 드래그 시 전체 씬이 반투명해지는 속도
