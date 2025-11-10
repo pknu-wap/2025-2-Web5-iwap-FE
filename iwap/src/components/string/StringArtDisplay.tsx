@@ -46,6 +46,20 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
   const [isPlaying, setIsPlaying] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1); // 1: normal, 2: fast-forward, -2: rewind
 
+  // 오버레이 할 색상 이미지 (테스트용)
+  const [sourceImg, setSourceImg] = useState<HTMLImageElement | null>(null);
+
+  useEffect(() => {
+    const img = new Image();
+    img.onload = () => setSourceImg(img);
+    img.onerror = () => {
+      console.error("Failed to load dummy image at /dummy_string_art_rgb.png");
+      setSourceImg(null);
+    };
+    // public 폴더의 리소스는 '/' (루트) 경로로 접근합니다.
+    img.src = "/dummy_string_art_rgb.png";
+  }, []); // 의존성 배열을 비워서 마운트 시 1회만 실행
+
   // [수정] 핀 인덱스 배열을 캔버스 [x, y] 좌표 배열로 변환
   const canvasCoordinates: Point[] = useMemo(() => {
     if (!coordinates) return [];
@@ -85,7 +99,7 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
     ctx.strokeStyle = "black";
     ctx.lineWidth = 0.25;
-    ctx.globalAlpha = 1.0;
+    ctx.globalAlpha = 0.1;
 
     ctx.beginPath();
     // [수정] canvasCoordinates 사용
@@ -98,7 +112,15 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
         ctx.lineTo(x, y);
     }
     ctx.stroke();
-  }, [canvasCoordinates, currentIndex, totalCoordinates]); // [수정] 의존성 배열 변경
+
+    // 2. 로드된 sourceImg를 'overlay' 모드로 덧그립니다. (테스트용)
+    if (sourceImg) {
+      ctx.globalCompositeOperation = 'overlay';
+      ctx.drawImage(sourceImg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.globalCompositeOperation = 'source-over';
+    }
+
+  }, [canvasCoordinates, currentIndex, totalCoordinates, sourceImg]);
 
 
   // --- 애니메이션 루프 로직 ---

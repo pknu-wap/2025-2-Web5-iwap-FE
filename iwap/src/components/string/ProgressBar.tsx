@@ -21,7 +21,7 @@ export default function ProgressBar({
     if (!barRef.current) return;
     const { left, width } = barRef.current.getBoundingClientRect();
     const progress = Math.max(0, Math.min(1, (x - left) / width));
-    const targetStep = Math.round(progress * (totalSteps - 1));
+    const targetStep = Math.round(progress * totalSteps);
 
     if (down || tap) {
       onSeek(targetStep);
@@ -30,7 +30,7 @@ export default function ProgressBar({
 
   if (totalSteps <= 1) return null;
   
-  const progressPercent = totalSteps > 1 ? (currentStep / (totalSteps - 1)) * 100 : 0;
+  const progressPercent = totalSteps > 1 ? (currentStep / totalSteps) * 100 : 0;
 
   return (
     <div
