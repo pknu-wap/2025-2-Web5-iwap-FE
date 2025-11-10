@@ -36,13 +36,9 @@ const USE_FX = (() => {
 })();
 
 export const getBackendUrl = (path: string) => {
-  const base = process.env.NEXT_PUBLIC_BACKEND_API_URL;
-  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-  if (!base || base.trim().length === 0) {
-    return normalizedPath;
-  }
-  const normalizedBase = base.endsWith("/") ? base.slice(0, -1) : base;
-  return `${normalizedBase}${normalizedPath}`;
+  // Always prefer same-origin API route to avoid CORS and hide backend URL.
+  // The Next.js API route will proxy to the real backend server.
+  return path.startsWith("/") ? path : `/${path}`;
 };
 
 const describeFetchError = (err: unknown) => {
@@ -140,6 +136,7 @@ export default function PianoBackendManager({
     let isCancelled = false;
     let sampler: Tone.Sampler | null = null;
     const activeMidiNotes = new Set<number>();
+    const MAX_POLY = isMobileDevice() ? 6 : 12;
 
     onStatusChange?.("");
     onTransportReset?.();
@@ -198,6 +195,9 @@ export default function PianoBackendManager({
         const midi = new Midi(midiArray);
 
         await Tone.start();
+        // Favor stability on mobile by increasing lookAhead slightly
+        const ctx = Tone.getContext();
+        ctx.lookAhead = isMobileDevice() ? 0.2 : 0.1;
         Tone.getDestination().volume.value = -20;
 
         disposeTransport();
@@ -211,6 +211,10 @@ export default function PianoBackendManager({
 
             Tone.Transport.schedule((time) => {
               if (isCancelled) return;
+              // Simple polyphony limiter
+              if (activeMidiNotes.size >= MAX_POLY) {
+                return;
+              }
               sampler?.triggerAttackRelease(
                 note.name,
                 duration,

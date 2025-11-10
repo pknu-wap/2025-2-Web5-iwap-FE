@@ -388,9 +388,8 @@ export default function VoiceToPiano() {
         )}
 
         <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible">
-          {!audioUrl ? (
-            // === '녹음' 뷰 (변경 없음) ===
-            <div className="flex flex-col items-center justify-center gap-8">
+          <>
+            <div className={`${audioUrl ? "hidden" : "flex"} flex-col items-center justify-center gap-8 transform translate-y-[35px]`}>
               <h1 className="text-2xl md:text-3xl font-bold text-center">음성을 입력해주세요</h1>
                 <RecorderButton
                   isRecording={isRecording}
@@ -416,14 +415,15 @@ export default function VoiceToPiano() {
                       onChange={handleFileSelected}
                     />
                   </>
-                ) : null}
+                ) : (
+                  <div className="w-[144px] h-[32px] md:w-[180px] md:h-[40px]" aria-hidden="true" />
+                )}
               </div>
-          ) : (
-            // === '피아노/재생' 뷰 ===
+          
             <>
               {/* === 데스크탑 뷰 (md:flex) === */}
               {/* (기존 코드와 동일) */}
-              <div className="hidden w-full flex-col items-center gap-6 md:flex">
+              <div className={`hidden w-full flex-col items-center gap-6 ${audioUrl ? "md:flex" : ""}`}>
                 {status ? (
                   <p className="text-lg text-center whitespace-nowrap">{status}</p>
                 ) : null}
@@ -449,7 +449,7 @@ export default function VoiceToPiano() {
               </div>
 
               {/* === 💡 모바일 뷰 (md:hidden) === */}
-              <div className="
+              <div className={`${audioUrl ? "" : "hidden"}
                 md:hidden /* 모바일에서만 보임 */
                 absolute top-1/2 left-1/2 
                 w-dvh h-dvw 
@@ -459,7 +459,7 @@ export default function VoiceToPiano() {
                 
                 flex flex-col items-center justify-center
                 overflow-hidden p-4 text-white
-              ">
+              `}>
                 
                 {/* 1. 모바일용 헤더 */}
                 <header className="w-full flex justify-between items-start px-6 pt-4">
@@ -511,7 +511,7 @@ export default function VoiceToPiano() {
                 )}
               </div>
             </>
-          )}
+          </>
         </main>
         
         {/* === 데스크탑용 MIDI 플레이어 바 === */}
