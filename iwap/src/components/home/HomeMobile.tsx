@@ -112,7 +112,7 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
     };
   }, [phase]);
 
-  // After we become horizontal, wait ~1s, then fly out and navigate to /slides
+  // After we become horizontal, wait ~1s, then fly out and navigate to /Landing
   useEffect(() => {
     if (phase !== "final" || finalLayout !== "horizontal") return;
     if (leaveTimerRef.current) {
@@ -123,7 +123,7 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
       setLeaving(true);
       leaveTimerRef.current = null;
       setTimeout(() => {
-        router.push("/slides");
+        router.push("/Landing");
       }, flyOutDurationMs);
     }, horizontalHoldMs);
 

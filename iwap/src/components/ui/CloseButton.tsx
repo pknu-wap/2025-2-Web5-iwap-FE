@@ -36,7 +36,7 @@ export default function CloseButton({
       onClick();
     // 2. onClick이 없고 goBack이 true이면, '/slides' 페이지로 이동.
     } else if (goBack) {
-      router.push('/slides');
+      router.push('/Landing');
     }
   };
 

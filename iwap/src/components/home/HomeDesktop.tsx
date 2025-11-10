@@ -52,7 +52,7 @@ export default function HomeDesktop({ isDarkTheme }: HomeDesktopProps) {
     }
 
     setTimeout(() => {
-      router.push("/slides");
+      router.push("/Landing");
     }, 700);
   };
 
@@ -167,7 +167,7 @@ export default function HomeDesktop({ isDarkTheme }: HomeDesktopProps) {
           }}
         >
           <Link
-            href="/slides"
+            href="/Landing"
             className="absolute inset-0 cursor-pointer"
             onMouseEnter={() => {
               if (typeof window !== "undefined" && window.innerWidth >= 768) {
