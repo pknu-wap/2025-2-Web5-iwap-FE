@@ -21,11 +21,6 @@ interface SideImageSectionProps {
   overlayPosition?: "top-left" | "top-right" | "bottom-left" | "bottom-right" | "center";
   // Extra classes for the overlay content box (inner wrapper)
   overlayClassName?: string;
-  // Additional overlays pinned to vertical center left/right
-  imageOverlayLeft?: React.ReactNode;
-  imageOverlayRight?: React.ReactNode;
-  overlayLeftClassName?: string;
-  overlayRightClassName?: string;
   children: React.ReactNode;
 }
 
@@ -52,10 +47,6 @@ export default function SideImageSection({
   imageOverlay,
   overlayPosition = "bottom-left",
   overlayClassName = "",
-  imageOverlayLeft,
-  imageOverlayRight,
-  overlayLeftClassName = "",
-  overlayRightClassName = "",
   children,
 }: SideImageSectionProps) {
   const isRight = side === "right";
@@ -85,22 +76,8 @@ export default function SideImageSection({
             />
             {imageOverlay && (
               <div className={`absolute inset-0 flex ${overlayPosClass}`}>
-                <div className={`text-white font-Medium text-[24px] px-4 py-2 ${overlayClassName}`}>
+                <div className={`text-white px-4 py-2 ${overlayClassName}`}>
                   {imageOverlay}
-                </div>
-              </div>
-            )}
-            {imageOverlayLeft && (
-              <div className="absolute inset-y-0 left-0 flex items-center justify-end">
-                <div className={`text-white/50 rotate-90 font-Medium text-[64px] ${overlayLeftClassName}`}>
-                  {imageOverlayLeft}
-                </div>
-              </div>
-            )}
-            {imageOverlayRight && (
-              <div className="absolute inset-y-0 right-0 flex items-end justify-end">
-                <div className={`text-white font-semibold text-[96px] translate-y-10 tracking-[-2.4px] ${overlayRightClassName}`}>
-                  {imageOverlayRight}
                 </div>
               </div>
             )}
@@ -123,3 +100,4 @@ export default function SideImageSection({
     </section>
   );
 }
+
