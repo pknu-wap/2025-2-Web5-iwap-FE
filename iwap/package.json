@@ -9,6 +9,9 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@mediapipe/camera_utils": "^0.3.1675466862",
+    "@mediapipe/drawing_utils": "^0.3.1675466124",
+    "@mediapipe/hands": "^0.4.1675469240",
     "@react-spring/three": "^10.0.3",
     "@react-spring/web": "^10.0.3",
     "@react-three/drei": "^10.7.6",
@@ -25,9 +28,6 @@
     "react-dom": "^19.1.0",
     "react-plotly.js": "^2.6.0",
     "react-resize-detector": "^12.3.0",
-    "swiper": "^12.0.2",
-    "three": "^0.180.0",
-    "tone": "^15.1.22",
     "siriwave": "^2.4.0",
     "svg-pathdata": "^8.0.0",
     "swiper": "^12.0.3",
