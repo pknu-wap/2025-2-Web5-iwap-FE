@@ -117,7 +117,7 @@ export default function IwapLanding() {
         <span>감정을 색과 형태로 번역하는 ‘디지털 엽서’.</span>
         <br /><br />
         <span>인간의 마음이 색채 반응으로 드러나는 시각적으로 체험합니다.</span><br />
-        <span>사용자가 손으로 하트를 그리고, 글로 메시지를 남길 수 있습니다.</span>
+        <span>사용자가 손으로 하트를 그리고, 글로 메시지를 남길 수 있습니다.</span><br />
         <span>그림의 색, 곡선의 흐름에 따라 감정이 시각적으로 표현되며,</span><br />
         <span>완성된 엽서는 이미지로 저장되거나 이메일로 전송됩니다.</span>
       </SideImageSection>
