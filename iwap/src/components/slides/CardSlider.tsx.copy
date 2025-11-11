@@ -1,4 +1,4 @@
-// components/slides/CardSlider.tsx
+﻿// components/slides/CardSlider.tsx
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
@@ -14,16 +14,15 @@ type CardSliderProps = {
   showHeader: boolean;
 };
 
-// Reduce card size and spacing a bit
-const BASE_CARD_WIDTH = 260;
-const BASE_CARD_HEIGHT = 420;
-const FOCUSED_WIDTH_RATIO = 1.7;
-const GAP = 24;
-const VISIBLE_STACK_OFFSET = 35;
+const BASE_CARD_WIDTH = 320;
+const BASE_CARD_HEIGHT = 500;
+const FOCUSED_WIDTH_RATIO = 2;
+const GAP = 40;
+const VISIBLE_STACK_OFFSET = 50;
 const HEADER_HEIGHT = 96;
 const DRAG_THRESHOLD = 5;
 
-// 모바일 화면 기준점 정의
+// 紐⑤컮???붾㈃ 湲곗????뺤쓽
 const MOBILE_BREAKPOINT = 768; 
 
 const RIGHT_PADDING_DESKTOP = -80;
@@ -31,10 +30,8 @@ const RIGHT_PADDING_MOBILE = -320;
 
 export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
   const router = useRouter();
-  // Expanded by default so users see the full slider without clicking
-  const [isExpanded, setIsExpanded] = useState(true);
-  // Focus first card by default for a nicer initial state
-  const [activeIndex, setActiveIndex] = useState<number | null>(0);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
   const [cardDimensions, setCardDimensions] = useState({
@@ -64,18 +61,18 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
     
 
   if (!isDesktop) {
-  const scale = 0.65; // 모바일 축소 비율
+  const scale = 0.65; // 紐⑤컮??異뺤냼 鍮꾩쑉
   newWidth *= scale;
   newHeight *= scale;
 }
 
-    // 모든 카드를 기준으로 초기 스택 너비를 계산
+    // 紐⑤뱺 移대뱶瑜?湲곗??쇰줈 珥덇린 ?ㅽ깮 ?덈퉬瑜?怨꾩궛
     const stackedWidth = newWidth + (images.length > 1 ? images.length - 1 : 0) * VISIBLE_STACK_OFFSET;
     
-    // 화면 너비에 따라 적절한 여백 값을 선택
+    // ?붾㈃ ?덈퉬???곕씪 ?곸젅???щ갚 媛믪쓣 ?좏깮
     const rightPadding = isDesktop ? RIGHT_PADDING_DESKTOP : RIGHT_PADDING_MOBILE;
 
-    // 초기 위치를 오른쪽 기준으로 계산
+    // 珥덇린 ?꾩튂瑜??ㅻⅨ履?湲곗??쇰줈 怨꾩궛
     const newInitialX = window.innerWidth - stackedWidth - rightPadding;
 
     setCardDimensions({
@@ -238,3 +235,4 @@ export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
     </div>
   );
 };
+
