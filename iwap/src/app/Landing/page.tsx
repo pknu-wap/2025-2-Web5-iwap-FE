@@ -2,7 +2,7 @@
 
 import React from "react";
 import { CardSlider } from "@/components/slides/CardSlider";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import SideImageSection from "@/components/sections/SideImageSection";
 
 
@@ -61,12 +61,17 @@ const sideSectionThumbs = [
 
 export default function IwapLanding() {
   const [heroHovered, setHeroHovered] = React.useState(false);
-  const scrollToAbout = () => {
+  const [heroDismissed, setHeroDismissed] = React.useState(false);
+  const scrollToAbout = React.useCallback(() => {
     const aboutSection = document.getElementById("about-details");
     if (aboutSection) {
       aboutSection.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-  };
+  }, []);
+  const handleHeroDismiss = React.useCallback(() => {
+    setHeroDismissed(true);
+    scrollToAbout();
+  }, [scrollToAbout]);
 
   return (
     <div className="min-h-screen w-full bg-white text-black">
@@ -86,58 +91,75 @@ export default function IwapLanding() {
           />
         </div>
 
-        <div className="pt-10">
-          <motion.div
-            className="relative w-full h-[450px] flex items-end justify-center overflow-hidden"
-            onHoverStart={() => setHeroHovered(true)}
-            onHoverEnd={() => setHeroHovered(false)}
-          >
+        <AnimatePresence>
+          {!heroDismissed && (
             <motion.div
-              className="absolute inset-x-0 bottom-0 bg-gradient-to-b from-white/60 to-[#9D9DC5]/60"
-              initial={{ height: 350 }}
-              animate={{ height: heroHovered ? 450 : 350 }}
-              transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
-              style={{ maxHeight: "100%" }}
-            />
-
-            <motion.div
-              className="relative z-10 flex flex-col items-center justify-center text-center text-white -translate-y-20"
-              initial={false}
-              animate={{ y: heroHovered ? -50 : 0 }}
+              key="hero-cta"
+              className="pt-10"
+              initial={{ opacity: 0, y: 40 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -40 }}
               transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
             >
-              <h2 className="text-[36px] font-light">Explore the Senses</h2>
-
-              <button
-                type="button"
-                onClick={scrollToAbout}
-                aria-label="Scroll to about section"
-                className="mt-6 inline-flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9D9DC5]"
+              <motion.div
+                className="relative w-full h-[450px] flex items-end justify-center overflow-hidden"
+                onHoverStart={() => setHeroHovered(true)}
+                onHoverEnd={() => setHeroHovered(false)}
               >
-                <img
-                  src="/icons/Chevrons_down.svg"
-                  alt="down"
-                  className="w-[159px] h-auto opacity-90"
+                <motion.div
+                  className="absolute inset-x-0 bottom-0 bg-gradient-to-b from-white/60 to-[#9D9DC5]/60"
+                  initial={{ height: 350 }}
+                  animate={{ height: heroHovered ? 450 : 350 }}
+                  transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
+                  style={{ maxHeight: "100%" }}
                 />
-              </button>
+
+                <motion.div
+                  className="relative z-10 flex flex-col items-center justify-center text-center text-white -translate-y-20"
+                  initial={false}
+                  animate={{ y: heroHovered ? -50 : 0 }}
+                  transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
+                >
+                  <h2 className="text-[36px] font-light">Explore the Senses</h2>
+
+                  <button
+                    type="button"
+                    onClick={handleHeroDismiss}
+                    aria-label="Scroll to about section"
+                    className="mt-6 inline-flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9D9DC5]"
+                  >
+                    <img
+                      src="/icons/Chevrons_down.svg"
+                      alt="down"
+                      className="w-[159px] h-auto opacity-90"
+                    />
+                  </button>
+                </motion.div>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        </div>
+          )}
+        </AnimatePresence>
       </section>
 
 
       <Section id="about-details" className="space-y-8">
-        <div className="flex flex-wrap items-center justify-center gap-10 px-6">
+        <motion.div
+          className="flex flex-wrap items-center justify-center gap-10 px-6"
+          variants={container}
+          initial="hidden"
+          whileInView="show"
+          viewport={{ once: false, amount: 0.2 }}
+        >
           {sideSectionThumbs.map(({ src, alt }) => (
-            <div key={src} className="w-[100px] h-[150px] overflow-hidden">
+            <motion.div key={src} variants={item} className="w-[100px] h-[150px] overflow-hidden">
               <img
                 src={src}
                 alt={alt}
                 className="w-full h-full object-cover"
               />
-            </div>
+            </motion.div>
           ))}
-        </div>
+        </motion.div>
 
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: false, amount: 0.2 }}>
           <div className="relative">
