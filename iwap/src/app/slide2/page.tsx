@@ -37,6 +37,7 @@ export default function SlidesPage() {
           perspective={800}
           imageDistance={230}
           initialRotation={180}
+          rotationBounds={{ min: 120, max: 240 }}
           animationDuration={1.5}
           staggerDelay={0.1}
           backgroundColor="#ffffff"
@@ -55,6 +56,7 @@ export default function SlidesPage() {
           perspective={200}
           imageDistance={50}
           initialRotation={160}
+          rotationBounds={{ min: 110, max: 210 }}
           animationDuration={1.2}
           staggerDelay={0.08}
           backgroundColor="#ffffff"

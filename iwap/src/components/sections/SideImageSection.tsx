@@ -74,9 +74,10 @@ export default function SideImageSection({
   }[overlayPosition];
 
   return (
-    <section id={id} className={`w-full max-w-7xl mx-auto px-6 md:px-8 py-16 scroll-mt-24 ${className}`}>
-      <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: false, amount: 0.2 }}>
-        <div className={`flex flex-col items-start gap-8 md:gap-10 ${isRight ? "md:flex-row-reverse" : "md:flex-row"}`}>
+    <section id={id} className={`w-full min-h-screen snap-start flex items-center px-6 md:px-8 scroll-mt-24 ${className}`}>
+      <div className="w-full max-w-7xl mx-auto py-16">
+        <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: false, amount: 0.2 }}>
+          <div className={`flex flex-col items-start gap-8 md:gap-10 ${isRight ? "md:flex-row-reverse" : "md:flex-row"}`}>
           <div className="relative w-full md:w-[520px] md:h-[400px] flex-shrink-0">
             <img
               src={imageSrc}
@@ -105,7 +106,7 @@ export default function SideImageSection({
               </div>
             )}
           </div>
-          <motion.div
+            <motion.div
             variants={item}
             className={`${alignClass} text-[#000000] text-[24px]`}
           >
@@ -117,9 +118,10 @@ export default function SideImageSection({
             </div>
             <span className="font-semibold text-[30px] block mb-2">{heading}</span>
             {children}
-          </motion.div>
-        </div>
-      </motion.div>
+            </motion.div>
+          </div>
+        </motion.div>
+      </div>
     </section>
   );
 }

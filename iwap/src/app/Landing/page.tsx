@@ -51,6 +51,14 @@ const ProjectCard = ({ title, desc, href, tags }: { title: string; desc: string;
 );
 
 export default function IwapLanding() {
+  const [heroHovered, setHeroHovered] = React.useState(false);
+  const scrollToAbout = () => {
+    const aboutSection = document.getElementById("about");
+    if (aboutSection) {
+      aboutSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
   return (
     <div className="min-h-screen w-full bg-white text-black">
 
@@ -68,9 +76,44 @@ export default function IwapLanding() {
         />
       </div>
 
-      <Section id="about" className="py-16 scroll-mt-24 text-center">
-        <span className="font-Light text-[36px]">Explore the Senses</span>      
-      </Section>
+      <div className="pt-10">
+        <motion.div
+          className="relative w-full h-[450px] flex items-end justify-center overflow-hidden"
+          onHoverStart={() => setHeroHovered(true)}
+          onHoverEnd={() => setHeroHovered(false)}
+        >
+          <motion.div
+            className="absolute inset-x-0 bottom-0 bg-gradient-to-b from-white/60 to-[#9D9DC5]/60"
+            initial={{ height: 350 }}
+            animate={{ height: heroHovered ? 450 : 350 }}
+            transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
+            style={{ maxHeight: "100%" }}
+          />
+
+          <motion.div
+            className="relative z-10 flex flex-col items-center justify-center text-center text-white"
+            initial={false}
+            animate={{ y: heroHovered ? -50 : 0 }}
+            transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
+          >
+            <h2 className="text-[36px] font-light">Explore the Senses</h2>
+
+            <button
+              type="button"
+              onClick={scrollToAbout}
+              aria-label="Scroll to about section"
+              className="mt-6 inline-flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9D9DC5]"
+            >
+              <img
+                src="/icons/Chevrons_down.svg"
+                alt="down"
+                className="w-[159px] h-auto opacity-90"
+              />
+            </button>
+          </motion.div>
+        </motion.div>
+      </div>
+
 
       <Section id="about" className="py-16 scroll-mt-24">
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: false, amount: 0.2 }}>
@@ -213,7 +256,7 @@ export default function IwapLanding() {
         imageAlt="instrument background"
         {...{ imageOverlay: "시작하기" }}
         imageOverlayLeft={"!nstrument"}
-        overlayLeftClassName = "-translate-y-7 -translate-x-30"
+        overlayLeftClassName = "-translate-y-7 -translate-x-32"
         imageOverlayRight={"06"}
         side="left"
         badgeText="Touch"
