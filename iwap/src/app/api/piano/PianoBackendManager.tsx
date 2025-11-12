@@ -14,13 +14,31 @@ export type MidiTransportControls = {
   getState: () => "started" | "stopped" | "paused";
 };
 
+export type ConversionContext = {
+  requestId: string;
+  midiFilename?: string;
+  mp3Filename?: string;
+};
+
+export type MidiReadyPayload = ConversionContext & {
+  blob: Blob;
+  filename: string;
+};
+
+type ConversionResponsePayload = ConversionContext & {
+  message?: string;
+};
+
 type PianoBackendManagerProps = {
   audioUrl: string | null;
   onMidiEvent: (event: { type: "on" | "off"; note: number }) => void;
   onStatusChange?: (status: string) => void;
-  onTransportReady?: (controls: MidiTransportControls) => void;
+  onTransportReady?: (
+    controls: MidiTransportControls,
+    context?: ConversionContext
+  ) => void;
   onTransportReset?: () => void;
-  onMidiReady?: (payload: { blob: Blob; filename: string }) => void;
+  onMidiReady?: (payload: MidiReadyPayload) => void;
 };
 
 let sharedSampler: Tone.Sampler | null = null;
@@ -41,16 +59,41 @@ export const getBackendUrl = (path: string) => {
   return path.startsWith("/") ? path : `/${path}`;
 };
 
-const describeFetchError = (err: unknown) => {
-  if (err instanceof TypeError) {
-    return "서버와 통신할 수 없어요. 네트워크나 백엔드 주소를 확인해 주세요.";
+const parseConversionResponse = async (
+  res: Response
+): Promise<ConversionResponsePayload> => {
+  let data: unknown;
+  try {
+    data = await res.json();
+  } catch {
+    throw new Error("서버 응답을 읽을 수 없습니다.");
   }
-  if (err instanceof Error && err.message) {
-    return err.message;
-  }
-  return "알 수 없는 오류가 발생했어요.";
-};
 
+  if (!data || typeof data !== "object") {
+    throw new Error("올바르지 않은 응답입니다.");
+  }
+
+  const payload = data as Record<string, unknown>;
+  const requestId = payload.requestId;
+
+  if (typeof requestId !== "string" || requestId.length === 0) {
+    throw new Error("요청 ID를 받지 못했습니다.");
+  }
+
+  return {
+    requestId,
+    midiFilename:
+      typeof payload.midiFilename === "string"
+        ? (payload.midiFilename as string)
+        : undefined,
+    mp3Filename:
+      typeof payload.mp3Filename === "string"
+        ? (payload.mp3Filename as string)
+        : undefined,
+    message:
+      typeof payload.message === "string" ? (payload.message as string) : undefined,
+  };
+};
 const getOrCreateSampler = async () => {
   if (Tone.context.state !== "running") {
     await Tone.start();
@@ -157,12 +200,15 @@ export default function PianoBackendManager({
       flushActiveNotes();
     };
 
-    const fetchAndPlayMidi = async () => {
+    const fetchAndPlayMidi = async (conversion: ConversionContext) => {
       try {
-        onStatusChange?.("MIDI 변환 중...");
-        const midiRes = await fetch(getBackendUrl("/api/piano/midi"));
+        onStatusChange?.("MIDI 蹂??以?..");
+        const requestToken = encodeURIComponent(conversion.requestId);
+        const midiRes = await fetch(
+          getBackendUrl(`/api/piano/midi?request_id=${requestToken}`)
+        );
         if (!midiRes.ok) {
-          throw new Error("MIDI 파일 다운로드에 실패했습니다.");
+          throw new Error("MIDI ?뚯씪 ?ㅼ슫濡쒕뱶???ㅽ뙣?덉뒿?덈떎.");
         }
 
         const midiArray = await midiRes.arrayBuffer();
@@ -170,26 +216,32 @@ export default function PianoBackendManager({
         let downloadBlob: Blob = new Blob([midiArray], {
           type: "audio/midi",
         });
-        let downloadExtension = "mid";
+        let downloadFilename = conversion.midiFilename ?? `piano-${downloadBaseName}.mid`;
 
         try {
-          const mp3Res = await fetch(getBackendUrl("/api/piano/midi_to_mp3"));
+          const mp3Res = await fetch(
+            getBackendUrl(`/api/piano/mp3?request_id=${requestToken}`)
+          );
           if (!mp3Res.ok) {
             throw new Error("MP3 파일 다운로드에 실패했습니다.");
           }
           const mp3Array = await mp3Res.arrayBuffer();
           downloadBlob = new Blob([mp3Array], { type: "audio/mpeg" });
-          downloadExtension = "mp3";
+          downloadFilename =
+            conversion.mp3Filename ?? `piano-${downloadBaseName}.mp3`;
         } catch (mp3Error) {
           console.warn(
-            "MP3 변환 파일을 가져오지 못해 MIDI로 대체합니다.",
+            "MP3 蹂???뚯씪??媛?몄삤吏 紐삵빐 MIDI濡??泥댄빀?덈떎.",
             mp3Error
           );
         }
 
         onMidiReady?.({
           blob: downloadBlob,
-          filename: `piano-${downloadBaseName}.${downloadExtension}`,
+          filename: downloadFilename,
+          requestId: conversion.requestId,
+          midiFilename: conversion.midiFilename,
+          mp3Filename: conversion.mp3Filename,
         });
 
         const midi = new Midi(midiArray);
@@ -274,9 +326,9 @@ export default function PianoBackendManager({
         };
 
         onStatusChange?.("");
-        onTransportReady?.(controls);
+        onTransportReady?.(controls, conversion);
       } catch (err) {
-        console.error("MIDI 변환 실패:", err);
+        console.error("MIDI 蹂???ㅽ뙣:", err);
         if (!isCancelled) {
           onStatusChange?.(describeFetchError(err));
         }
@@ -285,7 +337,7 @@ export default function PianoBackendManager({
 
     const sendAudioToBackend = async () => {
       try {
-        onStatusChange?.("MIDI 변환 중...");
+        onStatusChange?.("MIDI 蹂??以?..");
 
         const res = await fetch(audioUrl);
         const blob = await res.blob();
@@ -293,20 +345,25 @@ export default function PianoBackendManager({
         const formData = new FormData();
         formData.append("voice", blob, "voice.webm");
 
-        const uploadRes = await fetch(getBackendUrl("/api/piano/"), {
+        const uploadRes = await fetch(getBackendUrl("/api/piano"), {
           method: "POST",
           body: formData,
         });
 
         if (!uploadRes.ok) {
           throw new Error(
-            "오디오 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요."
+            "?ㅻ뵒???낅줈?쒖뿉 ?ㅽ뙣?덉뒿?덈떎. ?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??"
           );
         }
 
-        await fetchAndPlayMidi();
+        const conversion = await parseConversionResponse(uploadRes);
+        if (conversion.message) {
+          onStatusChange?.(conversion.message);
+        }
+
+        await fetchAndPlayMidi(conversion);
       } catch (err) {
-        console.error("오디오 업로드 실패:", err);
+        console.error("?ㅻ뵒???낅줈???ㅽ뙣:", err);
         if (!isCancelled) {
           onStatusChange?.(describeFetchError(err));
         }
@@ -331,4 +388,3 @@ export default function PianoBackendManager({
 
   return null;
 }
-963

@@ -16,6 +16,8 @@ import RecorderButton from "@/components/audio/RecorderButton";
 import Piano from "@/components/piano/Piano";
 import PianoBackendManager, {
   type MidiTransportControls,
+  type ConversionContext,
+  type MidiReadyPayload,
   getBackendUrl,
 } from "@/app/api/piano/PianoBackendManager";
 import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
@@ -47,6 +49,7 @@ export default function VoiceToPiano() {
     url: string;
     filename: string;
   } | null>(null);
+  const conversionContextRef = useRef<ConversionContext | null>(null);
 
   const router = useRouter(); //  2. router 선언
   const mp3AudioRef = useRef<HTMLAudioElement | null>(null);
@@ -194,6 +197,7 @@ export default function VoiceToPiano() {
       URL.revokeObjectURL(midiDownloadUrlRef.current);
       midiDownloadUrlRef.current = null;
     }
+    conversionContextRef.current = null;
     setMidiDownload(null);
   }, []);
 
@@ -221,7 +225,10 @@ export default function VoiceToPiano() {
   );
 
   const handleTransportReady = useCallback(
-    (controls: MidiTransportControls) => {
+    (controls: MidiTransportControls, context?: ConversionContext) => {
+      if (context) {
+        conversionContextRef.current = context;
+      }
       setTransport(controls);
       setTransportDuration(controls.duration);
       setTransportPosition(0);
@@ -232,7 +239,15 @@ export default function VoiceToPiano() {
         audioUrl && (audioUrl.startsWith("blob:") || audioUrl.startsWith("data:"))
           ? audioUrl
           : null;
-      const source = localSource ?? getBackendUrl("/api/piano/mp3");
+      const effectiveContext = context ?? conversionContextRef.current;
+      const remoteSource = effectiveContext
+        ? getBackendUrl(
+            `/api/piano/mp3?request_id=${encodeURIComponent(
+              effectiveContext.requestId
+            )}`
+          )
+        : getBackendUrl("/api/piano/mp3");
+      const source = localSource ?? remoteSource;
 
       const mp3 = new Audio(source);
       mp3.preload = "auto";
@@ -246,8 +261,19 @@ export default function VoiceToPiano() {
   );
 
   const handleMidiReady = useCallback(
-    ({ blob, filename }: { blob: Blob; filename: string }) => {
+    ({
+      blob,
+      filename,
+      requestId,
+      midiFilename,
+      mp3Filename,
+    }: MidiReadyPayload) => {
       clearMidiDownload();
+      conversionContextRef.current = {
+        requestId,
+        midiFilename,
+        mp3Filename,
+      };
       const url = URL.createObjectURL(blob);
       midiDownloadUrlRef.current = url;
       setMidiDownload({ url, filename });
