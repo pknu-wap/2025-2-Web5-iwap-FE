@@ -50,21 +50,31 @@ const ProjectCard = ({ title, desc, href, tags }: { title: string; desc: string;
   </motion.a>
 );
 
+const sideSectionThumbs = [
+  { src: "/images/inside_background.jpg", alt: "!nside thumbnail" },
+  { src: "/images/This-is-for-u_background.jpg", alt: "Th!s !s for u thumbnail" },
+  { src: "/images/Piano_Landing.png", alt: "P!ano thumbnail" },
+  { src: "/images/ascii_background.jpg", alt: "Asci! thumbnail" },
+  { src: "/images/string_background.jpg", alt: "Str!ng thumbnail" },
+  { src: "/images/instrument_background.jpg", alt: "!nstrument thumbnail" },
+];
+
 export default function IwapLanding() {
   const [heroHovered, setHeroHovered] = React.useState(false);
   const scrollToAbout = () => {
-    const aboutSection = document.getElementById("about");
+    const aboutSection = document.getElementById("about-details");
     if (aboutSection) {
-      aboutSection.scrollIntoView({ behavior: "smooth" });
+      aboutSection.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   };
 
   return (
     <div className="min-h-screen w-full bg-white text-black">
 
-      <div className="mt-20">
-        <CardSlider
-          showHeader={false}
+      <section className="min-h-screen flex flex-col justify-between">
+        <div className="mt-20 flex-1">
+          <CardSlider
+            showHeader={false}
           images={[
             { src: "/images/home/slides/slide1.jpg", link: "/inside", text: "!nside", description: "인공지능이 숫자를 인식하는 과정" },
             { src: "/images/home/slides/slide2.jpg", link: "/this-is-for-u", text: "Th!s !s for u", description: "함수로 하트 그리기" },
@@ -73,49 +83,62 @@ export default function IwapLanding() {
             { src: "/images/home/slides/slide4.jpg", link: "/string", text: "Str!ng", description: "선들로 이미지를 표현" },
             { src: "/images/home/slides/slide6.jpg", link: "/instrument", text: "!nstrument", description: "손동작으로 음악을 연주하는 오케스트라." },
           ]}
-        />
-      </div>
-
-      <div className="pt-10">
-        <motion.div
-          className="relative w-full h-[450px] flex items-end justify-center overflow-hidden"
-          onHoverStart={() => setHeroHovered(true)}
-          onHoverEnd={() => setHeroHovered(false)}
-        >
-          <motion.div
-            className="absolute inset-x-0 bottom-0 bg-gradient-to-b from-white/60 to-[#9D9DC5]/60"
-            initial={{ height: 350 }}
-            animate={{ height: heroHovered ? 450 : 350 }}
-            transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
-            style={{ maxHeight: "100%" }}
           />
+        </div>
 
+        <div className="pt-10">
           <motion.div
-            className="relative z-10 flex flex-col items-center justify-center text-center text-white"
-            initial={false}
-            animate={{ y: heroHovered ? -50 : 0 }}
-            transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
+            className="relative w-full h-[450px] flex items-end justify-center overflow-hidden"
+            onHoverStart={() => setHeroHovered(true)}
+            onHoverEnd={() => setHeroHovered(false)}
           >
-            <h2 className="text-[36px] font-light">Explore the Senses</h2>
+            <motion.div
+              className="absolute inset-x-0 bottom-0 bg-gradient-to-b from-white/60 to-[#9D9DC5]/60"
+              initial={{ height: 350 }}
+              animate={{ height: heroHovered ? 450 : 350 }}
+              transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
+              style={{ maxHeight: "100%" }}
+            />
 
-            <button
-              type="button"
-              onClick={scrollToAbout}
-              aria-label="Scroll to about section"
-              className="mt-6 inline-flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9D9DC5]"
+            <motion.div
+              className="relative z-10 flex flex-col items-center justify-center text-center text-white -translate-y-20"
+              initial={false}
+              animate={{ y: heroHovered ? -50 : 0 }}
+              transition={{ duration: 0.6, ease: [0.33, 1, 0.68, 1] }}
             >
-              <img
-                src="/icons/Chevrons_down.svg"
-                alt="down"
-                className="w-[159px] h-auto opacity-90"
-              />
-            </button>
+              <h2 className="text-[36px] font-light">Explore the Senses</h2>
+
+              <button
+                type="button"
+                onClick={scrollToAbout}
+                aria-label="Scroll to about section"
+                className="mt-6 inline-flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-[#9D9DC5]"
+              >
+                <img
+                  src="/icons/Chevrons_down.svg"
+                  alt="down"
+                  className="w-[159px] h-auto opacity-90"
+                />
+              </button>
+            </motion.div>
           </motion.div>
-        </motion.div>
-      </div>
+        </div>
+      </section>
 
 
-      <Section id="about" className="py-16 scroll-mt-24">
+      <Section id="about-details" className="space-y-8">
+        <div className="flex flex-wrap items-center justify-center gap-10 px-6">
+          {sideSectionThumbs.map(({ src, alt }) => (
+            <div key={src} className="w-[100px] h-[150px] overflow-hidden">
+              <img
+                src={src}
+                alt={alt}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
+
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: false, amount: 0.2 }}>
           <div className="relative">
             <motion.p variants={item} className="text-center text-[#6670BD] text-[30px]">
@@ -155,122 +178,6 @@ export default function IwapLanding() {
         <span>사용자는 화면 위에서 숫자를 그리면, 인공지능의 내부 feature</span><br />
         <span> map이 실시간으로 나타나며</span><br />
         <span>기계의 시각적 사고 과정을 체험할 수 있습니다.</span>
-      </SideImageSection>
-
-      <SideImageSection
-        id="subproject"
-        imageSrc="/images/This-is-for-u_background.jpg"
-        imageAlt="This-is-for-u background"
-        {...{ imageOverlay: "시작하기" }}
-        imageOverlayLeft={"Th!s !s for u"}
-        overlayLeftClassName = "-translate-y-7 -translate-x-37"
-        imageOverlayRight={"02"}
-        side="right"
-        badgeText="Vision"
-        textAlign="right"
-        badgeAlign="right"
-        heading="02  Th!s !s for u">
-
-        <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
-        감정을 색과 형태로 번역하는 ‘디지털 엽서’.</span>
-        <br /><br />
-        <span>인간의 마음이 색채 반응으로 드러나는 시각적으로 체험합니다.</span><br /><br />
-        <span>사용자가 손으로 하트를 그리고, 글로 메시지를 남길 수 있습니다.</span><br />
-        <span>그림의 색, 곡선의 흐름에 따라 감정이 시각적으로 표현되며,</span><br />
-        <span>완성된 엽서는 이미지로 저장되거나 이메일로 전송됩니다.</span>
-      </SideImageSection>
-
-      <SideImageSection
-        id="subproject"
-        imageSrc="/images/Piano_Landing.png"
-        imageAlt="Piano background"
-        {...{ imageOverlay: "시작하기" }}
-        imageOverlayLeft={"P!ano"}
-        overlayLeftClassName = "-translate-x-14 -translate-y-25"
-        imageOverlayRight={"03"}
-        side="right"
-        badgeText="Hearing"
-        textAlign="left"
-        badgeAlign="right"
-        heading="03  P!ano">
-
-        <span>사용자의 음성이나 주변 소리를 피아노 음으로 변환하는</span>
-        <br />
-        <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
-        사운드–비주얼 인터랙션 실험.</span><br /><br />
-        <span>음성 입력을 Tone.js 기반의 피아노 사운드로 변환하고,</span><br />
-        <span>각 음정과 강도를 시각적으로 스펙트럼화하여 보여줍니다.</span><br />
-        <br />
-        <span>시청각이 결합된 몰입형 음악 인터페이스로,</span><br />
-        <span>“보이는 소리”라는 개념을 체험할 수 있습니다.</span><br />
-      </SideImageSection>
-
-      <SideImageSection
-        id="subproject"
-        imageSrc="/images/ascii_background.jpg"
-        imageAlt="ascii background"
-        {...{ imageOverlay: "시작하기" }}
-        imageOverlayLeft={"Asci!"}
-        overlayLeftClassName = "-translate-x-10 -translate-y-30"
-        imageOverlayRight={"04"}
-        side="left"
-        badgeText="Vision"
-        textAlign="left"
-        badgeAlign="left"
-        heading="04  Asci!">
-
-        <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
-        이미지를 텍스트로 변환해 ‘보이는 언어’를 만드는 실험.</span>
-        <br /><br />
-        <span>이미지를 픽셀 단위로 분석해, 밝기 값을 문자(ASCII 코드)로 대체합니다.</span><br />
-        <span>그 결과 생성된 텍스트 이미지는 언어와 시각 사이의 경계를 흐리며,</span><br />
-        <span>“텍스트도 시각적 예술이 될 수 있는가?”를 탐구합니다.</span>
-      </SideImageSection>
-
-      <SideImageSection
-        id="subproject"
-        imageSrc="/images/string_background.jpg"
-        imageAlt="string background"
-        {...{ imageOverlay: "시작하기" }}
-        imageOverlayLeft={"Str!ng"}
-        overlayLeftClassName = "-translate-x-14 -translate-y-25"
-        imageOverlayRight={"05"}
-        side="left"
-        badgeText="Vision"
-        textAlign="left"
-        badgeAlign="left"
-        heading="05  Str!ng">
-
-        <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
-        선과 연결로 이미지를 재구성하는 알고리즘 아트.</span>
-        <br /><br />
-        <span>수많은 실선을 일정한 규칙으로 배치해</span><br />
-        <span>하나의 이미지를 만들어내는 시각적 알고리즘 실험입니다.</span><br />
-        <span>‘선’이라는 최소 단위를 통해 시각 인식의 구조와</span><br />
-        <span>데이터 기반 미학을 탐구합니다.</span>
-      </SideImageSection>
-
-      <SideImageSection
-        id="subproject"
-        imageSrc="/images/instrument_background.jpg"
-        imageAlt="instrument background"
-        {...{ imageOverlay: "시작하기" }}
-        imageOverlayLeft={"!nstrument"}
-        overlayLeftClassName = "-translate-y-7 -translate-x-32"
-        imageOverlayRight={"06"}
-        side="left"
-        badgeText="Touch"
-        textAlign="left"
-        badgeAlign="left"
-        heading="06  !nstrument">
-
-        <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
-        손동작으로 오케스트라를 지휘하는 인터랙티브 사운드 퍼포먼스.</span>
-        <br /><br />
-        <span>카메라로 인식한 제스처(손바닥, 손가락, 움직임)를</span><br />
-        <span>MIDI 신호로 변환하여 여러 악기의 연주를 제어합니다.</span><br />
-        <span>사용자의 동작이 음악의 속도, 볼륨, 악기를 실시간으로 바꾸며,</span><br />
-        <span>가장 촉각적인 ‘손의 인터페이스’를 통해 청각적 몰입을 만듭니다.</span>
       </SideImageSection>
    
 
