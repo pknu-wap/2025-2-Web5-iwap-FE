@@ -74,7 +74,7 @@ export default function SideImageSection({
   }[overlayPosition];
 
   return (
-    <section id={id} className={`w-full min-h-screen snap-start flex items-center px-6 md:px-8 scroll-mt-24 ${className}`}>
+    <section id={id} className={`w-full snap-start flex items-center px-6 md:px-30 py-20 scroll-mt-24 ${className}`}>
       <div className="w-full max-w-7xl mx-auto py-2">
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: false, amount: 0.2 }}>
           <div className={`flex flex-col items-start gap-8 md:gap-10 ${isRight ? "md:flex-row-reverse" : "md:flex-row"}`}>
