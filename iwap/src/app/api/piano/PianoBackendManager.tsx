@@ -135,13 +135,13 @@ export default function PianoBackendManager({
 
     const fetchAndPlayMidi = async (conversion: ConversionContext) => {
       try {
-        onStatusChange?.("MIDI 蹂??以?..");
+        onStatusChange?.("MIDI 변환 중...");
         const requestToken = encodeURIComponent(conversion.requestId);
         const midiRes = await fetch(
           getBackendUrl(`/api/piano/midi?request_id=${requestToken}`)
         );
         if (!midiRes.ok) {
-          throw new Error("MIDI ?뚯씪 ?ㅼ슫濡쒕뱶???ㅽ뙣?덉뒿?덈떎.");
+          throw new Error("MIDI 파일 다운로드에 실패했습니다.");
         }
 
         const midiArray = await midiRes.arrayBuffer();
@@ -164,7 +164,7 @@ export default function PianoBackendManager({
             conversion.mp3Filename ?? `piano-${downloadBaseName}.mp3`;
         } catch (mp3Error) {
           console.warn(
-            "MP3 蹂???뚯씪??媛?몄삤吏 紐삵빐 MIDI濡??泥댄빀?덈떎.",
+            "MP3 변환본을 가져오지 못해 MIDI로 대체합니다.",
             mp3Error
           );
         }
@@ -249,7 +249,7 @@ export default function PianoBackendManager({
         onStatusChange?.("");
         onTransportReady?.(controls, conversion);
       } catch (err) {
-        console.error("MIDI 蹂???ㅽ뙣:", err);
+        console.error("MIDI 변환 실패:", err);
         if (!isCancelled) {
           onStatusChange?.(describeFetchError(err));
         }
@@ -258,7 +258,7 @@ export default function PianoBackendManager({
 
     const sendAudioToBackend = async () => {
       try {
-        onStatusChange?.("MIDI 蹂??以?..");
+        onStatusChange?.("MIDI 변환 중...");
 
         const res = await fetch(audioUrl);
         const blob = await res.blob();
@@ -273,7 +273,7 @@ export default function PianoBackendManager({
 
         if (!uploadRes.ok) {
           throw new Error(
-            "?ㅻ뵒???낅줈?쒖뿉 ?ㅽ뙣?덉뒿?덈떎. ?좎떆 ???ㅼ떆 ?쒕룄??二쇱꽭??"
+            "오디오 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요."
           );
         }
 
@@ -284,7 +284,7 @@ export default function PianoBackendManager({
 
         await fetchAndPlayMidi(conversion);
       } catch (err) {
-        console.error("?ㅻ뵒???낅줈???ㅽ뙣:", err);
+        console.error("오디오 업로드 실패:", err);
         if (!isCancelled) {
           onStatusChange?.(describeFetchError(err));
         }
