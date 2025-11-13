@@ -247,7 +247,8 @@ export default function VoiceToPiano() {
             )}`
           )
         : getBackendUrl("/api/piano/mp3");
-      const source = localSource ?? remoteSource;
+      const shouldUseRemote = Boolean(effectiveContext) || !localSource;
+      const source = shouldUseRemote ? remoteSource : localSource;
 
       const mp3 = new Audio(source);
       mp3.preload = "auto";

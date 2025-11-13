@@ -41,22 +41,25 @@ type PianoBackendManagerProps = {
   onMidiReady?: (payload: MidiReadyPayload) => void;
 };
 
-let sharedSampler: Tone.Sampler | null = null;
-
 const isMobileDevice = () => {
   if (typeof navigator === "undefined") return false;
   return /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 };
 
-const USE_FX = (() => {
-  const v = (process.env.NEXT_PUBLIC_PIANO_USE_FX || "").toLowerCase();
-  return v === "1" || v === "true" || v === "yes";
-})();
-
 export const getBackendUrl = (path: string) => {
   // Always prefer same-origin API route to avoid CORS and hide backend URL.
   // The Next.js API route will proxy to the real backend server.
   return path.startsWith("/") ? path : `/${path}`;
+};
+
+const describeFetchError = (err: unknown) => {
+  if (err instanceof TypeError) {
+    return "네트워크 연결이나 백엔드 주소를 확인해주세요.";
+  }
+  if (err instanceof Error && err.message) {
+    return err.message;
+  }
+  return "알 수 없는 오류가 발생했어요.";
 };
 
 const parseConversionResponse = async (
@@ -94,74 +97,6 @@ const parseConversionResponse = async (
       typeof payload.message === "string" ? (payload.message as string) : undefined,
   };
 };
-const getOrCreateSampler = async () => {
-  if (Tone.context.state !== "running") {
-    await Tone.start();
-  }
-
-  if (sharedSampler) {
-    await sharedSampler.loaded;
-    return sharedSampler;
-  }
-
-  const sampler = new Tone.Sampler({
-    urls: {
-      A0: "A0.mp3",
-      C1: "C1.mp3",
-      "D#1": "Ds1.mp3",
-      "F#1": "Fs1.mp3",
-      A1: "A1.mp3",
-      C2: "C2.mp3",
-      "D#2": "Ds2.mp3",
-      "F#2": "Fs2.mp3",
-      A2: "A2.mp3",
-      C3: "C3.mp3",
-      "D#3": "Ds3.mp3",
-      "F#3": "Fs3.mp3",
-      A3: "A3.mp3",
-      C4: "C4.mp3",
-      "D#4": "Ds4.mp3",
-      "F#4": "Fs4.mp3",
-      A4: "A4.mp3",
-      C5: "C5.mp3",
-      "D#5": "Ds5.mp3",
-      "F#5": "Fs5.mp3",
-      A5: "A5.mp3",
-      C6: "C6.mp3",
-      "D#6": "Ds6.mp3",
-      "F#6": "Fs6.mp3",
-      A6: "A6.mp3",
-      C7: "C7.mp3",
-      "D#7": "Ds7.mp3",
-      "F#7": "Fs7.mp3",
-      A7: "A7.mp3",
-      C8: "C8.mp3",
-    },
-    release: 1,
-    baseUrl: "https://tonejs.github.io/audio/salamander/",
-  });
-
-  if (USE_FX) {
-    const mobile = isMobileDevice();
-    const filter = new Tone.Filter({
-      type: "lowpass",
-      frequency: mobile ? 9000 : 12000,
-      rolloff: -24,
-    });
-    const reverb = new Tone.Reverb({
-      decay: mobile ? 1.6 : 2.2,
-      wet: mobile ? 0.05 : 0.08,
-    });
-    sampler.chain(filter, reverb, Tone.Destination);
-  } else {
-    sampler.toDestination();
-  }
-
-  await sampler.loaded;
-  sharedSampler = sampler;
-  return sampler;
-};
-
 /**
  * Handles communication with the piano backend and schedules MIDI playback.
  */
@@ -177,7 +112,6 @@ export default function PianoBackendManager({
     if (!audioUrl) return;
 
     let isCancelled = false;
-    let sampler: Tone.Sampler | null = null;
     const activeMidiNotes = new Set<number>();
     const MAX_POLY = isMobileDevice() ? 6 : 12;
 
@@ -196,7 +130,6 @@ export default function PianoBackendManager({
       Tone.Transport.stop();
       Tone.Transport.cancel();
       Tone.Transport.seconds = 0;
-      sampler?.releaseAll();
       flushActiveNotes();
     };
 
@@ -253,27 +186,17 @@ export default function PianoBackendManager({
         Tone.getDestination().volume.value = -20;
 
         disposeTransport();
-        sampler = await getOrCreateSampler();
-
         midi.tracks.forEach((track) => {
           track.notes.forEach((note) => {
             const midiNum = note.midi;
             const start = note.time;
             const duration = Math.max(note.duration, 0.05);
 
-            Tone.Transport.schedule((time) => {
+            Tone.Transport.schedule(() => {
               if (isCancelled) return;
-              // Simple polyphony limiter
-              if (activeMidiNotes.size >= MAX_POLY) {
-                return;
+              if (activeMidiNotes.size < MAX_POLY) {
+                activeMidiNotes.add(midiNum);
               }
-              sampler?.triggerAttackRelease(
-                note.name,
-                duration,
-                time,
-                note.velocity ?? 0.8
-              );
-              activeMidiNotes.add(midiNum);
               onMidiEvent({ type: "on", note: midiNum });
               Tone.Transport.scheduleOnce(() => {
                 if (isCancelled) return;
@@ -306,13 +229,11 @@ export default function PianoBackendManager({
           },
           pause: () => {
             Tone.Transport.pause();
-            sampler?.releaseAll();
             flushActiveNotes();
           },
           stop: () => {
             Tone.Transport.stop();
             Tone.Transport.seconds = 0;
-            sampler?.releaseAll();
             flushActiveNotes();
           },
           seek: (seconds: number, resume = false) => {
