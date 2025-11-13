@@ -3,7 +3,6 @@
 import React, {
   useCallback,
   useEffect,
-  useMemo,
   useRef,
   useState,
 } from "react";
@@ -75,17 +74,23 @@ type MPResults = {
   >;
 };
 
+const OTHER_FINGER_TIP_IDS = [4, 12, 16, 20];
+const INDEX_EXTENSION_THRESHOLD = 0.3;
+const FINGER_FOLDED_THRESHOLD = 0.25;
+const COLOR_PALETTE = ["#ff315a", "#ffd166", "#60caff", "#7bedff", "#f4f4f4"];
+
 export default function GraffitiClient() {
+  const [customPatterns, setCustomPatterns] = useState<string[]>([]);
+
   /* -------------------- Intro / Camera 상태 -------------------- */
   const [showIntro, setShowIntro] = useState(true);
   const [cameraGranted, setCameraGranted] = useState(false);
   const [introFinished, setIntroFinished] = useState(false);
-  const [fingerAnimationDone, setFingerAnimationDone] =
-    useState(false);
+  const [fingerAnimationDone, setFingerAnimationDone] = useState(false);
   const fingerAnimationDoneRef = useRef(fingerAnimationDone);
 
   /* -------------------- 기존 상태 -------------------- */
-  const [brushColor, setBrushColor] = useState("#ff315a");
+  const [brushColor, setBrushColor] = useState<string>("#ff315a");
   const [brushSize, setBrushSize] = useState(6);
   const [gestureEnabled, setGestureEnabled] = useState(true);
   const [showOverlay, setShowOverlay] = useState(true);
@@ -93,6 +98,10 @@ export default function GraffitiClient() {
   const [fps, setFps] = useState(0);
   const [handsCount, setHandsCount] = useState(0);
   const [cameraNoticeVisible, setCameraNoticeVisible] = useState(true);
+
+  /* -------------------- Undo / Redo 상태 -------------------- */
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
 
   /* -------------------- Refs (null 안전 처리!) -------------------- */
   const videoRef = useRef<HTMLVideoElement>(null!);
@@ -117,10 +126,7 @@ export default function GraffitiClient() {
 
   const fpsCounter = useRef({
     frames: 0,
-    last:
-      typeof performance !== "undefined"
-        ? performance.now()
-        : 0,
+    last: typeof performance !== "undefined" ? performance.now() : 0,
   });
 
   /* -------------------- Intro 자동 skip (5초) -------------------- */
@@ -168,6 +174,166 @@ export default function GraffitiClient() {
     setFingerAnimationDone(true);
   }, [fingerAnimationDone, introFinished]);
 
+  /* -------------------- Mediapipe 결과 처리 -------------------- */
+  const onResults = useCallback((results: MPResults) => {
+    /* FPS 계산 */
+    fpsCounter.current.frames += 1;
+    const now = performance.now();
+    if (now - fpsCounter.current.last >= 1000) {
+      setFps(fpsCounter.current.frames);
+      fpsCounter.current.frames = 0;
+      fpsCounter.current.last = now;
+    }
+
+    const overlay = overlayRef.current;
+    const octx = overlay.getContext("2d")!;
+    octx.clearRect(0, 0, overlay.width, overlay.height);
+
+    const drawCtx = ctxRef.current;
+    const drawCanvas = drawRef.current;
+    if (!drawCtx || !drawCanvas) return;
+
+    const width = drawCanvas.width;
+    const height = drawCanvas.height;
+
+    let hands = results.multiHandLandmarks ?? [];
+
+    if (usingTasksRef.current && hands.length > 0) {
+      hands = hands.map((h) =>
+        h.map((p) => ({ ...p, x: 1 - p.x }))
+      );
+    }
+
+    setHandsCount(hands.length);
+
+    if (hands.length === 0) {
+      setPinchActive(false);
+      lastPointRef.current = [];
+      smoothLandmarksRef.current = null;
+      lastPinchRef.current = [];
+      gestureOnCountRef.current = [];
+      gestureOffCountRef.current = [];
+      return;
+    }
+
+    /* ------ Smoothing ------ */
+    const prevHands = smoothLandmarksRef.current;
+    const alphaBase = 0.5;
+
+    const smoothedHands = hands.map((hand, hi) => {
+      const prev = prevHands?.[hi];
+      const ref = getPalmWidth(hand);
+
+      return hand.map((p, i) => {
+        const prevP = prev?.[i];
+        if (!prevP) return p;
+        const dx = p.x - prevP.x;
+        const dy = p.y - prevP.y;
+        const motion =
+          Math.hypot(dx, dy) / Math.max(0.0001, ref);
+        const adaptive = clamp(
+          alphaBase + clamp(motion * 0.5, 0, 0.3),
+          0.4,
+          0.8
+        );
+        return {
+          x: prevP.x + adaptive * (p.x - prevP.x),
+          y: prevP.y + adaptive * (p.y - prevP.y),
+          z: p.z,
+        };
+      });
+    });
+
+    smoothLandmarksRef.current = smoothedHands;
+
+    /* Landmark Overlay */
+    if (showOverlayRef.current && drawLandmarksRef.current) {
+      for (const lm of smoothedHands) {
+        drawLandmarksRef.current(octx, lm, {
+          color: "#00E1FF",
+          lineWidth: 2,
+        });
+      }
+    }
+
+    /* ------ Gesture + Drawing ------ */
+    const nextPinchArr: boolean[] = [];
+    const lastPinchArr = lastPinchRef.current;
+    const lastPoints = lastPointRef.current;
+
+    const onCounts = gestureOnCountRef.current;
+    const offCounts = gestureOffCountRef.current;
+
+    smoothedHands.forEach((lm, hi) => {
+      const indexTip = lm[8];
+      if (!indexTip) {
+        nextPinchArr[hi] = false;
+        lastPoints[hi] = null;
+        return;
+      }
+
+      const ref = getPalmWidth(lm);
+      const palmCenter = getPalmCenter(lm);
+
+      const dIndex = fingerTipDistance(
+        lm,
+        8,
+        palmCenter,
+        ref
+      );
+      const indexExtended = dIndex > INDEX_EXTENSION_THRESHOLD;
+      const otherFolded = OTHER_FINGER_TIP_IDS.every((tip) => {
+        const dist = fingerTipDistance(lm, tip, palmCenter, ref);
+        return dist < FINGER_FOLDED_THRESHOLD;
+      });
+
+      const gestureActive = indexExtended && otherFolded;
+
+      const lastState = lastPinchArr[hi] ?? false;
+      onCounts[hi] = onCounts[hi] ?? 0;
+      offCounts[hi] = offCounts[hi] ?? 0;
+
+      if (gestureActive) {
+        onCounts[hi]++;
+        offCounts[hi] = 0;
+      } else {
+        offCounts[hi]++;
+        onCounts[hi] = 0;
+      }
+
+      let next = lastState;
+      if (!lastState && onCounts[hi] >= 2) next = true;
+      if (lastState && offCounts[hi] >= 3) next = false;
+
+      nextPinchArr[hi] = next;
+
+      const px = clamp(indexTip.x, 0, 1) * width;
+      const py = clamp(indexTip.y, 0, 1) * height;
+      const shouldDraw = gestureEnabledRef.current ? next : false;
+      const lastPoint = lastPoints[hi] ?? null;
+
+      // 새로 그리기 시작하는 순간 스냅샷 저장
+      if (shouldDraw && !lastPoint) {
+        const snapshot = drawCanvas.toDataURL();
+        setUndoStack((prev) => [...prev, snapshot]);
+        setRedoStack([]); // 새로운 stroke 시작 시 redo 비움
+      }
+
+      if (shouldDraw && lastPoint) {
+        drawCtx.beginPath();
+        drawCtx.moveTo(lastPoint.x, lastPoint.y);
+        drawCtx.lineTo(px, py);
+        drawCtx.stroke();
+      }
+
+      lastPoints[hi] = { x: px, y: py };
+    });
+
+    lastPinchRef.current = nextPinchArr;
+    lastPointRef.current = lastPoints;
+    setPinchActive(nextPinchArr.some(Boolean));
+  }, []);
+
   /* -------------------- Mediapipe + Camera 초기화 -------------------- */
   useEffect(() => {
     let stopped = false;
@@ -183,7 +349,7 @@ export default function GraffitiClient() {
           audio: false,
         });
 
-        /* ------- ★ 허용됨! Intro 종료 ------- */
+        /* ------- 허용됨! Intro 종료 ------- */
         setCameraGranted(true);
         introDelayTimer = window.setTimeout(() => {
           if (stopped) return;
@@ -352,164 +518,73 @@ export default function GraffitiClient() {
       const stream = videoRef.current?.srcObject as MediaStream | null;
       stream?.getTracks()?.forEach((t) => t.stop());
     };
-  }, []);
+  }, [onResults, brushColor, brushSize]);
 
-  /* -------------------- Mediapipe 결과 처리 -------------------- */
-  const onResults = useCallback((results: MPResults) => {
-    /* FPS 계산 */
-    fpsCounter.current.frames += 1;
-    const now = performance.now();
-    if (now - fpsCounter.current.last >= 1000) {
-      setFps(fpsCounter.current.frames);
-      fpsCounter.current.frames = 0;
-      fpsCounter.current.last = now;
+  /* -------------------- 브러시 스타일 반영 -------------------- */
+  useEffect(() => {
+    const ctx = ctxRef.current;
+    if (!ctx) return;
+    // pattern 같은 특수 모드는 나중에 패턴 브러시 구현 시 분기
+    if (brushColor !== "pattern") {
+      ctx.strokeStyle = brushColor;
     }
-
-    const overlay = overlayRef.current;
-    const octx = overlay.getContext("2d")!;
-    octx.clearRect(0, 0, overlay.width, overlay.height);
-
-    const drawCtx = ctxRef.current;
-    const drawCanvas = drawRef.current;
-    if (!drawCtx || !drawCanvas) return;
-
-    const width = drawCanvas.width;
-    const height = drawCanvas.height;
-
-    let hands = results.multiHandLandmarks ?? [];
-
-    if (usingTasksRef.current && hands.length > 0) {
-      hands = hands.map((h) =>
-        h.map((p) => ({ ...p, x: 1 - p.x }))
-      );
-    }
-
-    setHandsCount(hands.length);
-
-    if (hands.length === 0) {
-      setPinchActive(false);
-      lastPointRef.current = [];
-      smoothLandmarksRef.current = null;
-      lastPinchRef.current = [];
-      gestureOnCountRef.current = [];
-      gestureOffCountRef.current = [];
-      return;
-    }
-
-    /* ------ Smoothing ------ */
-    const prevHands = smoothLandmarksRef.current;
-    const alphaBase = 0.5;
-
-    const smoothedHands = hands.map((hand, hi) => {
-      const prev = prevHands?.[hi];
-      const ref = getPalmWidth(hand);
-
-      return hand.map((p, i) => {
-        const prevP = prev?.[i];
-        if (!prevP) return p;
-        const dx = p.x - prevP.x;
-        const dy = p.y - prevP.y;
-        const motion =
-          Math.hypot(dx, dy) / Math.max(0.0001, ref);
-        const adaptive = clamp(
-          alphaBase + clamp(motion * 0.5, 0, 0.3),
-          0.4,
-          0.8
-        );
-        return {
-          x: prevP.x + adaptive * (p.x - prevP.x),
-          y: prevP.y + adaptive * (p.y - prevP.y),
-          z: p.z,
-        };
-      });
-    });
-
-    smoothLandmarksRef.current = smoothedHands;
-
-    /* Landmark Overlay */
-    if (showOverlayRef.current && drawLandmarksRef.current) {
-      for (const lm of smoothedHands) {
-        drawLandmarksRef.current(octx, lm, {
-          color: "#00E1FF",
-          lineWidth: 2,
-        });
-      }
-    }
-
-    /* ------ Gesture + Drawing ------ */
-    const nextPinchArr: boolean[] = [];
-    const lastPinchArr = lastPinchRef.current;
-    const lastPoints = lastPointRef.current;
-
-    const onCounts = gestureOnCountRef.current;
-    const offCounts = gestureOffCountRef.current;
-
-    smoothedHands.forEach((lm, hi) => {
-      const indexTip = lm[8];
-      if (!indexTip) {
-        nextPinchArr[hi] = false;
-        lastPoints[hi] = null;
-        return;
-      }
-
-      const ref = getPalmWidth(lm);
-      const palmCenter = getPalmCenter(lm);
-
-      const dIndex = fingerTipDistance(
-        lm,
-        8,
-        palmCenter,
-        ref
-      );
-      const indexExtended = dIndex > 0.3;
-
-      const gestureActive = indexExtended;
-
-      const lastState = lastPinchArr[hi] ?? false;
-      onCounts[hi] = onCounts[hi] ?? 0;
-      offCounts[hi] = offCounts[hi] ?? 0;
-
-      if (gestureActive) {
-        onCounts[hi]++;
-        offCounts[hi] = 0;
-      } else {
-        offCounts[hi]++;
-        onCounts[hi] = 0;
-      }
-
-      let next = lastState;
-      if (!lastState && onCounts[hi] >= 2) next = true;
-      if (lastState && offCounts[hi] >= 3) next = false;
-
-      nextPinchArr[hi] = next;
-
-      /* Draw */
-      const px = clamp(indexTip.x, 0, 1) * width;
-      const py = clamp(indexTip.y, 0, 1) * height;
-      const shouldDraw =
-        gestureEnabledRef.current ? next : false;
-      const lastPoint = lastPoints[hi] ?? null;
-
-      if (shouldDraw && lastPoint) {
-        drawCtx.beginPath();
-        drawCtx.moveTo(lastPoint.x, lastPoint.y);
-        drawCtx.lineTo(px, py);
-        drawCtx.stroke();
-      }
-
-      lastPoints[hi] = { x: px, y: py };
-    });
-
-    lastPinchRef.current = nextPinchArr;
-    lastPointRef.current = lastPoints;
-    setPinchActive(nextPinchArr.some(Boolean));
-  }, []);
+    ctx.lineWidth = brushSize;
+  }, [brushColor, brushSize]);
 
   /* -------------------- Clear 버튼 -------------------- */
   const handleClear = useCallback(() => {
     const draw = drawRef.current;
     const ctx = draw.getContext("2d")!;
     ctx.clearRect(0, 0, draw.width, draw.height);
+    setUndoStack([]);
+    setRedoStack([]);
+  }, []);
+
+  /* -------------------- Undo / Redo -------------------- */
+  const handleUndo = useCallback(() => {
+    if (undoStack.length === 0) return;
+    const draw = drawRef.current;
+    const ctx = draw.getContext("2d")!;
+    const last = undoStack[undoStack.length - 1];
+
+    const current = draw.toDataURL();
+    setRedoStack((prev) => [...prev, current]);
+    setUndoStack((prev) => prev.slice(0, -1));
+
+    const img = new Image();
+    img.src = last;
+    img.onload = () => {
+      ctx.clearRect(0, 0, draw.width, draw.height);
+      ctx.drawImage(img, 0, 0);
+    };
+  }, [undoStack]);
+
+  const handleRedo = useCallback(() => {
+    if (redoStack.length === 0) return;
+    const draw = drawRef.current;
+    const ctx = draw.getContext("2d")!;
+    const last = redoStack[redoStack.length - 1];
+
+    const current = draw.toDataURL();
+    setUndoStack((prev) => [...prev, current]);
+    setRedoStack((prev) => prev.slice(0, -1));
+
+    const img = new Image();
+    img.src = last;
+    img.onload = () => {
+      ctx.clearRect(0, 0, draw.width, draw.height);
+      ctx.drawImage(img, 0, 0);
+    };
+  }, [redoStack]);
+
+  /* -------------------- Save -------------------- */
+  const handleSave = useCallback(() => {
+    const canvas = drawRef.current;
+    const url = canvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `graffiti-${Date.now()}.png`;
+    a.click();
   }, []);
 
   /* --------------------------------------------------- */
@@ -517,6 +592,7 @@ export default function GraffitiClient() {
   /* --------------------------------------------------- */
 
   const videoReady = !showIntro && fingerAnimationDone;
+
   return (
     <div
       className="relative w-full h-dvh"
@@ -536,58 +612,51 @@ export default function GraffitiClient() {
                 />
               )}
 
-                    {/* ------------------ Intro가 끝난 후 나타나는 박스 ------------------ */}
-                    {introFinished && !fingerAnimationDone && (
-                      <div className="pointer-events-none inset-x-0 top-0 flex justify-center z-30 opacity-0 animate-fadeIn">
-                        <div
-                          className="
-                            pointer-events-auto
-                            flex flex-col items-center justify-center gap-6 px-6 py-8
-                          
-                            /* 모바일 기본 크기 */
-                            w-[260px] h-[280px]
-
-                            /* 태블릿 이상 */
-                            sm:w-[380px] sm:h-[400px]
-
-                            /* 데스크탑 */
-                            md:w-[500px] md:h-[480px]
-
-                            bg-white/40
-                            border border-white/80
-                            backdrop-blur-[6px]
-                            shadow-[0_20px_60px_rgba(0,0,0,0.35)]
-                          "
-                        >
-                          <p className="text-white text-center text-[18px] md:text-[24px] font-semibold">
-                            손 모양을 따라해 보세요.
-                          </p>
-                          <div className="relative w-[200px] h-[180px] flex items-center justify-center">
-                            <svg
-                              viewBox="0 0 200 150"
-                              className="w-full h-full"
-                              fill="none"
-                              aria-hidden="true"
-                            >
-                              <path
-                                d="M10 135 L130 15 L175 95"
-                                stroke="rgba(255,255,255,0.2)"
-                                strokeWidth="8"
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                className="finger-trace-path"
-                              />
-                            </svg>
-                            <img
-                              src="/icons/graffiti_finger.png"
-                              alt="손가락 시연 아이콘"
-                              className="finger-trace-icon absolute left-1/2 top-1/2 w-[64px] h-[64px]"
-                              onAnimationEnd={handleFingerAnimationComplete}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
+              {/* Intro가 끝난 후 나타나는 박스 */}
+              {introFinished && !fingerAnimationDone && (
+                <div className="pointer-events-none inset-x-0 top-0 flex justify-center z-30 opacity-0 animate-fadeIn">
+                  <div
+                    className="
+                      pointer-events-auto
+                      flex flex-col items-center justify-center gap-6 px-6 py-8
+                      w-[260px] h-[280px]
+                      sm:w-[380px] sm:h-[400px]
+                      md:w-[500px] md:h-[480px]
+                      bg-white/40
+                      border border-white/80
+                      backdrop-blur-[6px]
+                      shadow-[0_20px_60px_rgba(0,0,0,0.35)]
+                    "
+                  >
+                    <p className="text-white text-center text-[18px] md:text-[24px] font-semibold">
+                      손 모양을 따라해 보세요.
+                    </p>
+                    <div className="relative w-[200px] h-[180px] flex items-center justify-center">
+                      <svg
+                        viewBox="0 0 200 150"
+                        className="w-full h-full"
+                        fill="none"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M10 135 L130 15 L175 95"
+                          stroke="rgba(255,255,255,0.2)"
+                          strokeWidth="8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="finger-trace-path"
+                        />
+                      </svg>
+                      <img
+                        src="/icons/graffiti_finger.png"
+                        alt="손가락 시연 아이콘"
+                        className="finger-trace-icon absolute left-1/2 top-1/2 w-[64px] h-[64px]"
+                        onAnimationEnd={handleFingerAnimationComplete}
+                      />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* 카메라 허용 안내 박스 */}
               {showIntro && (
@@ -607,7 +676,8 @@ export default function GraffitiClient() {
                     손동작 인식을 위해 카메라 접근을 허용해주세요.
                   </p>
                   <p className="md:hidden text-black text-[18px] text-center">
-                    손동작 인식을 위해<br />
+                    손동작 인식을 위해
+                    <br />
                     카메라 접근을 허용해주세요.
                   </p>
                 </div>
@@ -639,6 +709,151 @@ export default function GraffitiClient() {
           className="absolute inset-0 w-full h-full"
         />
       </div>
+
+      {videoReady && (
+        <div className="pointer-events-auto absolute inset-x-0 bottom-20 flex justify-center">
+          <div
+            className="
+              w-[820px] h-[90px]
+              flex-shrink-0
+              rounded-[118px]
+              border border-white
+              bg-[rgba(255,255,255,0.40)]
+              shadow-[0_0_50px_20px_rgba(0,0,0,0.25)]
+              backdrop-blur-[4px]
+              px-6
+              flex items-center justify-between
+            "
+          >
+            {/* Undo / Redo */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleUndo}
+                aria-label="Undo"
+                className="p-2 hover:opacity-75 transition"
+              >
+                <img src="/icons/undo_white.svg" className="w-[36px] h-[36px]" />
+              </button>
+
+              <button
+                onClick={handleRedo}
+                aria-label="Redo"
+                className="p-2 hover:opacity-75 transition"
+              >
+                <img src="/icons/redo_white.svg" className="w-[28px] h-[28px]" />
+              </button>
+            </div>
+
+            {/* Color List */}
+            <div className="flex items-center gap-3">
+              {COLOR_PALETTE.map((color) => (
+                <button
+                  key={color}
+                  type="button"
+                  className="
+                    h-[30px] w-[30px]
+                    rounded-full border-2
+                    transition
+                  "
+                  style={{
+                    backgroundColor: color,
+                    borderColor:
+                      brushColor === color ? "#ffffff" : "rgba(255,255,255,0.3)",
+                  }}
+                  onClick={() => setBrushColor(color)}
+                />
+              ))}
+
+              {customPatterns.map((hex) => (
+                <button
+                  key={hex}
+                  className="h-[30px] w-[30px] rounded-full border-2 transition"
+                  style={{
+                    backgroundColor: hex,
+                    borderColor:
+                      brushColor === hex ? "#ffffff" : "rgba(255,255,255,0.3)",
+                  }}
+                  onClick={() => setBrushColor(hex)}
+                />
+              ))}
+
+              {/* 패턴 브러시 */}
+              <button
+                type="button"
+                className="
+                  h-[30px] w-[30px]
+                  rounded-full border-2 transition
+                "
+                style={{
+                  borderColor:
+                    brushColor === "pattern"
+                      ? "#ffffff"
+                      : "rgba(255,255,255,0.3)",
+                  background:
+                    "url('/textures/pattern.png') lightgray -2.561px -5.025px / 113.333% 121.791% no-repeat",
+                }}
+                onClick={() => setBrushColor("pattern")}
+              />
+            </div>
+
+            {/* Hex Pattern Add Button */}
+            <button
+              onClick={() => {
+                const hex = prompt("HEX 코드를 입력하세요 (예: #FF00AA)");
+                if (hex && /^#?[0-9A-Fa-f]{6}$/.test(hex)) {
+                  const normalized = hex.startsWith("#") ? hex : "#" + hex;
+                  setCustomPatterns((prev) => [...prev, normalized]);
+                }
+              }}
+              className="
+                px-3 py-1
+                rounded-full border border-white/50
+                text-white text-xs
+                bg-white/10
+                hover:bg-white/20 transition
+              "
+            >
+              + HEX
+            </button>
+
+            {/* Stroke Size */}
+            <div className="flex items-center gap-2 w-[150px]">
+              <input
+                type="range"
+                min={2}
+                max={40}
+                value={brushSize}
+                onChange={(e) => setBrushSize(Number(e.target.value))}
+                className="w-full accent-white"
+              />
+              <span className="text-white text-sm">{brushSize}</span>
+            </div>
+
+            {/* Trash + Save */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={handleClear}
+                aria-label="Clear"
+                className="p-2 hover:opacity-75 transition"
+              >
+                <img src="/icons/trash.svg" className="w-6 h-6" />
+              </button>
+
+              <button
+                onClick={handleSave}
+                className="
+                  px-4 py-2
+                  rounded-full border border-white text-white text-sm
+                  bg-white/20 hover:bg-white/30
+                  backdrop-blur-sm transition
+                "
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
