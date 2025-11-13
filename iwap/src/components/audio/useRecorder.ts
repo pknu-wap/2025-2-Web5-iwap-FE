@@ -1,11 +1,28 @@
-import { useRef, useState } from "react";
-import * as Tone from "tone";
+import { useEffect, useRef, useState } from "react";
 
 export function useRecorder() {
   const [isRecording, setIsRecording] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [audioFile, setAudioFile] = useState<File | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const objectUrlRef = useRef<string | null>(null);
+
+  const revokeObjectUrl = () => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current);
+      objectUrlRef.current = null;
+    }
+  };
+
+  const assignAudioFile = (file: File) => {
+    revokeObjectUrl();
+    const nextUrl = URL.createObjectURL(file);
+    objectUrlRef.current = nextUrl;
+    setAudioFile(file);
+    setAudioUrl(nextUrl);
+    setIsRecording(false);
+  };
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -33,8 +50,14 @@ export function useRecorder() {
     const handleStop = () => {
       const outType = chosenMime || (recorder as any).mimeType || "audio/webm";
       const blob = new Blob(chunks, { type: outType });
-      setAudioUrl(URL.createObjectURL(blob));
-      setIsRecording(false);
+      const subtype = outType.includes("/") ? outType.split("/")[1] : "webm";
+      const extension = subtype.split(";")[0] || "webm";
+      const file = new File(
+        [blob],
+        `voice-${Date.now()}.${extension}`,
+        { type: outType }
+      );
+      assignAudioFile(file);
       recorder.removeEventListener("dataavailable", handleData);
       recorder.removeEventListener("stop", handleStop);
     };
@@ -64,5 +87,23 @@ export function useRecorder() {
     mediaRecorderRef.current = null;
   };
 
-  return { isRecording, audioUrl, startRecording, stopRecording };
+  const setAudioFromFile = (file: File | null) => {
+    if (!file) return;
+    assignAudioFile(file);
+  };
+
+  useEffect(() => {
+    return () => {
+      revokeObjectUrl();
+    };
+  }, []);
+
+  return {
+    isRecording,
+    audioUrl,
+    audioFile,
+    startRecording,
+    stopRecording,
+    setAudioFromFile,
+  };
 }
