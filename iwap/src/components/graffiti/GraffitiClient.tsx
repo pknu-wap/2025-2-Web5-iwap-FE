@@ -23,6 +23,67 @@ function getPalmWidth(landmarks: { x: number; y: number }[]) {
   return Math.max(0.0001, distance(a, b));
 }
 
+function getPalmCenter(landmarks: { x: number; y: number }[]) {
+  const idx = [0, 5, 9, 13, 17];
+  let cx = 0;
+  let cy = 0;
+  let n = 0;
+  for (const i of idx) {
+    const p = landmarks[i];
+    if (p) {
+      cx += p.x;
+      cy += p.y;
+      n += 1;
+    }
+  }
+  if (n === 0) return { x: 0.5, y: 0.5 };
+  return { x: cx / n, y: cy / n };
+}
+
+function isFingerExtended(
+  landmarks: { x: number; y: number }[],
+  tipIndex: number,
+  baseIndex: number,
+  palmCenter: { x: number; y: number },
+  ref: number,
+  threshold: number
+) {
+  const tip = landmarks[tipIndex];
+  const base = landmarks[baseIndex];
+  if (!tip || !base) return false;
+  const dTipPalm = distance(tip, palmCenter) / Math.max(0.0001, ref);
+  return dTipPalm > threshold;
+}
+
+function isFingerExtendedByDistance(
+  landmarks: { x: number; y: number }[],
+  pipIndex: number,
+  tipIndex: number,
+  palmCenter: { x: number; y: number },
+  ref: number,
+  minTip: number,
+  delta: number
+) {
+  const tip = landmarks[tipIndex];
+  const pip = landmarks[pipIndex];
+  if (!tip || !pip) return false;
+  const norm = Math.max(0.0001, ref);
+  const dTip = distance(tip, palmCenter) / norm;
+  const dPip = distance(pip, palmCenter) / norm;
+  return dTip > Math.max(minTip, dPip + delta);
+}
+
+function fingerTipDistance(
+  landmarks: { x: number; y: number }[],
+  tipIndex: number,
+  palmCenter: { x: number; y: number },
+  ref: number
+) {
+  const tip = landmarks[tipIndex];
+  if (!tip) return 0;
+  return distance(tip, palmCenter) / Math.max(0.0001, ref);
+}
+
 export default function GraffitiClient() {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
@@ -39,7 +100,7 @@ export default function GraffitiClient() {
   const [streamError, setStreamError] = useState<string | null>(null);
   const [brushColor, setBrushColor] = useState("#ff315a");
   const [brushSize, setBrushSize] = useState(6);
-  const [isDrawing, setIsDrawing] = useState(false);
+  
   const [gestureEnabled, setGestureEnabled] = useState(true);
   const [pinchActive, setPinchActive] = useState(false);
   const [showOverlay, setShowOverlay] = useState(true);
@@ -48,13 +109,15 @@ export default function GraffitiClient() {
 
   const lastPointRef = useRef<Array<{ x: number; y: number } | null>>([]);
   const lastPinchRef = useRef<Array<boolean>>([]);
+  const gestureOnCountRef = useRef<number[]>([]);
+  const gestureOffCountRef = useRef<number[]>([]);
   const fpsCounter = useRef({ frames: 0, last: typeof performance !== "undefined" ? performance.now() : 0 });
   const gestureEnabledRef = useRef(gestureEnabled);
-  const isDrawingRef = useRef(isDrawing);
+  
   const showOverlayRef = useRef(showOverlay);
 
   useEffect(() => { gestureEnabledRef.current = gestureEnabled; }, [gestureEnabled]);
-  useEffect(() => { isDrawingRef.current = isDrawing; }, [isDrawing]);
+  
   useEffect(() => { showOverlayRef.current = showOverlay; }, [showOverlay]);
 
   const updateCanvasSize = useCallback(() => {
@@ -123,6 +186,8 @@ export default function GraffitiClient() {
       lastPointRef.current = [];
       smoothLandmarksRef.current = null;
       lastPinchRef.current = [];
+      gestureOnCountRef.current = [];
+      gestureOffCountRef.current = [];
       return;
     }
 
@@ -151,35 +216,61 @@ export default function GraffitiClient() {
       }
     }
 
-    // Pinch + drawing per hand
-    const onThresh = 0.5;
-    const offThresh = 0.6;
+    // Gesture + drawing per hand (draw when only index is extended)
     const nextPinchArr: boolean[] = [];
     const lastPinchArr = lastPinchRef.current;
     const lastPoints = lastPointRef.current;
+    const onCounts = gestureOnCountRef.current;
+    const offCounts = gestureOffCountRef.current;
 
     smoothedHands.forEach((lm, hi) => {
-      const thumb = lm[4];
-      const index = lm[8];
+      const indexTip = lm[8];
+      if (!indexTip) {
+        nextPinchArr[hi] = false;
+        lastPoints[hi] = null;
+        return;
+      }
       const ref = getPalmWidth(lm);
-      const d = distance(thumb, index);
-      const dn = d / ref;
-      const currentlyPinching = dn < onThresh;
-      const lastPin = lastPinchArr[hi] ?? false;
-      const pinchOn = currentlyPinching || (lastPin && dn < onThresh * 1.05);
-      const pinchOff = !currentlyPinching && dn > offThresh;
-      let next = lastPin;
-      if (!lastPin && pinchOn) next = true;
-      if (lastPin && pinchOff) next = false;
+      const palmCenter = getPalmCenter(lm);
+
+      const indexTipDist = fingerTipDistance(lm, 8, palmCenter, ref);
+      const indexExtended = indexTipDist > 0.3;
+      const middleTipDist = fingerTipDistance(lm, 12, palmCenter, ref);
+      const ringTipDist = fingerTipDistance(lm, 16, palmCenter, ref);
+      const pinkyTipDist = fingerTipDistance(lm, 20, palmCenter, ref);
+      const thumbTipDist = fingerTipDistance(lm, 4, palmCenter, ref);
+
+      const middleExtended = isFingerExtendedByDistance(lm, 10, 12, palmCenter, ref, 0.5, 0.05);
+      const ringExtended = isFingerExtendedByDistance(lm, 14, 16, palmCenter, ref, 0.48, 0.05);
+      const pinkyExtended = isFingerExtendedByDistance(lm, 18, 20, palmCenter, ref, 0.46, 0.05);
+      const thumbExtended = isFingerExtendedByDistance(lm, 3, 4, palmCenter, ref, 0.54, 0.05);
+
+      const middleDown = (!middleExtended && middleTipDist < 0.36) || middleTipDist + 0.01 < indexTipDist;
+      const ringDown = (!ringExtended && ringTipDist < 0.34) || ringTipDist + 0.015 < indexTipDist;
+      const pinkyDown = (!pinkyExtended && pinkyTipDist < 0.32) || pinkyTipDist + 0.02 < indexTipDist;
+      const thumbDown = (!thumbExtended && thumbTipDist < 0.3) || thumbTipDist + 0.02 < indexTipDist;
+
+      const gestureActive = indexExtended && middleDown && ringDown && pinkyDown && thumbDown;
+
+      // Debounce: require 2 consecutive active frames to turn on, 3 inactive to turn off
+      const lastState = lastPinchArr[hi] ?? false;
+      onCounts[hi] = onCounts[hi] ?? 0;
+      offCounts[hi] = offCounts[hi] ?? 0;
+      if (gestureActive) { onCounts[hi] = onCounts[hi] + 1; offCounts[hi] = 0; }
+      else { offCounts[hi] = offCounts[hi] + 1; onCounts[hi] = 0; }
+      let next = lastState;
+      if (!lastState && onCounts[hi] >= 2) next = true;
+      if (lastState && offCounts[hi] >= 3) next = false;
       nextPinchArr[hi] = next;
 
-      const px = clamp(index.x, 0, 1) * width;
-      const py = clamp(index.y, 0, 1) * height;
-      const shouldDraw = (gestureEnabledRef.current ? next : false) || isDrawingRef.current;
-      const last = lastPoints[hi] ?? null;
-      if (shouldDraw && last) {
+      // Draw using the index fingertip position
+      const px = clamp(indexTip.x, 0, 1) * width;
+      const py = clamp(indexTip.y, 0, 1) * height;
+      const shouldDraw = gestureEnabledRef.current ? next : false;
+      const lastPoint = lastPoints[hi] ?? null;
+      if (shouldDraw && lastPoint) {
         drawCtx.beginPath();
-        drawCtx.moveTo(last.x, last.y);
+        drawCtx.moveTo(lastPoint.x, lastPoint.y);
         drawCtx.lineTo(px, py);
         drawCtx.stroke();
       }
@@ -354,13 +445,10 @@ export default function GraffitiClient() {
     ctx.clearRect(0, 0, draw.width, draw.height);
   }, []);
 
-  const toggleDrawing = useCallback(() => setIsDrawing((v) => !v), []);
+  
 
   const ui = useMemo(() => (
     <div className="absolute left-4 top-4 z-20 flex gap-3 items-center bg-black/40 backdrop-blur px-3 py-2 rounded-md text-white">
-      <button onClick={toggleDrawing} className={`px-3 py-1 rounded font-medium ${isDrawing ? "bg-emerald-500" : "bg-slate-600"}`} title="Toggle drawing manually">
-        {isDrawing ? "Drawing" : "Idle"}
-      </button>
       <label className="flex items-center gap-2 text-sm">
         Gesture
         <input type="checkbox" checked={gestureEnabled} onChange={(e) => setGestureEnabled(e.target.checked)} />
@@ -378,16 +466,16 @@ export default function GraffitiClient() {
         Overlay
         <input type="checkbox" checked={showOverlay} onChange={(e) => setShowOverlay(e.target.checked)} />
       </label>
-      <div className="text-xs opacity-80">FPS {fps} • Hands {handsCount} • {usingTasksRef.current ? "Tasks" : "Hands"}</div>
-      <div className={`text-xs ${pinchActive ? "text-emerald-300" : "text-slate-300"}`}>pinch {pinchActive ? "ON" : "OFF"}</div>
+      <div className="text-xs opacity-80">FPS {fps} ? Hands {handsCount} ? {usingTasksRef.current ? "Tasks" : "Hands"}</div>
+      <div className={`text-xs ${pinchActive ? "text-emerald-300" : "text-slate-300"}`}>gesture {pinchActive ? "ON" : "OFF"}</div>
     </div>
-  ), [brushColor, brushSize, fps, handleClear, isDrawing, pinchActive, showOverlay, toggleDrawing, gestureEnabled]);
+  ), [brushColor, brushSize, fps, handleClear, pinchActive, showOverlay, gestureEnabled]);
 
   return (
     <div className="relative w-full min-h-[calc(100dvh-64px)] flex items-center justify-center bg-stone-900 text-white overflow-hidden">
       <div className="absolute bottom-4 left-4 z-20 text-stone-200 text-sm bg-black/40 backdrop-blur px-3 py-2 rounded-md">
         <div className="font-semibold">Graffiti</div>
-        <div>Pinch thumb+index to draw. Allow camera.</div>
+        <div>Extend only index to draw. Allow camera.</div>
         <div>Use good lighting for accuracy.</div>
       </div>
 
