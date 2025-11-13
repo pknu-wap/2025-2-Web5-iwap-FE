@@ -2,16 +2,7 @@
 
 
 
-import Link from "next/link";
-
-import { CanvasSection } from "./components/CanvasSection";
-
-import { MessageSection } from "./components/MessageSection";
-
-import { TemplateSelectorSection } from "./components/TemplateSelectorSection";
-
-import { ToolControlsSection } from "./components/ToolControlsSection";
-
+import JSZip from "jszip";
 import {
   useCallback,
   useEffect,
@@ -21,9 +12,19 @@ import {
   type ChangeEvent,
   type PointerEvent,
 } from "react";
+
+import { CanvasSection } from "./components/CanvasSection";
+import { MessageSection } from "./components/MessageSection";
+import { TemplateSelectorSection } from "./components/TemplateSelectorSection";
+import { ToolControlsSection } from "./components/ToolControlsSection";
+import { computeDrawingFourier, computeTextFourier } from "./fourier";
 import {
-  type FontOption,
+  type FourierCoefficient,
+  type FourierMetadata,
   type PostcardTemplate,
+  type Stroke,
+  type StrokeMode,
+  type StrokePoint,
   type Tool,
 } from "./types";
 
@@ -174,6 +175,11 @@ const BACKGROUND_COLORS = [
 ];
 
 const HEX_PATTERN = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+const TRANSMISSION_STEPS = [
+  { stage: "송신", action: "감정을 '그림·글'로 표현", feeling: "\"내 마음을 전송한다\"" },
+  { stage: "변환", action: "Fourier로 파형화", feeling: "\"내 마음이 신호로 바뀐다\"" },
+  { stage: "수신", action: "Fourier를 재생", feeling: "\"상대의 감정이 내 앞에서 풀린다\"" },
+];
 
 function normalizeHex(value: string) {
   const trimmed = value.trim();
@@ -181,22 +187,12 @@ function normalizeHex(value: string) {
   return trimmed.startsWith("#") ? trimmed : `#${trimmed}`;
 }
 
-type StrokeMode = "draw" | "erase";
-
-type StrokePoint = {
-  x: number;
-  y: number;
-};
-
-type Stroke = {
-  id: number;
-  mode: StrokeMode;
-  color: string;
-  sizeRatio: number;
-  points: StrokePoint[];
-};
-
 const STROKE_ERASER_MIN_PX = 12;
+type FourierMetadataDraft = Omit<FourierMetadata, "createdAt">;
+
+function formatTimestampForFile(value: string) {
+  return value.replace(/[:.]/g, "-");
+}
 
 export default function ThisIsForUPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState(
@@ -241,7 +237,7 @@ export default function ThisIsForUPage() {
   const [signature, setSignature] = useState("");
   const [recipient, setRecipient] = useState("");
 
-  const [fontFamily, setFontFamily] = useState(FONT_OPTIONS[0].id);
+  const [fontFamily] = useState(FONT_OPTIONS[0].id);
 
   const [backAlignment, setBackAlignment] = useState<
 
@@ -278,6 +274,13 @@ export default function ThisIsForUPage() {
   const lastTemplateIdRef = useRef<string | null>(null);
 
   const [strokes, setStrokes] = useState<Stroke[]>([]);
+  const [receiverMetadata, setReceiverMetadata] = useState<FourierMetadata | null>(null);
+  const [receiverPreviewUrl, setReceiverPreviewUrl] = useState<string | null>(null);
+  const receiverCanvasRef = useRef<HTMLCanvasElement>(null);
+  const receiverAnimationRef = useRef<number | null>(null);
+  const [isPlayingEmotion, setIsPlayingEmotion] = useState(false);
+  const [isPackaging, setIsPackaging] = useState(false);
+  const [lastFourierTimestamp, setLastFourierTimestamp] = useState<string | null>(null);
 
 
 
@@ -288,6 +291,73 @@ export default function ThisIsForUPage() {
   const isBackgroundHexValid = HEX_PATTERN.test(normalizedBackgroundHex);
   const normalizedTextHex = normalizeHex(customTextHex);
   const isCustomTextHexValid = HEX_PATTERN.test(normalizedTextHex);
+  const activeFontOption = useMemo(
+    () =>
+      FONT_OPTIONS.find((option) => option.id === fontFamily) ?? FONT_OPTIONS[0],
+    [fontFamily],
+  );
+  const drawingFourier = useMemo(
+    () => computeDrawingFourier(strokes),
+    [strokes],
+  );
+  const textFourier = useMemo(
+    () => computeTextFourier(message, activeFontOption.css),
+    [message, activeFontOption.css],
+  );
+  const drawingPointCount = useMemo(
+    () =>
+      strokes.reduce((total, stroke) => {
+        if (stroke.mode === "erase") return total;
+        return total + stroke.points.length;
+      }, 0),
+    [strokes],
+  );
+  const metadataDraft = useMemo<FourierMetadataDraft>(
+    () => ({
+      version: 1,
+      templateId: template.id,
+      templateName: template.name,
+      background: frontBackgroundColor,
+      drawingFourier,
+      textFourier,
+      recipient: recipient.trim() || undefined,
+      signature: signature.trim() || undefined,
+      messagePreview: message.trim() ? message.trim().slice(0, 160) : undefined,
+    }),
+    [
+      drawingFourier,
+      frontBackgroundColor,
+      message,
+      recipient,
+      signature,
+      template.id,
+      template.name,
+      textFourier,
+    ],
+  );
+  const hasFourierData = drawingFourier.length > 0 || textFourier.length > 0;
+  const lastEncodedLabel = useMemo(() => {
+    if (!lastFourierTimestamp) return "대기 중";
+    const date = new Date(lastFourierTimestamp);
+    if (Number.isNaN(date.getTime())) return lastFourierTimestamp;
+    return date.toLocaleString();
+  }, [lastFourierTimestamp]);
+  const buildMetadataPayload = useCallback(
+    (): FourierMetadata => ({
+      ...metadataDraft,
+      createdAt: new Date().toISOString(),
+    }),
+    [metadataDraft],
+  );
+  const metadataPreviewString = useMemo(
+    () =>
+      JSON.stringify(
+        { ...metadataDraft, createdAt: "YYYY-MM-DDTHH:mmZ" },
+        null,
+        2,
+      ),
+    [metadataDraft],
+  );
   const applyBackgroundColor = useCallback((color: string) => {
     const normalized = normalizeHex(color);
     if (!HEX_PATTERN.test(normalized)) return;
@@ -347,6 +417,33 @@ export default function ThisIsForUPage() {
       if (!HEX_PATTERN.test(value)) return;
       setBackgroundHexInput(value);
     },
+    [],
+  );
+  const captureFrontPreview = useCallback(() => {
+    const canvas = frontCanvasRef.current;
+    if (!canvas) return null;
+    try {
+      return canvas.toDataURL("image/png");
+    } catch (error) {
+      console.warn("Failed to capture front preview", error);
+      return null;
+    }
+  }, []);
+  const canvasToBlob = useCallback(
+    (canvas: HTMLCanvasElement) =>
+      new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob(
+          (blob) => {
+            if (blob) {
+              resolve(blob);
+            } else {
+              reject(new Error("blob이 만들어지지 않았어요."));
+            }
+          },
+          "image/png",
+          1,
+        );
+      }),
     [],
   );
 
@@ -920,11 +1017,7 @@ export default function ThisIsForUPage() {
 
 
 
-    const fontOption =
-
-      FONT_OPTIONS.find((option) => option.id === fontFamily) ??
-
-      FONT_OPTIONS[0];
+    const fontOption = activeFontOption;
 
     const fontSize = 24 * dpr;
 
@@ -1056,29 +1149,17 @@ export default function ThisIsForUPage() {
     }
 
   }, [
-
+    activeFontOption,
     backAlignment,
-
     canvasSize.height,
-
     canvasSize.width,
-
-    fontFamily,
-
     message,
-
     recipient,
-
     signature,
-
     frontBackgroundColor,
-
     template.lineColor,
-
     template.stampColor,
-
     textColor,
-
   ]);
 
 
@@ -1107,8 +1188,7 @@ export default function ThisIsForUPage() {
       const widthPx = Math.floor(canvasSize.width * dpr);
       const heightPx = Math.floor(canvasSize.height * dpr);
       const margin = 48 * dpr;
-      const fontOption =
-        FONT_OPTIONS.find((option) => option.id === fontFamily) ?? FONT_OPTIONS[0];
+      const fontOption = activeFontOption;
       const fontSize = 24 * dpr;
       const lineHeight = fontSize * 1.4;
       const writingWidth = widthPx - margin * 2;
@@ -1133,9 +1213,9 @@ export default function ThisIsForUPage() {
       } // else ignore extra input
     },
     [
+      activeFontOption,
       canvasSize.height,
       canvasSize.width,
-      fontFamily,
       signature,
     ],
   );
@@ -1157,6 +1237,194 @@ export default function ThisIsForUPage() {
     };
 
   }, []);
+  useEffect(() => {
+    return () => {
+      if (receiverAnimationRef.current) {
+        window.cancelAnimationFrame(receiverAnimationRef.current);
+        receiverAnimationRef.current = null;
+      }
+    };
+  }, []);
+  useEffect(() => {
+    if (!isPlayingEmotion || !receiverMetadata) {
+      if (receiverAnimationRef.current) {
+        window.cancelAnimationFrame(receiverAnimationRef.current);
+        receiverAnimationRef.current = null;
+      }
+      return;
+    }
+    const canvas = receiverCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const width = 480;
+    const height = 320;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+
+    const drawingTrail: Array<{ x: number; y: number }> = [];
+    const textTrail: Array<{ x: number; y: number }> = [];
+    const drawingCoeffs = receiverMetadata.drawingFourier.slice(0, 28);
+    const textCoeffs = receiverMetadata.textFourier.slice(0, 28);
+    let time = 0;
+
+    const drawEpicycles = (
+      coefficients: FourierCoefficient[],
+      originX: number,
+      originY: number,
+      scale: number,
+      circleColor: string,
+      vectorColor: string,
+    ) => {
+      let centerX = originX;
+      let centerY = originY;
+      coefficients.forEach((coeff, index) => {
+        const radius = Math.max(0, coeff.amp * scale);
+        const angle = coeff.freq * time + coeff.phase;
+        if (radius > 0.2) {
+          ctx.save();
+          ctx.strokeStyle = circleColor;
+          ctx.globalAlpha = 0.24;
+          ctx.lineWidth = index === 0 ? 2 : 1;
+          ctx.beginPath();
+          ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+        const tipX = centerX + Math.cos(angle) * radius;
+        const tipY = centerY + Math.sin(angle) * radius;
+        ctx.save();
+        ctx.strokeStyle = vectorColor;
+        ctx.globalAlpha = 0.55;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(centerX, centerY);
+        ctx.lineTo(tipX, tipY);
+        ctx.stroke();
+        ctx.restore();
+        centerX = tipX;
+        centerY = tipY;
+      });
+      return { x: centerX, y: centerY };
+    };
+
+    const render = () => {
+      receiverAnimationRef.current = window.requestAnimationFrame(render);
+      time += 0.015;
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, width, height);
+      const gradient = ctx.createLinearGradient(0, 0, width, height);
+      gradient.addColorStop(0, "#020617");
+      gradient.addColorStop(1, "#0f172a");
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+      ctx.strokeStyle = "rgba(255,255,255,0.04)";
+      ctx.strokeRect(0, 0, width, height);
+
+      if (drawingCoeffs.length) {
+        const head = drawEpicycles(
+          drawingCoeffs,
+          width * 0.32,
+          height * 0.42,
+          Math.min(width, height) * 0.38,
+          "rgba(255,255,255,0.45)",
+          "rgba(248,113,113,0.9)",
+        );
+        drawingTrail.push(head);
+        if (drawingTrail.length > 720) drawingTrail.shift();
+        ctx.save();
+        ctx.strokeStyle = "rgba(251,113,133,0.95)";
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        drawingTrail.forEach((point, index) => {
+          if (index === 0) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        });
+        ctx.stroke();
+        ctx.restore();
+        ctx.fillStyle = "#fff7ed";
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(248,250,252,0.8)";
+        ctx.font = "11px 'SUIT', sans-serif";
+        ctx.textAlign = "left";
+        ctx.fillText("앞면 · Fourier epicycles", 12, 20);
+      }
+
+      if (textCoeffs.length) {
+        const head = drawEpicycles(
+          textCoeffs,
+          width * 0.72,
+          height * 0.65,
+          Math.min(width, height) * 0.25,
+          "rgba(226,232,240,0.35)",
+          "rgba(165,180,252,0.95)",
+        );
+        textTrail.push(head);
+        if (textTrail.length > 560) textTrail.shift();
+        ctx.save();
+        ctx.strokeStyle = "rgba(191,219,254,0.9)";
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        textTrail.forEach((point, index) => {
+          if (index === 0) ctx.moveTo(point.x, point.y);
+          else ctx.lineTo(point.x, point.y);
+        });
+        ctx.stroke();
+        ctx.restore();
+        ctx.fillStyle = "#e0e7ff";
+        ctx.beginPath();
+        ctx.arc(head.x, head.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(226,232,240,0.85)";
+        ctx.font = "11px 'SUIT', sans-serif";
+        ctx.textAlign = "right";
+        ctx.fillText("뒷면 · 텍스트 epicycles", width - 12, height - 12);
+      }
+    };
+
+    render();
+
+    return () => {
+      if (receiverAnimationRef.current) {
+        window.cancelAnimationFrame(receiverAnimationRef.current);
+        receiverAnimationRef.current = null;
+      }
+    };
+  }, [isPlayingEmotion, receiverMetadata]);
+  useEffect(() => {
+    if (isPlayingEmotion) return;
+    const canvas = receiverCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const width = 480;
+    const height = 320;
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = width * dpr;
+    canvas.height = height * dpr;
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+    ctx.fillStyle = "#0b1120";
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = "rgba(255,255,255,0.04)";
+    ctx.fillRect(0, 0, width, height);
+    ctx.fillStyle = "rgba(255,255,255,0.82)";
+    ctx.font = "14px 'SUIT', sans-serif";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const message = receiverMetadata
+      ? "재생(Play Emotion) 버튼으로 Fourier epicycles를 복원해요."
+      : "먼저 Fourier 패키지를 생성해 주세요.";
+    ctx.fillText(message, width / 2, height / 2);
+  }, [isPlayingEmotion, receiverMetadata]);
 
 
 
@@ -1287,8 +1555,7 @@ export default function ThisIsForUPage() {
     ctx.fillRect(widthPx - margin - stampSize, margin, stampSize, stampSize);
     ctx.restore();
 
-    const fontOption =
-      FONT_OPTIONS.find((option) => option.id === fontFamily) ?? FONT_OPTIONS[0];
+    const fontOption = activeFontOption;
     const fontSize = 24 * dpr;
     const lineHeight = fontSize * 1.4;
     const writingWidth = widthPx - margin * 2;
@@ -1364,7 +1631,7 @@ export default function ThisIsForUPage() {
     backAlignment,
     canvasSize.height,
     canvasSize.width,
-    fontFamily,
+    activeFontOption,
     frontBackgroundColor,
     message,
     recipient,
@@ -1507,6 +1774,108 @@ export default function ThisIsForUPage() {
     builderRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   }, []);
+  const handleDownloadMetadataJson = useCallback(() => {
+    if (!hasFourierData) {
+      showStatus("먼저 앞면 그림이나 메시지로 Fourier 데이터를 만들어주세요.");
+      return;
+    }
+    const metadata = buildMetadataPayload();
+    const blob = new Blob([JSON.stringify(metadata, null, 2)], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const filename = `this-is-for-u-metadata-${formatTimestampForFile(metadata.createdAt)}.json`;
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+    setReceiverMetadata(metadata);
+    setLastFourierTimestamp(metadata.createdAt);
+    const preview = captureFrontPreview();
+    if (preview) {
+      setReceiverPreviewUrl(preview);
+    }
+    showStatus("Fourier metadata JSON을 저장했어요.");
+  }, [buildMetadataPayload, captureFrontPreview, hasFourierData, showStatus]);
+  const handleReceiverPreviewUpdate = useCallback(() => {
+    if (!hasFourierData) {
+      showStatus("먼저 그림과 메시지를 담아서 Fourier 데이터를 만들어주세요.");
+      return;
+    }
+    const metadata = buildMetadataPayload();
+    setReceiverMetadata(metadata);
+    setLastFourierTimestamp(metadata.createdAt);
+    const preview = captureFrontPreview();
+    if (preview) {
+      setReceiverPreviewUrl(preview);
+    }
+    showStatus("수신자 미리보기를 최신 Fourier 데이터로 맞췄어요.");
+  }, [buildMetadataPayload, captureFrontPreview, hasFourierData, showStatus]);
+  const handleDownloadEmotionPackage = useCallback(async () => {
+    if (!hasFourierData) {
+      showStatus("Fourier 데이터를 먼저 생성해주세요.");
+      return;
+    }
+    const frontCanvas = createFrontExportSnapshot();
+    const backCanvas = createBackExportSnapshot();
+    if (!frontCanvas || !backCanvas) {
+      showStatus("PNG 스냅샷을 만들 수 없어요.");
+      return;
+    }
+    const metadata = buildMetadataPayload();
+    try {
+      setIsPackaging(true);
+      const [frontBlob, backBlob] = await Promise.all([
+        canvasToBlob(frontCanvas),
+        canvasToBlob(backCanvas),
+      ]);
+      const metadataBlob = new Blob([JSON.stringify(metadata, null, 2)], {
+        type: "application/json",
+      });
+      const zip = new JSZip();
+      zip.file("metadata.json", metadataBlob);
+      zip.file("front.png", frontBlob);
+      zip.file("back.png", backBlob);
+      const archive = await zip.generateAsync({ type: "blob" });
+      const url = URL.createObjectURL(archive);
+      const filename = `this-is-for-u-${formatTimestampForFile(metadata.createdAt)}.zip`;
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = filename;
+      anchor.click();
+      URL.revokeObjectURL(url);
+      setReceiverMetadata(metadata);
+      setLastFourierTimestamp(metadata.createdAt);
+      setReceiverPreviewUrl(frontCanvas.toDataURL("image/png"));
+      showStatus("앞·뒷면 PNG와 Fourier 데이터를 한 번에 묶었어요.");
+    } catch (error) {
+      console.error("Failed to export Fourier package", error);
+      showStatus("Fourier 패키지를 만드는 데 실패했어요.");
+    } finally {
+      setIsPackaging(false);
+    }
+  }, [
+    buildMetadataPayload,
+    canvasToBlob,
+    createBackExportSnapshot,
+    createFrontExportSnapshot,
+    hasFourierData,
+    showStatus,
+  ]);
+  const handleToggleEmotionPlayback = useCallback(() => {
+    if (!receiverMetadata) {
+      showStatus("먼저 Fourier 패키지를 생성하고 미리보기를 준비해주세요.");
+      return;
+    }
+    setIsPlayingEmotion((previous) => {
+      const next = !previous;
+      showStatus(
+        next ? "Fourier epicycles를 재생하고 있어요." : "epicycles 재생을 멈췄어요.",
+      );
+      return next;
+    });
+  }, [receiverMetadata, showStatus]);
 
 
 
@@ -1738,6 +2107,141 @@ export default function ThisIsForUPage() {
 
               />
 
+              <section className="space-y-5 rounded-[28px] border border-rose-100 bg-gradient-to-br from-rose-50/70 via-white to-amber-50/40 p-5 shadow-inner shadow-white/70">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-[0.35em] text-rose-400">
+                    Fourier Transmission
+                  </p>
+                  <h3 className="text-xl font-semibold text-slate-900">
+                    Sender ↔ Receiver 감정 부호화 실험실
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    앞면 드로잉을 원 궤적의 Fourier 계수로 분해하고, 뒷면 메시지 윤곽도 파동 데이터로 저장해요.
+                    JSON + PNG 패키지를 만들거나, 바로 아래에서 수신자 미리보기를 재생할 수 있어요.
+                  </p>
+                </div>
+
+                <div className="grid gap-5 lg:grid-cols-2">
+                  <div className="space-y-4 rounded-2xl border border-white/70 bg-white/90 p-4 shadow-lg shadow-rose-100/50">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="text-sm font-semibold text-slate-900">Sender · 부호화</p>
+                        <p className="text-xs text-slate-500">그림 &amp; 텍스트 → (amp, freq, phase)</p>
+                      </div>
+                      <span
+                        className={`rounded-full px-3 py-1 text-[11px] font-semibold ${hasFourierData ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-400"}`}
+                      >
+                        {hasFourierData ? "READY" : "EMPTY"}
+                      </span>
+                    </div>
+                    <dl className="grid grid-cols-2 gap-3 text-xs text-slate-500">
+                      <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+                        <dt className="font-semibold text-slate-600">포인트 샘플</dt>
+                        <dd className="mt-1 text-base font-semibold text-slate-900">{drawingPointCount}</dd>
+                      </div>
+                      <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+                        <dt className="font-semibold text-slate-600">그림 계수</dt>
+                        <dd className="mt-1 text-base font-semibold text-slate-900">{drawingFourier.length}</dd>
+                      </div>
+                      <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+                        <dt className="font-semibold text-slate-600">텍스트 계수</dt>
+                        <dd className="mt-1 text-base font-semibold text-slate-900">{textFourier.length}</dd>
+                      </div>
+                      <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
+                        <dt className="font-semibold text-slate-600">최근 생성</dt>
+                        <dd className="mt-1 text-base font-semibold text-slate-900">{lastEncodedLabel}</dd>
+                      </div>
+                    </dl>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={handleReceiverPreviewUpdate}
+                        className="rounded-full border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-500 transition hover:border-rose-300 hover:bg-rose-50"
+                      >
+                        Receiver 미리보기 준비
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDownloadMetadataJson}
+                        className="rounded-full border border-rose-200 bg-white px-4 py-2 text-xs font-semibold text-rose-500 transition hover:border-rose-300 hover:bg-rose-50"
+                      >
+                        metadata.json 저장
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDownloadEmotionPackage}
+                        disabled={isPackaging}
+                        className="sm:col-span-2 rounded-full bg-gradient-to-r from-rose-500 to-amber-400 px-4 py-2 text-xs font-semibold text-white shadow-lg shadow-rose-200 transition hover:brightness-110 disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        {isPackaging ? "압축 중..." : "PNG ×2 + Fourier ZIP"}
+                      </button>
+                    </div>
+                    <div className="rounded-2xl border border-slate-100 bg-slate-50/80 p-3 text-[11px] text-slate-600">
+                      <p className="font-semibold text-slate-700">metadata.json preview</p>
+                      <pre className="mt-2 max-h-48 overflow-auto rounded-xl bg-white/80 p-3 text-[10px] text-slate-700">
+                        {metadataPreviewString}
+                      </pre>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 rounded-2xl border border-slate-900/30 bg-slate-950/90 p-4 text-slate-100 shadow-2xl shadow-slate-900/60">
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <p className="text-sm font-semibold">Receiver · 복원</p>
+                        <p className="text-xs text-slate-400">
+                          정적 엽서 → Fourier epicycles · 앞/뒷면 파형 복원
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={handleToggleEmotionPlayback}
+                        disabled={!receiverMetadata}
+                        className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
+                          receiverMetadata
+                            ? "border border-white/20 text-white hover:bg-white/10"
+                            : "cursor-not-allowed border border-white/10 text-slate-500"
+                        }`}
+                      >
+                        {isPlayingEmotion ? "Stop Emotion" : "Play Emotion"}
+                      </button>
+                    </div>
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/5">
+                        {receiverPreviewUrl ? (
+                          <>
+                            {/* eslint-disable-next-line @next/next/no-img-element */}
+                            <img
+                              src={receiverPreviewUrl}
+                              alt="Latest postcard front preview"
+                              className="h-full w-full object-cover"
+                            />
+                          </>
+                        ) : (
+                          <div className="flex h-full items-center justify-center p-6 text-center text-xs text-slate-400">
+                            Fourier 패키지를 만들면 정적 엽서가 여기에 미리보기로 표시돼요.
+                          </div>
+                        )}
+                      </div>
+                      <div className="rounded-2xl border border-white/10 bg-slate-900/60 p-2">
+                        <canvas
+                          ref={receiverCanvasRef}
+                          className="h-full w-full rounded-xl bg-slate-900/40"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-slate-400">
+                      {receiverMetadata
+                        ? `템플릿 ${receiverMetadata.templateName} · ${receiverMetadata.drawingFourier.length} 계수로 궤적을 다시 그립니다.`
+                        : "Fourier metadata를 생성하면 'Play Emotion'으로 감정 파형을 복원할 수 있어요."}
+                    </p>
+                  </div>
+                </div>
+
+                <blockquote className="rounded-2xl border border-dashed border-rose-200/80 bg-white/70 p-4 text-sm text-rose-500">
+                  “이 엽서는 내 감정의 파형을 담고 있어요. 당신의 화면에서 복원해보세요.”
+                </blockquote>
+              </section>
+
             </div>
 
           </div>
@@ -1748,11 +2252,55 @@ export default function ThisIsForUPage() {
 
 
 
+      <section className="mx-auto max-w-5xl px-6 pb-12">
+        <div className="rounded-[32px] border border-white/70 bg-white/90 p-6 shadow-xl shadow-slate-200/60">
+          <div className="space-y-3">
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-rose-400">
+              Transmission Map
+            </p>
+            <h3 className="text-2xl font-semibold text-slate-900">This-is-for-U 전달 구조</h3>
+            <p className="text-sm text-slate-600">
+              감정을 ‘그림·글’로 표현하고 → Fourier 계수를 통해 파형으로 변환하고 → 수신자가 재생하는
+              3단계를 표로 정리했어요. (amp, freq, phase) 배열은 metadata.json 안에 포함됩니다.
+            </p>
+          </div>
+          <div className="mt-4 overflow-x-auto rounded-2xl border border-slate-100">
+            <table className="w-full min-w-[480px] text-left text-sm text-slate-600">
+              <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-4 py-3">단계</th>
+                  <th className="px-4 py-3">동작</th>
+                  <th className="px-4 py-3">사용자 감정</th>
+                </tr>
+              </thead>
+              <tbody>
+                {TRANSMISSION_STEPS.map((row) => (
+                  <tr key={row.stage} className="border-t border-slate-100">
+                    <td className="px-4 py-3 font-semibold text-slate-900">{row.stage}</td>
+                    <td className="px-4 py-3">{row.action}</td>
+                    <td className="px-4 py-3 text-rose-500">{row.feeling}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="mt-6 rounded-2xl bg-gradient-to-r from-rose-50 to-white p-4 text-sm font-medium text-rose-500">
+            보내는 이는 감정을 수학으로 부호화하고, 받는 이는 그것을 시각·청각적으로 복원한다.
+          </p>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-5xl px-6 pb-20">
 
         <EmailDeliveryPlaceholder />
 
       </section>
+
+      {statusMessage && (
+        <div className="fixed bottom-6 right-6 z-50 rounded-full bg-slate-900/90 px-4 py-2 text-xs font-semibold text-white shadow-xl shadow-slate-900/40">
+          {statusMessage}
+        </div>
+      )}
 
     </div>
 
