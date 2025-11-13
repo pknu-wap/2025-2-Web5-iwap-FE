@@ -1,6 +1,19 @@
 ﻿"use client";
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import PageHeader from '@/components/ui/PageHeader';
+import Image from "next/image";
+
+
+const pageBackgroundStyle = {
+  backgroundImage: `
+    linear-gradient(to bottom, rgba(13, 17, 19, 0), #090223),
+    url('/images/instrument_background.jpg')
+    `,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed',
+  };
 
 type MPResults = {
   multiHandLandmarks?: Array<Array<{ x: number; y: number; z?: number }>>;
@@ -85,6 +98,8 @@ function fingerTipDistance(
 }
 
 export default function GraffitiClient() {
+  const [showIntro, setShowIntro] = useState(true);
+
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const overlayRef = useRef<HTMLCanvasElement | null>(null);
   const drawRef = useRef<HTMLCanvasElement | null>(null);
@@ -471,28 +486,69 @@ export default function GraffitiClient() {
     </div>
   ), [brushColor, brushSize, fps, handleClear, pinchActive, showOverlay, gestureEnabled]);
 
-  return (
-    <div className="relative w-full min-h-[calc(100dvh-64px)] flex items-center justify-center bg-stone-900 text-white overflow-hidden">
-      <div className="absolute bottom-4 left-4 z-20 text-stone-200 text-sm bg-black/40 backdrop-blur px-3 py-2 rounded-md">
-        <div className="font-semibold">Graffiti</div>
-        <div>Extend only index to draw. Allow camera.</div>
-        <div>Use good lighting for accuracy.</div>
+return (
+  <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" style={pageBackgroundStyle}>
+    {/* ===== Intro UI (video 나오기 전) ===== */}
+    {showIntro && (
+      <div className="w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
+        <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
+          <div className="w-full h-full pt-[10px]">
+
+            <PageHeader
+              title="Graff!ti"
+              subtitle="움직임으로만 드로잉"
+              goBack={true}
+              padding="p-0"
+            />
+
+            <div className="w-full flex justify-center items-center mt-8">
+            <div
+              className="
+                md:w-[500px]
+                md:h-[100px]
+                w-[300px]
+                h-[80px]
+                flex-shrink-0
+                rounded-[84px]
+                border border-white
+                bg-white/60
+                shadow-[0_0_50px_20px_rgba(0,0,0,0.25)]
+                backdrop-blur-[4px]
+                flex items-center justify-center translate-y-50
+              "
+            >
+              {/* 데스크탑 전용 (md 이상) */}
+            <p className="hidden md:block text-black text-[20px] font-regular translate-y-0.5">
+              손동작 인식을 위해 카메라 접근을 허용해주세요.
+            </p>
+
+              {/* 모바일 전용 (md 미만) */}
+            <p className="md:hidden text-black text-center text-[20px] font-regular translate-y-0.5">
+              손동작 인식을 위해<br />
+              카메라 접근을 허용해주세요.
+            </p>
+            </div>
+          </div>
+          </div>
+        </div>
       </div>
+    )}
 
-      {ui}
 
-      {!ready && !streamError && (
-        <div className="absolute z-20 text-sm bg-black/50 px-3 py-2 rounded-md">Initializing camera…</div>
-      )}
-      {streamError && (
-        <div className="absolute z-20 text-sm bg-rose-600/80 px-3 py-2 rounded-md">{streamError}</div>
-      )}
-
+    {/* ===== Video 화면 (Intro가 끝난 후) ===== */}
+    {!showIntro && (
       <div className="relative w-full max-w-[1000px] aspect-video">
-        <video ref={videoRef} className="absolute inset-0 w-full h-full object-contain -scale-x-100" playsInline muted />
-        <canvas ref={overlayRef} className={`absolute inset-0 w-full h-full ${showOverlay ? "opacity-100" : "opacity-0"} pointer-events-none `} />
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-contain -scale-x-100"
+          playsInline
+          muted
+        />
+        <canvas ref={overlayRef} className="absolute inset-0 w-full h-full" />
         <canvas ref={drawRef} className="absolute inset-0 w-full h-full" />
       </div>
-    </div>
-  );
+    )}
+
+  </div>
+);
 }
