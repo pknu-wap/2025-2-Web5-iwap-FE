@@ -82,6 +82,7 @@ export default function GraffitiClient() {
   const [introFinished, setIntroFinished] = useState(false);
   const [fingerAnimationDone, setFingerAnimationDone] =
     useState(false);
+  const fingerAnimationDoneRef = useRef(fingerAnimationDone);
 
   /* -------------------- 기존 상태 -------------------- */
   const [brushColor, setBrushColor] = useState("#ff315a");
@@ -91,6 +92,7 @@ export default function GraffitiClient() {
   const [pinchActive, setPinchActive] = useState(false);
   const [fps, setFps] = useState(0);
   const [handsCount, setHandsCount] = useState(0);
+  const [cameraNoticeVisible, setCameraNoticeVisible] = useState(true);
 
   /* -------------------- Refs (null 안전 처리!) -------------------- */
   const videoRef = useRef<HTMLVideoElement>(null!);
@@ -126,8 +128,20 @@ export default function GraffitiClient() {
     const timer = setTimeout(() => {
       setShowIntro(false);
       setIntroFinished(true);
-      setFingerAnimationDone(false);
+      if (!fingerAnimationDoneRef.current) {
+        fingerAnimationDoneRef.current = false;
+        setFingerAnimationDone(false);
+      }
     }, 5000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    fingerAnimationDoneRef.current = fingerAnimationDone;
+  }, [fingerAnimationDone]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setCameraNoticeVisible(false), 5000);
     return () => clearTimeout(timer);
   }, []);
 
@@ -157,6 +171,7 @@ export default function GraffitiClient() {
   /* -------------------- Mediapipe + Camera 초기화 -------------------- */
   useEffect(() => {
     let stopped = false;
+    let introDelayTimer: number | null = null;
 
     async function init() {
       try {
@@ -170,9 +185,15 @@ export default function GraffitiClient() {
 
         /* ------- ★ 허용됨! Intro 종료 ------- */
         setCameraGranted(true);
-        setShowIntro(false);
-        setIntroFinished(true);
-        setFingerAnimationDone(false);
+        introDelayTimer = window.setTimeout(() => {
+          if (stopped) return;
+          setShowIntro(false);
+          setIntroFinished(true);
+          if (!fingerAnimationDoneRef.current) {
+            fingerAnimationDoneRef.current = false;
+            setFingerAnimationDone(false);
+          }
+        }, 3000);
 
         video.srcObject = stream;
         await video.play();
@@ -321,6 +342,9 @@ export default function GraffitiClient() {
 
     return () => {
       stopped = true;
+      if (introDelayTimer) {
+        clearTimeout(introDelayTimer);
+      }
       try {
         cameraRef.current?.stop?.();
       } catch {}
@@ -492,22 +516,25 @@ export default function GraffitiClient() {
   /*                       UI                           */
   /* --------------------------------------------------- */
 
+  const videoReady = !showIntro && fingerAnimationDone;
   return (
     <div
       className="relative w-full h-dvh"
       style={pageBackgroundStyle}
     >
       {/* ------------------ Persistent Header ------------------ */}
-      <div className="pointer-events-none translate-y-[50px] inset-0 flex items-center justify-center p-6 animate-fadeIn">
-        <div className="pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
+      <div className="pointer-events-none inset-0 flex items-center justify-center p-6 animate-fadeIn">
+        <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
             <div className="w-full h-full pt-[100px]">
-              <PageHeader
-                title="Graff!ti"
-                subtitle="움직임으로만 드로잉"
-                goBack={true}
-                padding="p-0"
-              />
+              {!videoReady && (
+                <PageHeader
+                  title="Graff!ti"
+                  subtitle="움직임으로만 드로잉"
+                  goBack={true}
+                  padding="p-0"
+                />
+              )}
 
                     {/* ------------------ Intro가 끝난 후 나타나는 박스 ------------------ */}
                     {introFinished && !fingerAnimationDone && (
@@ -563,7 +590,7 @@ export default function GraffitiClient() {
                     )}
 
               {/* 카메라 허용 안내 박스 */}
-              {showIntro && !cameraGranted && (
+              {showIntro && (
                 <div
                   className="
                     mt-10
@@ -591,24 +618,27 @@ export default function GraffitiClient() {
       </div>
 
       {/* ------------------ 비디오 화면 ------------------ */}
-      {!showIntro && fingerAnimationDone && (
-        <div className="relative w-full max-w-[1000px] aspect-video mx-auto mt-10">
-          <video
-            ref={videoRef}
-            className="absolute inset-0 w-full h-full object-contain -scale-x-100"
-            playsInline
-            muted
-          />
-          <canvas
-            ref={overlayRef}
-            className="absolute inset-0 w-full h-full"
-          />
-          <canvas
-            ref={drawRef}
-            className="absolute inset-0 w-full h-full"
-          />
-        </div>
-      )}
+      <div
+        className={`relative w-full max-w-[1000px] aspect-video mx-auto ${
+          videoReady ? "" : "hidden"
+        }`}
+        aria-hidden={!videoReady}
+      >
+        <video
+          ref={videoRef}
+          className="absolute inset-0 w-full h-full object-contain -scale-x-100"
+          playsInline
+          muted
+        />
+        <canvas
+          ref={overlayRef}
+          className="absolute inset-0 w-full h-full"
+        />
+        <canvas
+          ref={drawRef}
+          className="absolute inset-0 w-full h-full"
+        />
+      </div>
     </div>
   );
 }
