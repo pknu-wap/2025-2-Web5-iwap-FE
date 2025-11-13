@@ -77,10 +77,21 @@ type MPResults = {
 const OTHER_FINGER_TIP_IDS = [4, 12, 16, 20];
 const INDEX_EXTENSION_THRESHOLD = 0.3;
 const FINGER_FOLDED_THRESHOLD = 0.25;
-const COLOR_PALETTE = ["#ff315a", "#ffd166", "#60caff", "#7bedff", "#f4f4f4"];
+const COLOR_PALETTE = ["#FA4051", "#FDD047", "#2FB665", "#FFFFFF", "#000000"];
 
 export default function GraffitiClient() {
   const [customPatterns, setCustomPatterns] = useState<string[]>([]);
+  const colorPickerRef = useRef<HTMLInputElement>(null);
+  const [pendingCustomColor, setPendingCustomColor] = useState<string | null>(null);
+  const handleConfirmPendingCustomColor = () => {
+    if (!pendingCustomColor) return;
+    setCustomPatterns((prev) =>
+      prev.includes(pendingCustomColor) ? prev : [...prev, pendingCustomColor]
+    );
+    setPendingCustomColor(null);
+  };
+
+
 
   /* -------------------- Intro / Camera 상태 -------------------- */
   const [showIntro, setShowIntro] = useState(true);
@@ -727,21 +738,29 @@ export default function GraffitiClient() {
           >
             {/* Undo / Redo */}
             <div className="flex items-center gap-3">
-              <button
-                onClick={handleUndo}
-                aria-label="Undo"
-                className="p-2 hover:opacity-75 transition"
-              >
-                <img src="/icons/undo_white.svg" className="w-[36px] h-[36px]" />
-              </button>
+{/* Undo = redo_white.svg 좌우반전 */}
+<button
+  onClick={handleUndo}
+  aria-label="Undo"
+  className="p-2 hover:opacity-75 transition"
+>
+  <img
+    src="/icons/redo_white.svg"
+    className="w-[28px] h-[28px] -scale-x-100"
+  />
+</button>
 
-              <button
-                onClick={handleRedo}
-                aria-label="Redo"
-                className="p-2 hover:opacity-75 transition"
-              >
-                <img src="/icons/redo_white.svg" className="w-[28px] h-[28px]" />
-              </button>
+{/* Redo (원본) */}
+<button
+  onClick={handleRedo}
+  aria-label="Redo"
+  className="p-2 hover:opacity-75 transition"
+>
+  <img
+    src="/icons/redo_white.svg"
+    className="w-[28px] h-[28px]"
+  />
+</button>
             </div>
 
             {/* Color List */}
@@ -764,40 +783,70 @@ export default function GraffitiClient() {
                 />
               ))}
 
-              {customPatterns.map((hex) => (
-                <button
-                  key={hex}
-                  className="h-[30px] w-[30px] rounded-full border-2 transition"
-                  style={{
-                    backgroundColor: hex,
-                    borderColor:
-                      brushColor === hex ? "#ffffff" : "rgba(255,255,255,0.3)",
-                  }}
-                  onClick={() => setBrushColor(hex)}
-                />
-              ))}
-
-              {/* 패턴 브러시 */}
+            {customPatterns.map((hex) => (
               <button
-                type="button"
-                className="
-                  h-[30px] w-[30px]
-                  rounded-full border-2 transition
-                "
+                key={hex}
+                className="h-[30px] w-[30px] rounded-full border-2 transition"
                 style={{
+                  backgroundColor: hex,
                   borderColor:
-                    brushColor === "pattern"
-                      ? "#ffffff"
-                      : "rgba(255,255,255,0.3)",
-                  background:
-                    "url('/textures/pattern.png') lightgray -2.561px -5.025px / 113.333% 121.791% no-repeat",
+                    brushColor === hex ? "#ffffff" : "rgba(255,255,255,0.3)",
                 }}
-                onClick={() => setBrushColor("pattern")}
+                onClick={() => setBrushColor(hex)}
               />
+            ))}
+
+
+{/* 컬러픽커용 숨겨진 input */}
+            <input
+              type="color"
+              ref={colorPickerRef}
+              className="hidden"
+              onChange={(e) => {
+                const color = e.target.value;
+                setPendingCustomColor(color);
+                setBrushColor(color);
+              }}
+            />
+            {/* 패턴 브러시 */}
+            <button
+              type="button"
+              className="
+                h-[30px] w-[30px]
+                rounded-full border-2 transition
+              "
+              style={{
+                borderColor:
+                  customPatterns.includes(brushColor)
+                    ? "#ffffff"
+                    : "rgba(255,255,255,0.3)",
+                background:
+                  "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
+              }}
+              onClick={() => colorPickerRef.current?.showPicker?.() ?? colorPickerRef.current?.click()}
+            />
+            <button
+              type="button"
+              onClick={handleConfirmPendingCustomColor}
+              disabled={
+                !pendingCustomColor ||
+                customPatterns.includes(pendingCustomColor)
+              }
+              className="
+                px-2 py-1
+                rounded-full border border-white/30
+                text-[12px]
+                text-white transition
+                disabled:opacity-40 disabled:cursor-not-allowed
+              "
+            >
+              Confirm
+            </button>
+
             </div>
 
             {/* Hex Pattern Add Button */}
-            <button
+            {/* <button
               onClick={() => {
                 const hex = prompt("HEX 코드를 입력하세요 (예: #FF00AA)");
                 if (hex && /^#?[0-9A-Fa-f]{6}$/.test(hex)) {
@@ -814,10 +863,11 @@ export default function GraffitiClient() {
               "
             >
               + HEX
-            </button>
+            </button> */}
 
             {/* Stroke Size */}
-            <div className="flex items-center gap-2 w-[150px]">
+            <div className="flex items-center gap-2 w-[170px] h-[4px]">
+                <p className="flex items-cente text-[20px] text-white font-light">size</p>
               <input
                 type="range"
                 min={2}
@@ -826,7 +876,6 @@ export default function GraffitiClient() {
                 onChange={(e) => setBrushSize(Number(e.target.value))}
                 className="w-full accent-white"
               />
-              <span className="text-white text-sm">{brushSize}</span>
             </div>
 
             {/* Trash + Save */}
@@ -836,20 +885,32 @@ export default function GraffitiClient() {
                 aria-label="Clear"
                 className="p-2 hover:opacity-75 transition"
               >
-                <img src="/icons/trash.svg" className="w-6 h-6" />
+                <img src="/icons/trash 2.svg" className="w-[24px] h-[24px]" />
               </button>
+<button
+  onClick={handleSave}
+  className="
+    w-[90px] h-[35px]
+    rounded-[3px] text-[#294393] text-[20px] font-semibold
+    bg-white hover:bg-[#294393]
+    flex items-center justify-center gap-1
+    transition-all
+    group
+  "
+>
+  <img
+    src="/icons/Download_blue.svg"
+    alt="download"
+    className="w-[18px] h-[18px] block group-hover:hidden"
+  />
+  <img
+    src="/icons/download.svg"
+    alt="download hover"
+    className="w-[18px] h-[18px] hidden group-hover:block"
+  />
+  <span className="group-hover:text-white">PNG</span>
+</button>
 
-              <button
-                onClick={handleSave}
-                className="
-                  px-4 py-2
-                  rounded-full border border-white text-white text-sm
-                  bg-white/20 hover:bg-white/30
-                  backdrop-blur-sm transition
-                "
-              >
-                Save
-              </button>
             </div>
           </div>
         </div>
