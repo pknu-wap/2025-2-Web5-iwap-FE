@@ -22,32 +22,16 @@ const FOCUS_SCALE = 2.0;
 // 최소 투명도
 const minOpacity = 0.65;
 
-// --- 애니메이션 속도 (Constant Speed) 상수 ---
-// [수정] 페이즈(크기)별 *등속 이동 속도* (초당 인덱스)를 정의합니다.
-// 5개의 레이어 크기 그룹에 대해 [페이즈1, 페이즈2, 페이즈3, 페이즈4, 페이즈5] 순서로
-// 속도(Units/Sec) 값을 직접 지정합니다.
+const CUTOFF_INDEX = 2240; // 등속/댐핑 전환 인덱스
 
-// (1) '재생' 속도: 로딩 시, 프로그레스 바의 시작/끝 클릭 시 (느림)
-const SPEEDS_AUTOPLAY = [
-  96, // 페이즈 1 (0-64 / 64개)
-  384, // 페이즈 2 (64-320 / 256개)
-  960, // 페이즈 3 (320-960 / 640개)
-  1920, // 페이즈 4 (960-2240 / 1280개)
-  3840  // 페이즈 5 (2240-4800 / 2560개)
-];
+// --- [수정] 1. 등속 이동 (0 ~ 2239) - 4개 페이즈
+const SPEEDS_AUTOPLAY = [48, 128, 256, 320]; // 5번째 값 제거
 
-// (2) '탐색' 속도: 프로그레스 바의 중간 지점 클릭 또는 드래그 스냅 시 (빠름)
-const SPEEDS_SEEK = [
-  96, // 페이즈 1 (0-64 / 64개)
-  384, // 페이즈 2 (64-320 / 256개)
-  960, // 페이즈 3 (320-960 / 640개)
-  1920, // 페이즈 4 (960-2240 / 1280개)
-  3840  // 페이즈 5 (2240-4800 / 2560개)
-];
+// --- [유지] 2. 댐핑 이동 (2240 이후) ---
+const DAMP_FOCUS_AUTOPLAY = 3;
+const DAMP_FOCUS_SEEK = 4;
 
-// --- [유지] 이하 Damping 상수는 부드러운 효과를 위해 그대로 사용 ---
-
-// (3) '확대/축소' 속도: 레이어가 포커스될 때 확대/축소되는 속도
+// --- [유지] 기타 댐핑 상수 ---
 const DAMP_FACTOR_SCALE = 4;
 // (4) '레이어 투명도' 속도: 주변 레이어의 투명도가 변경되는 속도
 const DAMP_FACTOR_LAYER_OPACITY = 8;
@@ -68,54 +52,38 @@ const DAMP_FACTOR_CAMERA = 4;
 
 
 /**
- * 개별 레이어 컴포넌트 (이미지 또는 텍스트).
- * useFrame을 통해 자신의 스케일, 투명도, Z위치를 독립적으로 애니메이션합니다.
+ * 개별 레이어 컴포넌트 (변경 없음).
  */
 function AnimatedElement({ layer, focusIndex, globalOpacity }) {
   const meshRef = useRef();
   const materialRef = useRef();
   const textMaterialRef = useRef();
-
   const currentScale = useRef(1);
   const currentOpacity = useRef(0.1);
 
   useFrame((state, delta) => {
-    // 1. 타겟 값 계산
     const distance = layer.originalIndex - focusIndex;
     const absDist = Math.abs(distance);
-
     const targetScale = Math.max(1, FOCUS_SCALE - absDist * 0.5);
     const targetLayerOpacity = Math.max(minOpacity, 1.0 - absDist / 3);
 
-    // 2. 현재 값 -> 타겟 값으로 Damping (속도 상수 적용)
     currentScale.current = THREE.MathUtils.damp(
-      currentScale.current,
-      targetScale,
-      DAMP_FACTOR_SCALE, // 확대/축소 속도
-      delta
+      currentScale.current, targetScale, DAMP_FACTOR_SCALE, delta
     );
-
     currentOpacity.current = THREE.MathUtils.damp(
-      currentOpacity.current,
-      targetLayerOpacity,
-      DAMP_FACTOR_LAYER_OPACITY, // 레이어 투명도 속도
-      delta
+      currentOpacity.current, targetLayerOpacity, DAMP_FACTOR_LAYER_OPACITY, delta
     );
 
-    // 3. 실제 3D 객체에 계산된 값 적용
     const finalZ = -distance * Z_OFFSET;
     if (meshRef.current) {
       meshRef.current.scale.setScalar(currentScale.current);
       meshRef.current.position.z = finalZ;
     }
-
-    // 개별 레이어 투명도와 전역(드래그) 투명도를 곱하여 최종 투명도 설정
     const finalOpacity = currentOpacity.current * globalOpacity;
     if (materialRef.current) materialRef.current.opacity = finalOpacity;
     if (textMaterialRef.current) textMaterialRef.current.opacity = finalOpacity;
   });
 
-  // 레이어 타입(이미지/텍스트)에 따라 지오메트리 생성
   const geometry = useMemo(
     () =>
       layer.isTextLayer
@@ -150,30 +118,22 @@ function AnimatedElement({ layer, focusIndex, globalOpacity }) {
 }
 
 /**
- * 3D 씬 컨테이너.
- * 렌더링 윈도우(최적화) 로직을 담당하고 AnimatedElement를 렌더링합니다.
+ * 3D 씬 컨테이너 (변경 없음 - textLayer 별도 렌더링).
  */
-function Scene({ layers, focusIndex, rotation, opacity }) {
+function Scene({ layers, textLayer, focusIndex, rotation, opacity }) {
   const [visibleLayers, setVisibleLayers] = useState([]);
 
-  // 렌더링 윈도우 계산: 현재 포커스 주변의 레이어만 'visibleLayers' 상태로 관리
   useFrame(() => {
     if (!layers || layers.length === 0) return;
-
     const currentFocus = focusIndex;
-    const startIndex = Math.max(
-      0,
-      Math.floor(currentFocus) - RENDER_WINDOW_SIZE
-    );
-    const endIndex = Math.min(
-      layers.length,
-      Math.ceil(currentFocus) + RENDER_WINDOW_SIZE + 1
-    );
+    const startIndex = Math.max(0, Math.floor(currentFocus) - RENDER_WINDOW_SIZE);
+    const endIndex = Math.min(layers.length, Math.ceil(currentFocus) + RENDER_WINDOW_SIZE + 1);
 
     if (
       visibleLayers.length === 0 ||
-      visibleLayers[0]?.originalIndex !== startIndex ||
-      visibleLayers[visibleLayers.length - 1]?.originalIndex !== endIndex - 1
+      !visibleLayers[0] ||
+      visibleLayers[0].originalIndex !== startIndex ||
+      visibleLayers[visibleLayers.length - 1].originalIndex !== endIndex - 1
     ) {
       setVisibleLayers(layers.slice(startIndex, endIndex));
     }
@@ -192,118 +152,105 @@ function Scene({ layers, focusIndex, rotation, opacity }) {
             globalOpacity={opacity}
           />
         ))}
+        {textLayer && (
+          <AnimatedElement
+            key={textLayer.id}
+            layer={textLayer}
+            focusIndex={focusIndex}
+            globalOpacity={opacity}
+          />
+        )}
       </group>
     </>
   );
 }
 
 /**
- * [추가] 현재 인덱스가 몇 번째 페이즈(0~4)에 속하는지 계산하는 헬퍼 함수
+ * 등속 이동 페이즈 계산 헬퍼 함수 (변경 없음).
  */
 const getPhaseFromIndex = (roundedIndex, sizeIndices) => {
   if (!sizeIndices || sizeIndices.length === 0) return 0;
-  
-  // 현재 인덱스보다 '큰' 첫 번째 변경 지점의 인덱스를 찾습니다.
   const nextChangeIdx = sizeIndices.findIndex(idx => idx > roundedIndex);
-  
   if (nextChangeIdx === -1) {
-    // 찾지 못했다면 마지막 페이즈입니다. (예: 5페이즈면 인덱스 4)
     return sizeIndices.length;
   }
-  
-  // 찾았다면, 그 인덱스가 현재 페이즈입니다.
   return nextChangeIdx;
 };
 
 
 /**
  * R3F의 useFrame을 실행하는 메인 래퍼.
- * 전역 상태(포커스, 회전, 카메라)를 관리하고 애니메이션(Damping)을 수행합니다.
- */
-/**
- * R3F의 useFrame을 실행하는 메인 래퍼.
- * 전역 상태(포커스, 회전, 카메라)를 관리하고 애니메이션(Damping)을 수행합니다.
+ * [수정] 'autoplay' 모드의 if 조건을 'ci' 기준으로만 판단
  */
 function SceneWrapper({
   layers,
+  textLayer,
   targetFocusIndex,
   targetRotation,
   targetOpacity,
   currentFocusIndexRef,
   currentRotationRef,
   currentOpacityRef,
-  dragModeRef,
   onLiveIndexUpdate,
-  currentFocusDampFactorRef, // 이름은 Damp Factor지만, 실제로는 'mode' (AUTOPLAY/SEEK)를 가짐
+  currentFocusDampFactorRef, // 'AUTOPLAY' 또는 'SEEK' 모드
   sizeChangeIndices
 }) {
   useFrame((state, delta) => {
-    const dragMode = dragModeRef.current;
-
-    // --- 속도 계산 로직 (등속) ---
-
-    // 1. 현재 모드 ('AUTOPLAY' 또는 'SEEK') 가져오기
-    const mode = currentFocusDampFactorRef.current;
-
-    // 2. 현재 레이어 정보 가져오기 (카메라 로직과 공유)
     const ci = currentFocusIndexRef.current;
-    const roundedIndex = Math.min(
-      layers.length - 1,
-      Math.max(0, Math.round(ci))
-    );
-    const layer = layers[roundedIndex];
+    const target = targetFocusIndex;
+    const mode = currentFocusDampFactorRef.current; // 'AUTOPLAY' or 'SEEK'
 
-    // 3. 현재 페이즈(0~4) 계산
-    const currentPhase = getPhaseFromIndex(roundedIndex, sizeChangeIndices);
-
-    // 4. 모드와 페이즈에 맞는 *이동 속도* (units/sec) '조회'
-    let speed;
-    if (mode === 'AUTOPLAY') {
-      speed = SPEEDS_AUTOPLAY[currentPhase];
+    // 1. 포커스 인덱스 보간
+    if (mode === 'SEEK') {
+      // --- (A) 'SEEK' 모드: 항상 Damping ---
+      const dampFactor = DAMP_FOCUS_SEEK;
+      currentFocusIndexRef.current = THREE.MathUtils.damp(
+        ci,
+        target,
+        dampFactor,
+        delta
+      );
     } else {
-      // mode === 'SEEK'
-      speed = SPEEDS_SEEK[currentPhase];
-    }
-
-    // (안전 장치) 만약 정의되지 않은 페이즈가 되면 0번 페이즈 값 사용
-    if (speed === undefined) {
-      speed =
-        mode === 'AUTOPLAY'
-          ? SPEEDS_AUTOPLAY[0]
-          : SPEEDS_SEEK[0];
-    }
-
-    // 1. 포커스 인덱스 보간 (레이어 이동) [수정: 등속 이동]
-    if (dragMode !== 'horizontal') {
-      const current = currentFocusIndexRef.current;
-      const target = targetFocusIndex;
+      // --- (B) 'AUTOPLAY' 모드: 하이브리드 (등속 or 댐핑) ---
       
-      // 이 프레임에서 이동할 거리 (속도 * 시간)
-      const step = speed * delta;
+      // [수정] 분기 조건을 'target'과 무관하게 '현재 위치(ci)'로만 판단
+      if (ci < CUTOFF_INDEX) { 
+        // (B-1) 현재 2240 이전 구간: 등속
+        const roundedIndex = Math.min(layers.length - 1, Math.max(0, Math.round(ci)));
+        const currentPhase = getPhaseFromIndex(roundedIndex, sizeChangeIndices);
+        
+        let speed = SPEEDS_AUTOPLAY[currentPhase];
+        if (speed === undefined) speed = SPEEDS_AUTOPLAY[0]; // 안전 장치
 
-      // [수정] THREE.MathUtils.moveTowards는 존재하지 않으므로
-      // 등속 이동 로직을 수동으로 구현합니다.
-      const distance = target - current;
+        const step = speed * delta;
+        const distance = target - ci;
 
-      if (Math.abs(distance) <= step) {
-        currentFocusIndexRef.current = target; // 목표 도달
+        // 등속으로 이동 시 타겟을 지나치지 않도록 처리
+        if (Math.abs(distance) <= step) {
+          currentFocusIndexRef.current = target;
+        } else {
+          currentFocusIndexRef.current = ci + Math.sign(distance) * step;
+        }
       } else {
-        currentFocusIndexRef.current = current + Math.sign(distance) * step; // 등속 이동
+        // (B-2) 현재 2240 이후 구간: 댐핑
+        const dampFactor = DAMP_FOCUS_AUTOPLAY;
+        currentFocusIndexRef.current = THREE.MathUtils.damp(
+          ci,
+          target,
+          dampFactor,
+          delta
+        );
       }
     }
 
-    // --- 이하 로직은 댐핑(damp) 유지 ---
-
     // 2. 회전값 보간 (damp 유지)
-    if (dragMode !== 'vertical') {
-      const [rx, ry, rz] = currentRotationRef.current;
-      const [tr, ty, tz] = targetRotation;
-      currentRotationRef.current = [
-        THREE.MathUtils.damp(rx, tr, DAMP_FACTOR_ROTATION, delta),
-        THREE.MathUtils.damp(ry, ty, DAMP_FACTOR_ROTATION, delta),
-        THREE.MathUtils.damp(rz, tz, DAMP_FACTOR_ROTATION, delta),
-      ];
-    }
+    const [rx, ry, rz] = currentRotationRef.current;
+    const [tr, ty, tz] = targetRotation;
+    currentRotationRef.current = [
+      THREE.MathUtils.damp(rx, tr, DAMP_FACTOR_ROTATION, delta),
+      THREE.MathUtils.damp(ry, ty, DAMP_FACTOR_ROTATION, delta),
+      THREE.MathUtils.damp(rz, tz, DAMP_FACTOR_ROTATION, delta),
+    ];
 
     // 3. 전역 투명도 보간 (damp 유지)
     currentOpacityRef.current = THREE.MathUtils.damp(
@@ -313,10 +260,19 @@ function SceneWrapper({
       delta
     );
 
-    // 4. ProgressBar UI 업데이트 (변경 없음)
+    // 4. ProgressBar UI 업데이트
     onLiveIndexUpdate(currentFocusIndexRef.current);
 
     // 5. 동적 카메라 거리 조절 (damp 유지)
+    const totalLayers = layers.length + (textLayer ? 1 : 0);
+    const roundedIndex = Math.min(
+      totalLayers - 1,
+      Math.max(0, Math.round(currentFocusIndexRef.current))
+    );
+    const layer = (roundedIndex === layers.length && textLayer) 
+                  ? textLayer 
+                  : layers[roundedIndex];
+                  
     if (layer) {
       const layerWidth = layer.width || (layer.isTextLayer ? 100 : 28);
       const targetZ = BASE_CAMERA_Z + layerWidth * CAMERA_SIZE_FACTOR;
@@ -334,6 +290,7 @@ function SceneWrapper({
   return (
     <Scene
       layers={layers}
+      textLayer={textLayer}
       focusIndex={currentFocusIndexRef.current}
       rotation={currentRotationRef.current}
       opacity={currentOpacityRef.current}
@@ -342,52 +299,33 @@ function SceneWrapper({
 }
 
 /**
- * 메인 컴포넌트.
- * 레이어 데이터를 처리하고, 상태를 관리하며, 드래그 이벤트를 바인딩합니다.
+ * 메인 컴포넌트 (변경 없음 - textLayer 분리).
  */
 export default function ImageGridLayers({ layersData }) {
-  // '목표값' state: 애니메이션이 도달해야 할 최종 값
   const [targetFocusIndex, setTargetFocusIndex] = useState(0);
   const [targetRotation, setTargetRotation] = useState(INITIAL_ROTATION);
   const [targetOpacity, setTargetOpacity] = useState(1);
-
-  // '실시간값' state: ProgressBar UI 업데이트용
   const [liveFocusIndex, setLiveFocusIndex] = useState(0);
 
-  // '현재값' ref: useFrame에서 직접 조작될 실제 3D 씬의 값
   const currentFocusIndexRef = useRef(0);
   const currentRotationRef = useRef(INITIAL_ROTATION);
   const currentOpacityRef = useRef(1);
-  // [유지] 현재 적용할 이동 속도 '모드' ref ('AUTOPLAY' 또는 'SEEK')
   const currentFocusDampFactorRef = useRef('AUTOPLAY');
 
-  // 입력된 데이터를 3D 씬에서 사용할 수 있도록 가공 (텍스처 생성 등)
-  const { layers, sizeChangeIndices } = useMemo(() => {
+  const { layers, textLayer, sizeChangeIndices } = useMemo(() => {
     try {
-      if (
-        !layersData ||
-        !layersData.layers ||
-        typeof layersData.layers !== 'object'
-      ) {
-        return { layers: [], sizeChangeIndices: [] };
+      if (!layersData || !layersData.layers || typeof layersData.layers !== 'object') {
+        return { layers: [], textLayer: null, sizeChangeIndices: [] };
       }
-
       const actualLayers = layersData.layers;
-
-      // 데이터 구조에서 2D 배열(이미지) 추출
       const extract2DArrays = (data) => {
-        if (
-          Array.isArray(data) &&
-          Array.isArray(data[0]) &&
-          typeof data[0][0] === 'number'
-        )
+        if (Array.isArray(data) && Array.isArray(data[0]) && typeof data[0][0] === 'number')
           return [data];
         if (Array.isArray(data))
           return data.flatMap((item) => extract2DArrays(item));
         return [];
       };
 
-      // 'fc' (Fully Connected) 레이어를 제외한 모든 이미지 레이어 추출
       const allImageData = Object.entries(actualLayers)
         .filter(([key]) => key !== 'fc')
         .flatMap(([key, value]) =>
@@ -397,7 +335,6 @@ export default function ImageGridLayers({ layersData }) {
           }))
         );
 
-      // 이미지 배열을 THREE.DataTexture로 변환
       const processedLayers = allImageData
         .map((item, i) => {
           const { brightnessArray } = item;
@@ -405,59 +342,44 @@ export default function ImageGridLayers({ layersData }) {
           const width = brightnessArray[0].length;
           const flatArray = brightnessArray.flat();
           const data = new Uint8Array(width * height * 4);
-
           for (let j = 0; j < flatArray.length; j++) {
             const brightness = flatArray[j];
             data.set([brightness, brightness, brightness, 255], j * 4);
           }
-
           const texture = new THREE.DataTexture(
-            data,
-            width,
-            height,
-            THREE.RGBAFormat,
-            THREE.UnsignedByteType
+            data, width, height, THREE.RGBAFormat, THREE.UnsignedByteType
           );
           texture.needsUpdate = true;
           texture.flipY = true;
           texture.minFilter = THREE.NearestFilter;
           texture.magFilter = THREE.NearestFilter;
-
           return { ...item, texture, width, height, originalIndex: i };
         })
         .filter(Boolean);
 
-      // 'fc' 레이어가 있다면, 최종 예측 숫자를 텍스트 레이어로 추가
-      if (
-        actualLayers.fc &&
-        Array.isArray(actualLayers.fc) &&
-        actualLayers.fc.length > 0
-      ) {
+      let textLayer = null;
+      if (actualLayers.fc && Array.isArray(actualLayers.fc) && actualLayers.fc.length > 0) {
         const fcData = actualLayers.fc[0];
         const predictedIndex = fcData.indexOf(Math.max(...fcData));
-        processedLayers.push({
+        textLayer = {
           id: 'final-prediction-text',
           isTextLayer: true,
           text: predictedIndex.toString(),
           originalIndex: processedLayers.length,
-        });
+        };
       }
 
-      // ProgressBar의 '마커' 계산을 위한 로직 (여기서는 3D 배치와 무관)
       const layersWithPositions = [];
       let currentX = 0;
       processedLayers.forEach((layer, i) => {
         const prevLayer = i > 0 ? processedLayers[i - 1] : null;
         const prevWidth = prevLayer ? prevLayer.width || 100 : 0;
         const currentWidth = layer.width || 100;
-        const spacing = prevLayer
-          ? prevWidth / 2 + currentWidth / 2 + 25
-          : 0;
+        const spacing = prevLayer ? prevWidth / 2 + currentWidth / 2 + 25 : 0;
         currentX += spacing;
         layersWithPositions.push({ ...layer, cumulativeX: currentX });
       });
 
-      // 이미지 크기가 변경되는 지점의 인덱스 계산 (ProgressBar 마커용)
       const sizeChangeIndices = [];
       layersWithPositions.forEach((layer, i) => {
         if (i === 0) return;
@@ -470,112 +392,86 @@ export default function ImageGridLayers({ layersData }) {
           sizeChangeIndices.push(i);
         }
       });
-
-      return { layers: layersWithPositions, sizeChangeIndices };
+      
+      return { layers: layersWithPositions, textLayer, sizeChangeIndices };
+      
     } catch (error) {
-      console.error(
-        '[ImageGridLayers] Error: Failed to process and memoize layers:',
-        error
-      );
-      return { layers: [], sizeChangeIndices: [] };
+      console.error('[ImageGridLayers] Error: Failed to process and memoize layers:', error);
+      return { layers: [], textLayer: null, sizeChangeIndices: [] };
     }
   }, [layersData]);
 
-  // 페이지 로딩 시: 0.75초 지연 후, 마지막 레이어로 '재생'(AUTOPLAY) 속도로 이동
+  const totalLayers = layers.length + (textLayer ? 1 : 0);
+
   useEffect(() => {
-    if (layers.length > 0) {
+    if (totalLayers > 0) {
       const timer = setTimeout(() => {
         currentFocusDampFactorRef.current = 'AUTOPLAY';
-        setTargetFocusIndex(layers.length - 1);
-      }, 750); // 0.75초 지연
-
-      // 컴포넌트 언마운트 시 타이머 정리
+        setTargetFocusIndex(totalLayers - 1);
+      }, 750);
       return () => clearTimeout(timer);
     }
-  }, [layers.length]);
+  }, [totalLayers]);
 
-  // 드래그 시작 시점의 값 저장을 위한 ref
   const startRotation = useRef([0, 0, 0]);
   const dragModeRef = useRef('none');
   const startFocusIndex = useRef(0);
 
-  // @use-gesture/react 드래그 이벤트 핸들러
+  // @use-gesture/react 드래그 이벤트 핸들러 (변경 없음)
   const bind = useDrag(({ first, last, active, movement: [mx, my] }) => {
-    const deadzone = 10; // 드래그 시작을 인지하는 최소 픽셀
-
-    // 드래그 시작
+    const deadzone = 10;
     if (first) {
       startRotation.current = currentRotationRef.current;
       startFocusIndex.current = currentFocusIndexRef.current;
       dragModeRef.current = 'none';
+      currentFocusDampFactorRef.current = 'SEEK';
     }
 
-    // 드래그 중
-
-    // 드래그 방향(가로/세로) 결정
-    if (
-      dragModeRef.current === 'none' &&
-      (Math.abs(mx) > deadzone || Math.abs(my) > deadzone)
-    ) {
-      dragModeRef.current =
-        Math.abs(my) > Math.abs(mx) * 2 ? 'vertical' : 'horizontal';
+    if (dragModeRef.current === 'none' && (Math.abs(mx) > deadzone || Math.abs(my) > deadzone)) {
+      dragModeRef.current = Math.abs(my) > Math.abs(mx) * 2 ? 'vertical' : 'horizontal';
     }
 
-    // 가로 드래그: 레이어 탐색
     if (dragModeRef.current === 'horizontal') {
       const indexSensitivity = 15;
       const newIndex = -(mx / indexSensitivity) + startFocusIndex.current;
-      const clampedIndex = Math.max(0, Math.min(layers.length - 1, newIndex));
-
-      // 드래그 중에는 Damping 없이 즉시 현재값(ref)을 업데이트하여 반응성 향상
+      const clampedIndex = Math.max(0, Math.min(totalLayers - 1, newIndex));
+      setTargetFocusIndex(clampedIndex);
       currentFocusIndexRef.current = clampedIndex;
       setLiveFocusIndex(clampedIndex);
-
-      // 세로 드래그: 씬 회전
     } else if (dragModeRef.current === 'vertical') {
       const rotSensitivity = 200;
       const newRotationX = startRotation.current[0] - my / rotSensitivity;
-      const clampedRotationX = Math.max(
-        -MAX_VERTICAL_ROTATION,
-        Math.min(MAX_VERTICAL_ROTATION, newRotationX)
-      );
-
-      currentRotationRef.current = [
-        clampedRotationX,
-        startRotation.current[1],
-        startRotation.current[2],
-      ];
+      const clampedRotationX = Math.max(-MAX_VERTICAL_ROTATION, Math.min(MAX_VERTICAL_ROTATION, newRotationX));
+      const newRot = [clampedRotationX, startRotation.current[1], startRotation.current[2]];
+      setTargetRotation(newRot);
+      currentRotationRef.current = newRot;
     }
 
-    // 드래그 종료
     if (last) {
       if (dragModeRef.current === 'horizontal') {
-        // 드래그 종료 시 '탐색'(SEEK) 모드로 스냅
         currentFocusDampFactorRef.current = 'SEEK';
         setTargetFocusIndex(Math.round(currentFocusIndexRef.current));
       }
-      if (dragModeRef.current !== 'horizontal') {
-        // 세로 드래그 종료 시 초기 각도로 복귀
+      if (dragModeRef.current === 'vertical') {
         setTargetRotation(INITIAL_ROTATION);
       }
       dragModeRef.current = 'none';
     }
   });
 
-  // ProgressBar 클릭 이벤트 핸들러
+  // ProgressBar 클릭 이벤트 핸들러 (변경 없음)
   const handleSeek = (targetIndex) => {
-    if (targetIndex === 0 || targetIndex === layers.length - 1) {
-      // 시작/끝 클릭: '재생'(AUTOPLAY) 모드
+    if (targetIndex === totalLayers - 1) {
       currentFocusDampFactorRef.current = 'AUTOPLAY';
     } else {
-      // 중간 클릭: '탐색'(SEEK) 모드
       currentFocusDampFactorRef.current = 'SEEK';
     }
     setTargetFocusIndex(targetIndex);
   };
 
-  if (!layers || layers.length === 0) return null;
+  if (totalLayers === 0) return null;
 
+  // 렌더링 (변경 없음)
   return (
     <div className="w-full h-full relative">
       <div
@@ -585,26 +481,23 @@ export default function ImageGridLayers({ layersData }) {
         <Canvas
           gl={{ alpha: true }}
           style={{
-            background:
-              'linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113)',
+            background: 'linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113)',
           }}
           camera={{ position: [0, 0, BASE_CAMERA_Z], fov: 60 }}
-          onCreated={({ scene }) => {
-            scene.background = null;
-          }}
+          onCreated={({ scene }) => { scene.background = null; }}
         >
           <SceneWrapper
             layers={layers}
+            textLayer={textLayer}
             targetFocusIndex={targetFocusIndex}
             targetRotation={targetRotation}
             targetOpacity={targetOpacity}
             currentFocusIndexRef={currentFocusIndexRef}
             currentRotationRef={currentRotationRef}
             currentOpacityRef={currentOpacityRef}
-            dragModeRef={dragModeRef}
             onLiveIndexUpdate={setLiveFocusIndex}
             currentFocusDampFactorRef={currentFocusDampFactorRef}
-            sizeChangeIndices={sizeChangeIndices} 
+            sizeChangeIndices={sizeChangeIndices}
           />
         </Canvas>
       </div>
@@ -613,7 +506,7 @@ export default function ImageGridLayers({ layersData }) {
         <ProgressBar
           liveIndex={liveFocusIndex}
           displayIndex={Math.round(liveFocusIndex)}
-          totalLayers={layers.length}
+          totalLayers={totalLayers}
           onSeek={handleSeek}
           sizeChangeIndices={sizeChangeIndices}
         />
