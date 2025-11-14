@@ -7,6 +7,7 @@ import React, {
   useState,
 } from "react";
 import PageHeader from "@/components/ui/PageHeader";
+import GraffitiToolbar from "./GraffitiToolbar";
 
 /* ------------------------- 배경 스타일 ------------------------- */
 const pageBackgroundStyle = {
@@ -74,28 +75,41 @@ type MPResults = {
   >;
 };
 
-const OTHER_FINGER_TIP_IDS = [4, 12, 16, 20];
-const INDEX_EXTENSION_THRESHOLD = 0.3;
-const FINGER_FOLDED_THRESHOLD = 0.25;
+// 어떤 손가락이 펴졌는지/접혔는지 판정용
+const OTHER_FINGER_TIP_IDS = [16, 20];          // 약지, 새끼만 "접힘" 체크
+const INDEX_EXTENSION_THRESHOLD = 0.20;         // 검지 기준 거리 (조금 완화)
+const MIDDLE_EXTENSION_THRESHOLD = 0.20;        // 중지 기준 거리 (새로 추가)
+
+// pinch (엄지-검지) 제스처
+const FINGER_FOLDED_THRESHOLD = 0.45;  
+const PINCH_DISTANCE_THRESHOLD = 0.33;          // 좀 넉넉하게
+
+// 제스처 온/오프 히스테리시스
+const GESTURE_ON_FRAMES = 4;                    // 최소 4프레임 연속 "on"이면 on
+const GESTURE_OFF_FRAMES = 6;                   // 최소 6프레임 연속 "off"면 off
+
 const COLOR_PALETTE = ["#FA4051", "#FDD047", "#2FB665", "#FFFFFF", "#000000"];
 
 export default function GraffitiClient() {
   const [customPatterns, setCustomPatterns] = useState<string[]>([]);
   const colorPickerRef = useRef<HTMLInputElement>(null);
   const [pendingCustomColor, setPendingCustomColor] = useState<string | null>(null);
-  const handleConfirmPendingCustomColor = () => {
+  const handleConfirmPendingCustomColor = useCallback(() => {
     if (!pendingCustomColor) return;
     setCustomPatterns((prev) =>
       prev.includes(pendingCustomColor) ? prev : [...prev, pendingCustomColor]
     );
     setPendingCustomColor(null);
-  };
+  }, [pendingCustomColor]);
 
+  const handleCustomColorPick = useCallback((color: string) => {
+    setPendingCustomColor(color);
+    setBrushColor(color);
+  }, []);
 
 
   /* -------------------- Intro / Camera 상태 -------------------- */
   const [showIntro, setShowIntro] = useState(true);
-  const [cameraGranted, setCameraGranted] = useState(false);
   const [introFinished, setIntroFinished] = useState(false);
   const [fingerAnimationDone, setFingerAnimationDone] = useState(false);
   const fingerAnimationDoneRef = useRef(fingerAnimationDone);
@@ -103,12 +117,6 @@ export default function GraffitiClient() {
   /* -------------------- 기존 상태 -------------------- */
   const [brushColor, setBrushColor] = useState<string>("#ff315a");
   const [brushSize, setBrushSize] = useState(6);
-  const [gestureEnabled, setGestureEnabled] = useState(true);
-  const [showOverlay, setShowOverlay] = useState(true);
-  const [pinchActive, setPinchActive] = useState(false);
-  const [fps, setFps] = useState(0);
-  const [handsCount, setHandsCount] = useState(0);
-  const [cameraNoticeVisible, setCameraNoticeVisible] = useState(true);
 
   /* -------------------- Undo / Redo 상태 -------------------- */
   const [undoStack, setUndoStack] = useState<string[]>([]);
@@ -132,13 +140,6 @@ export default function GraffitiClient() {
   const lastPinchRef = useRef<boolean[]>([]);
   const gestureOnCountRef = useRef<number[]>([]);
   const gestureOffCountRef = useRef<number[]>([]);
-  const gestureEnabledRef = useRef(gestureEnabled);
-  const showOverlayRef = useRef(showOverlay);
-
-  const fpsCounter = useRef({
-    frames: 0,
-    last: typeof performance !== "undefined" ? performance.now() : 0,
-  });
 
   /* -------------------- Intro 자동 skip (5초) -------------------- */
   useEffect(() => {
@@ -157,20 +158,6 @@ export default function GraffitiClient() {
     fingerAnimationDoneRef.current = fingerAnimationDone;
   }, [fingerAnimationDone]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => setCameraNoticeVisible(false), 5000);
-    return () => clearTimeout(timer);
-  }, []);
-
-  /* -------------------- gesture & overlay ref sync -------------------- */
-  useEffect(() => {
-    gestureEnabledRef.current = gestureEnabled;
-  }, [gestureEnabled]);
-
-  useEffect(() => {
-    showOverlayRef.current = showOverlay;
-  }, [showOverlay]);
-
   /* -------------------- Intro 애니메이션 완료 대기 -------------------- */
   useEffect(() => {
     if (!introFinished || fingerAnimationDone) return;
@@ -187,15 +174,6 @@ export default function GraffitiClient() {
 
   /* -------------------- Mediapipe 결과 처리 -------------------- */
   const onResults = useCallback((results: MPResults) => {
-    /* FPS 계산 */
-    fpsCounter.current.frames += 1;
-    const now = performance.now();
-    if (now - fpsCounter.current.last >= 1000) {
-      setFps(fpsCounter.current.frames);
-      fpsCounter.current.frames = 0;
-      fpsCounter.current.last = now;
-    }
-
     const overlay = overlayRef.current;
     const octx = overlay.getContext("2d")!;
     octx.clearRect(0, 0, overlay.width, overlay.height);
@@ -215,10 +193,8 @@ export default function GraffitiClient() {
       );
     }
 
-    setHandsCount(hands.length);
 
     if (hands.length === 0) {
-      setPinchActive(false);
       lastPointRef.current = [];
       smoothLandmarksRef.current = null;
       lastPinchRef.current = [];
@@ -229,7 +205,7 @@ export default function GraffitiClient() {
 
     /* ------ Smoothing ------ */
     const prevHands = smoothLandmarksRef.current;
-    const alphaBase = 0.5;
+    const alphaBase = 0.18;
 
     const smoothedHands = hands.map((hand, hi) => {
       const prev = prevHands?.[hi];
@@ -258,7 +234,7 @@ export default function GraffitiClient() {
     smoothLandmarksRef.current = smoothedHands;
 
     /* Landmark Overlay */
-    if (showOverlayRef.current && drawLandmarksRef.current) {
+    if (drawLandmarksRef.current) {
       for (const lm of smoothedHands) {
         drawLandmarksRef.current(octx, lm, {
           color: "#00E1FF",
@@ -286,63 +262,79 @@ export default function GraffitiClient() {
       const ref = getPalmWidth(lm);
       const palmCenter = getPalmCenter(lm);
 
-      const dIndex = fingerTipDistance(
-        lm,
-        8,
-        palmCenter,
-        ref
-      );
-      const indexExtended = dIndex > INDEX_EXTENSION_THRESHOLD;
-      const otherFolded = OTHER_FINGER_TIP_IDS.every((tip) => {
-        const dist = fingerTipDistance(lm, tip, palmCenter, ref);
-        return dist < FINGER_FOLDED_THRESHOLD;
-      });
+// ---- 새 제스처 판정 로직 ----
 
-      const gestureActive = indexExtended && otherFolded;
+// 손바닥 기준 길이(ref)와 중심(palmCenter)은 위에서 이미 계산됨
+const dIndex = fingerTipDistance(lm, 8, palmCenter, ref);
+const dMiddle = fingerTipDistance(lm, 12, palmCenter, ref);
 
-      const lastState = lastPinchArr[hi] ?? false;
-      onCounts[hi] = onCounts[hi] ?? 0;
-      offCounts[hi] = offCounts[hi] ?? 0;
+// 검지/중지 "펴짐" 판정
+const indexExtended = dIndex > INDEX_EXTENSION_THRESHOLD;
+const middleExtended = dMiddle > MIDDLE_EXTENSION_THRESHOLD;
 
-      if (gestureActive) {
-        onCounts[hi]++;
-        offCounts[hi] = 0;
-      } else {
-        offCounts[hi]++;
-        onCounts[hi] = 0;
-      }
+// 약지/새끼는 "접힘"이면 좋음 (완전 접히지 않아도 허용)
+const othersFolded = OTHER_FINGER_TIP_IDS.every((tip) => {
+  const dist = fingerTipDistance(lm, tip, palmCenter, ref);
+  return dist < FINGER_FOLDED_THRESHOLD;
+});
 
-      let next = lastState;
-      if (!lastState && onCounts[hi] >= 2) next = true;
-      if (lastState && offCounts[hi] >= 3) next = false;
+// pinch (엄지-검지)
+const thumbTip = lm[4];
+const thumbIndexDistance =
+  thumbTip && indexTip
+    ? distance(thumbTip, indexTip) / Math.max(0.0001, ref)
+    : Infinity;
+const pinchGesture = thumbIndexDistance < PINCH_DISTANCE_THRESHOLD;
 
-      nextPinchArr[hi] = next;
+// 최종 제스처: (검지+중지 펴기) OR (pinch)
+const drawGesture =
+  ((indexExtended && middleExtended && othersFolded) || pinchGesture);
 
-      const px = clamp(indexTip.x, 0, 1) * width;
-      const py = clamp(indexTip.y, 0, 1) * height;
-      const shouldDraw = gestureEnabledRef.current ? next : false;
-      const lastPoint = lastPoints[hi] ?? null;
+// 히스테리시스 적용
+const lastState = lastPinchArr[hi] ?? false;
+onCounts[hi] = onCounts[hi] ?? 0;
+offCounts[hi] = offCounts[hi] ?? 0;
 
-      // 새로 그리기 시작하는 순간 스냅샷 저장
-      if (shouldDraw && !lastPoint) {
-        const snapshot = drawCanvas.toDataURL();
-        setUndoStack((prev) => [...prev, snapshot]);
-        setRedoStack([]); // 새로운 stroke 시작 시 redo 비움
-      }
+if (drawGesture) {
+  onCounts[hi]++;
+  offCounts[hi] = 0;
+} else {
+  offCounts[hi]++;
+  onCounts[hi] = 0;
+}
 
-      if (shouldDraw && lastPoint) {
-        drawCtx.beginPath();
-        drawCtx.moveTo(lastPoint.x, lastPoint.y);
-        drawCtx.lineTo(px, py);
-        drawCtx.stroke();
-      }
+let next = lastState;
+if (!lastState && onCounts[hi] >= GESTURE_ON_FRAMES) next = true;
+if (lastState && offCounts[hi] >= GESTURE_OFF_FRAMES) next = false;
 
-      lastPoints[hi] = { x: px, y: py };
+nextPinchArr[hi] = next;
+
+// 실제 그리기 좌표 (항상 검지 끝 기준)
+const px = clamp(indexTip.x, 0, 1) * width;
+const py = clamp(indexTip.y, 0, 1) * height;
+
+const shouldDraw = next;
+const lastPoint = lastPoints[hi] ?? null;
+
+// 새로 그리기 시작하는 순간 스냅샷 저장
+if (shouldDraw && !lastPoint) {
+  const snapshot = drawCanvas.toDataURL();
+  setUndoStack((prev) => [...prev, snapshot]);
+  setRedoStack([]); // 새로운 stroke 시작 시 redo 비움
+}
+
+if (shouldDraw && lastPoint) {
+  drawCtx.beginPath();
+  drawCtx.moveTo(lastPoint.x, lastPoint.y);
+  drawCtx.lineTo(px, py);
+  drawCtx.stroke();
+}
+
+lastPoints[hi] = { x: px, y: py };
     });
 
     lastPinchRef.current = nextPinchArr;
     lastPointRef.current = lastPoints;
-    setPinchActive(nextPinchArr.some(Boolean));
   }, []);
 
   /* -------------------- Mediapipe + Camera 초기화 -------------------- */
@@ -361,7 +353,6 @@ export default function GraffitiClient() {
         });
 
         /* ------- 허용됨! Intro 종료 ------- */
-        setCameraGranted(true);
         introDelayTimer = window.setTimeout(() => {
           if (stopped) return;
           setShowIntro(false);
@@ -373,7 +364,8 @@ export default function GraffitiClient() {
         }, 3000);
 
         video.srcObject = stream;
-        await video.play();
+  await video.play();
+
 
         /* ------- 캔버스 초기화 ------- */
         const overlay = overlayRef.current;
@@ -383,12 +375,10 @@ export default function GraffitiClient() {
         draw.width = video.videoWidth;
         draw.height = video.videoHeight;
 
-        const ctx = draw.getContext("2d")!;
-        ctx.lineCap = "round";
-        ctx.lineJoin = "round";
-        ctx.strokeStyle = brushColor;
-        ctx.lineWidth = brushSize;
-        ctxRef.current = ctx;
+    const ctx = draw.getContext("2d")!;
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    ctxRef.current = ctx;
 
         /* ------- Mediapipe 로딩 ------- */
         const base = "https://cdn.jsdelivr.net/npm/@mediapipe";
@@ -421,8 +411,8 @@ export default function GraffitiClient() {
 
         const tryLoadTasksVision = async () => {
           const candidates = [
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.3/vision_bundle.js",
             "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js",
+             "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js"
           ];
           for (const url of candidates) {
             try {
@@ -529,7 +519,7 @@ export default function GraffitiClient() {
       const stream = videoRef.current?.srcObject as MediaStream | null;
       stream?.getTracks()?.forEach((t) => t.stop());
     };
-  }, [onResults, brushColor, brushSize]);
+  }, []);
 
   /* -------------------- 브러시 스타일 반영 -------------------- */
   useEffect(() => {
@@ -541,6 +531,19 @@ export default function GraffitiClient() {
     }
     ctx.lineWidth = brushSize;
   }, [brushColor, brushSize]);
+
+  const restoreCanvasSnapshot = useCallback((snapshot: string) => {
+    const draw = drawRef.current;
+    if (!draw) return;
+    const ctx = draw.getContext("2d");
+    if (!ctx) return;
+    const img = new Image();
+    img.src = snapshot;
+    img.onload = () => {
+      ctx.clearRect(0, 0, draw.width, draw.height);
+      ctx.drawImage(img, 0, 0);
+    };
+  }, []);
 
   /* -------------------- Clear 버튼 -------------------- */
   const handleClear = useCallback(() => {
@@ -555,38 +558,26 @@ export default function GraffitiClient() {
   const handleUndo = useCallback(() => {
     if (undoStack.length === 0) return;
     const draw = drawRef.current;
-    const ctx = draw.getContext("2d")!;
-    const last = undoStack[undoStack.length - 1];
+    if (!draw) return;
 
+    const last = undoStack[undoStack.length - 1];
     const current = draw.toDataURL();
     setRedoStack((prev) => [...prev, current]);
     setUndoStack((prev) => prev.slice(0, -1));
-
-    const img = new Image();
-    img.src = last;
-    img.onload = () => {
-      ctx.clearRect(0, 0, draw.width, draw.height);
-      ctx.drawImage(img, 0, 0);
-    };
-  }, [undoStack]);
+    restoreCanvasSnapshot(last);
+  }, [undoStack, restoreCanvasSnapshot]);
 
   const handleRedo = useCallback(() => {
     if (redoStack.length === 0) return;
     const draw = drawRef.current;
-    const ctx = draw.getContext("2d")!;
-    const last = redoStack[redoStack.length - 1];
+    if (!draw) return;
 
+    const last = redoStack[redoStack.length - 1];
     const current = draw.toDataURL();
     setUndoStack((prev) => [...prev, current]);
     setRedoStack((prev) => prev.slice(0, -1));
-
-    const img = new Image();
-    img.src = last;
-    img.onload = () => {
-      ctx.clearRect(0, 0, draw.width, draw.height);
-      ctx.drawImage(img, 0, 0);
-    };
-  }, [redoStack]);
+    restoreCanvasSnapshot(last);
+  }, [redoStack, restoreCanvasSnapshot]);
 
   /* -------------------- Save -------------------- */
   const handleSave = useCallback(() => {
@@ -613,7 +604,7 @@ export default function GraffitiClient() {
       <div className="pointer-events-none inset-0 flex items-center justify-center p-6 animate-fadeIn">
         <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
-            <div className="w-full h-full pt-[100px]">
+            <div className="w-full h-full pt-[100px] md:translate-y-0 translate-y-40">
               {!videoReady && (
                 <PageHeader
                   title="Graff!ti"
@@ -637,6 +628,7 @@ export default function GraffitiClient() {
                       border border-white/80
                       backdrop-blur-[6px]
                       shadow-[0_20px_60px_rgba(0,0,0,0.35)]
+                      -translate-x-4 md:translate-x-0
                     "
                   >
                     <p className="text-white text-center text-[18px] md:text-[24px] font-semibold">
@@ -680,7 +672,7 @@ export default function GraffitiClient() {
                     border border-white
                     bg-white/60 backdrop-blur-[4px]
                     shadow-[0_0_50px_20px_rgba(0,0,0,0.25)]
-                    flex items-center justify-center translate-y-30
+                    flex items-center justify-center md:translate-y-30 -translate-x-3 md:translate-x-0
                   "
                 >
                   <p className="hidden md:block text-black text-[20px]">
@@ -699,12 +691,16 @@ export default function GraffitiClient() {
       </div>
 
       {/* ------------------ 비디오 화면 ------------------ */}
-      <div
-        className={`relative w-full max-w-[1000px] aspect-video mx-auto ${
-          videoReady ? "" : "hidden"
-        }`}
-        aria-hidden={!videoReady}
-      >
+<div
+  className={`
+    relative w-full max-w-[1000px] aspect-video mx-auto md:translate-y-0 translate-y-50
+    ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
+    transition-opacity duration-500
+  `}
+  aria-hidden={!videoReady}
+>
+
+
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-contain -scale-x-100"
@@ -722,199 +718,26 @@ export default function GraffitiClient() {
       </div>
 
       {videoReady && (
-        <div className="pointer-events-auto absolute inset-x-0 bottom-20 flex justify-center">
-          <div
-            className="
-              w-[820px] h-[90px]
-              flex-shrink-0
-              rounded-[118px]
-              border border-white
-              bg-[rgba(255,255,255,0.40)]
-              shadow-[0_0_50px_20px_rgba(0,0,0,0.25)]
-              backdrop-blur-[4px]
-              px-6
-              flex items-center justify-between
-            "
-          >
-            {/* Undo / Redo */}
-            <div className="flex items-center gap-3">
-{/* Undo = redo_white.svg 좌우반전 */}
-<button
-  onClick={handleUndo}
-  aria-label="Undo"
-  className="p-2 hover:opacity-75 transition"
->
-  <img
-    src="/icons/redo_white.svg"
-    className="w-[28px] h-[28px] -scale-x-100"
-  />
-</button>
-
-{/* Redo (원본) */}
-<button
-  onClick={handleRedo}
-  aria-label="Redo"
-  className="p-2 hover:opacity-75 transition"
->
-  <img
-    src="/icons/redo_white.svg"
-    className="w-[28px] h-[28px]"
-  />
-</button>
-            </div>
-
-            {/* Color List */}
-            <div className="flex items-center gap-3">
-              {COLOR_PALETTE.map((color) => (
-                <button
-                  key={color}
-                  type="button"
-                  className="
-                    h-[30px] w-[30px]
-                    rounded-full border-2
-                    transition
-                  "
-                  style={{
-                    backgroundColor: color,
-                    borderColor:
-                      brushColor === color ? "#ffffff" : "rgba(255,255,255,0.3)",
-                  }}
-                  onClick={() => setBrushColor(color)}
-                />
-              ))}
-
-            {customPatterns.map((hex) => (
-              <button
-                key={hex}
-                className="h-[30px] w-[30px] rounded-full border-2 transition"
-                style={{
-                  backgroundColor: hex,
-                  borderColor:
-                    brushColor === hex ? "#ffffff" : "rgba(255,255,255,0.3)",
-                }}
-                onClick={() => setBrushColor(hex)}
-              />
-            ))}
-
-
-{/* 컬러픽커용 숨겨진 input */}
-            <input
-              type="color"
-              ref={colorPickerRef}
-              className="hidden"
-              onChange={(e) => {
-                const color = e.target.value;
-                setPendingCustomColor(color);
-                setBrushColor(color);
-              }}
-            />
-            {/* 패턴 브러시 */}
-            <button
-              type="button"
-              className="
-                h-[30px] w-[30px]
-                rounded-full border-2 transition
-              "
-              style={{
-                borderColor:
-                  customPatterns.includes(brushColor)
-                    ? "#ffffff"
-                    : "rgba(255,255,255,0.3)",
-                background:
-                  "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
-              }}
-              onClick={() => colorPickerRef.current?.showPicker?.() ?? colorPickerRef.current?.click()}
-            />
-            <button
-              type="button"
-              onClick={handleConfirmPendingCustomColor}
-              disabled={
-                !pendingCustomColor ||
-                customPatterns.includes(pendingCustomColor)
-              }
-              className="
-                px-2 py-1
-                rounded-full border border-white/30
-                text-[12px]
-                text-white transition
-                disabled:opacity-40 disabled:cursor-not-allowed
-              "
-            >
-              Confirm
-            </button>
-
-            </div>
-
-            {/* Hex Pattern Add Button */}
-            {/* <button
-              onClick={() => {
-                const hex = prompt("HEX 코드를 입력하세요 (예: #FF00AA)");
-                if (hex && /^#?[0-9A-Fa-f]{6}$/.test(hex)) {
-                  const normalized = hex.startsWith("#") ? hex : "#" + hex;
-                  setCustomPatterns((prev) => [...prev, normalized]);
-                }
-              }}
-              className="
-                px-3 py-1
-                rounded-full border border-white/50
-                text-white text-xs
-                bg-white/10
-                hover:bg-white/20 transition
-              "
-            >
-              + HEX
-            </button> */}
-
-            {/* Stroke Size */}
-            <div className="flex items-center gap-2 w-[170px] h-[4px]">
-                <p className="flex items-cente text-[20px] text-white font-light">size</p>
-              <input
-                type="range"
-                min={2}
-                max={40}
-                value={brushSize}
-                onChange={(e) => setBrushSize(Number(e.target.value))}
-                className="w-full accent-white"
-              />
-            </div>
-
-            {/* Trash + Save */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleClear}
-                aria-label="Clear"
-                className="p-2 hover:opacity-75 transition"
-              >
-                <img src="/icons/trash 2.svg" className="w-[24px] h-[24px]" />
-              </button>
-<button
-  onClick={handleSave}
-  className="
-    w-[90px] h-[35px]
-    rounded-[3px] text-[#294393] text-[20px] font-semibold
-    bg-white hover:bg-[#294393]
-    flex items-center justify-center gap-1
-    transition-all
-    group
-  "
->
-  <img
-    src="/icons/Download_blue.svg"
-    alt="download"
-    className="w-[18px] h-[18px] block group-hover:hidden"
-  />
-  <img
-    src="/icons/download.svg"
-    alt="download hover"
-    className="w-[18px] h-[18px] hidden group-hover:block"
-  />
-  <span className="group-hover:text-white">PNG</span>
-</button>
-
-            </div>
-          </div>
+        <div className="pointer-events-auto absolute inset-x-0 bottom-20 flex justify-center scale-40 sm:scale-100 md:translate-y-0 -translate-y-40">
+          <GraffitiToolbar
+            colorPalette={COLOR_PALETTE}
+            brushColor={brushColor}
+            brushSize={brushSize}
+            customPatterns={customPatterns}
+            pendingCustomColor={pendingCustomColor}
+            colorPickerRef={colorPickerRef}
+            onBrushColorChange={setBrushColor}
+            onSizeChange={setBrushSize}
+            onCustomColorPick={handleCustomColorPick}
+            onConfirmCustomColor={handleConfirmPendingCustomColor}
+            onUndo={handleUndo}
+            onRedo={handleRedo}
+            onClear={handleClear}
+            onSave={handleSave}
+          />
         </div>
       )}
+
     </div>
   );
 }
