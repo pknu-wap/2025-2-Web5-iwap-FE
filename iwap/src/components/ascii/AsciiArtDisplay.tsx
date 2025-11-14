@@ -1,8 +1,8 @@
 // src/components/ascii/AsciiArtDisplay.tsx
 'use client';
 
-// [수정] useCallback, useEffect 추가
 import React, { useState, useRef, useLayoutEffect, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import PageHeader from '@/components/ui/PageHeader';
 import ResolutionSlider from './ResolutionSlider';
 import DownloadOptions from './DownloadOptions';
@@ -12,7 +12,14 @@ type ArtDimensions = { w: number; h: number };
 type AsciiCell = { char: string; color: string };
 // DownloadOptions.tsx에서 import할 수 있도록 'export' 키워드 유지
 export type AsciiResult = { art: React.ReactNode | null; data: AsciiCell[][] | null; dims: ArtDimensions; initialResolution: number; };
-interface AsciiArtDisplayProps { asciiResult: AsciiResult; onClose: () => void; onResolutionChange: (newResolution: number) => void; isProcessing: boolean; }
+// [수정] previewUrl prop 추가
+interface AsciiArtDisplayProps {
+  asciiResult: AsciiResult;
+  onClose: () => void;
+  onResolutionChange: (newResolution: number) => void;
+  isProcessing: boolean;
+  previewUrl: string | null; // [수정]
+}
 const CHAR_WIDTH_PX = 5;
 const CHAR_HEIGHT_PX = 7;
 const FONT_SIZE_PX = 7;
@@ -20,9 +27,11 @@ const MAX_USER_ZOOM = 8;
 const FONT_FAMILY = 'monospace';
 const FONT = `${FONT_SIZE_PX}px ${FONT_FAMILY}`;
 const RENDER_SCALE = 4;
+// [수정] STATIC_PADDING_PX 상수 제거 (원복)
 
 
-const SpinnerIcon = () => ( <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle> <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg> );
+const SpinnerIcon = () => ( <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"> <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle> <path className="opacity-75" fill="currentColor" d="M4 12a8 8
+ 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path> </svg> );
 const InlineLoadingIndicator = ({ text }: { text: string }) => ( <div className="flex items-center"> <SpinnerIcon /> <span className="text-sm text-white ml-2">{text}</span> </div> );
 
 export default function AsciiArtDisplay({
@@ -30,6 +39,7 @@ export default function AsciiArtDisplay({
   onClose,
   onResolutionChange,
   isProcessing,
+  previewUrl, // [수정]
 }: AsciiArtDisplayProps) {
   const [resolution, setResolution] = useState(asciiResult.initialResolution);
   const [pngScaleFactor, setPngScaleFactor] = useState<number>(1);
@@ -39,6 +49,9 @@ export default function AsciiArtDisplay({
   // Panning(드래그 이동) 상태 추가
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [isPanning, setIsPanning] = useState(false);
+  
+  // [수정] 애니메이션을 위한 state 추가
+  const [isRevealed, setIsRevealed] = useState(false);
 
   const artRef = useRef<HTMLDivElement>(null);
   const zoomWrapperRef = useRef<HTMLDivElement>(null);
@@ -84,10 +97,13 @@ export default function AsciiArtDisplay({
     const calculateFitScale = () => {
       const { w, h } = artNaturalDimsRef.current;
       if (w === 0 || !container) return;
+      
+      // [수정] 여백 계산 로직 원복 (컨테이너 전체 크기 기준)
       const scale = Math.min(
         container.clientWidth / w,
         container.clientHeight / h
       );
+      
       if (isFinite(scale) && scale > 0) {
         setFitScale(scale);
       } else {
@@ -103,6 +119,12 @@ export default function AsciiArtDisplay({
       setPanOffset({ x: 0, y: 0 }); // 줌 리셋 시 팬 리셋
       isMountRef.current = false; // 마운트 완료
     }
+    
+    // [수정] "인공 로딩" 애니메이션 로직 추가
+    setIsRevealed(false); // 1. 먼저 숨김
+    const timer = setTimeout(() => {
+      setIsRevealed(true); // 2. 100ms 후 "인공 로딩" 시작(표시)
+    }, 1000); // [수정] 2000ms -> 1000ms (1초)
 
     const resizeObserver = new ResizeObserver(calculateFitScale);
     resizeObserver.observe(container);
@@ -111,7 +133,7 @@ export default function AsciiArtDisplay({
     return () => {
       resizeObserver.unobserve(container);
       window.removeEventListener('resize', calculateFitScale);
-      // [수정] 여기서 isMountRef를 리셋하지 않습니다.
+      clearTimeout(timer); // [수정] 타이머 클린업
     };
   }, [asciiResult.dims]);
 
@@ -142,7 +164,8 @@ export default function AsciiArtDisplay({
     // [수정] art 자체의 transform과 transition 제거 (부모가 transform됨)
     art.style.transform = '';
     art.style.transformOrigin = '';
-    art.style.transition = 'none';
+    // [수정] art의 transition은 opacity만 담당 (className으로 이동)
+    // art.style.transition = 'none'; // 제거
 
     // panOffset은 스크린 픽셀 기준이므로, scale 이후 적용되는 translate 값은 scale로 나눠줘야 함.
     const transX = effectivePanOffset.x / effectiveScale;
@@ -252,6 +275,7 @@ export default function AsciiArtDisplay({
         const scaledWidth = w * effectiveScale;
         const scaledHeight = h * effectiveScale;
 
+        // [수정] 여백 계산 로직 원복 (컨테이너 전체 크기 기준)
         const maxOverhangX = Math.max(0, scaledWidth - container.clientWidth);
         const maxOverhangY = Math.max(0, scaledHeight - container.clientHeight);
         
@@ -297,7 +321,7 @@ export default function AsciiArtDisplay({
         const scaledWidth = w * effectiveScale;
         const scaledHeight = h * effectiveScale;
 
-        // 1. 이미지가 컨테이너보다 얼마나 더 큰지 (오버행) 계산
+        // [수정] 여백 계산 로직 원복 (컨테이너 전체 크기 기준)
         const maxOverhangX = Math.max(0, scaledWidth - container.clientWidth);
         const maxOverhangY = Math.max(0, scaledHeight - container.clientHeight);
         
@@ -398,6 +422,7 @@ export default function AsciiArtDisplay({
           const scaledWidth = w * effectiveScale;
           const scaledHeight = h * effectiveScale;
 
+          // [수정] 여백 계산 로직 원복 (컨테이너 전체 크기 기준)
           const maxOverhangX = Math.max(0, scaledWidth - container.clientWidth);
           const maxOverhangY = Math.max(0, scaledHeight - container.clientHeight);
           
@@ -428,9 +453,11 @@ export default function AsciiArtDisplay({
   };
 
   return (
+    // [수정] justify-center 제거, h-screen -> h-dvh
     <div className="w-full h-dvh overflow-hidden flex flex-col items-center p-4 sm:p-8" style={backgroundStyle}>
       
       {/* 'relative'를 추가하여 z-index 스태킹 컨텍스트 생성 */}
+      {/* [수정] max-h-full -> h-full */}
       <div className="w-full max-w-[620px] flex flex-col h-full relative">
         
         {/* 'z-10' 추가 */}
@@ -446,14 +473,38 @@ export default function AsciiArtDisplay({
           onTouchMove={handleTouchMove} // [수정] 핀치-줌 전용
           onTouchEnd={handleTouchEnd}   // [수정] 핀치-줌 종료 전용
         >
-          {/* panTargetRef(겉부분, 흰색 박스)에 줌/팬/애니메이션 모두 적용 */}
-          <div ref={panTargetRef} className="bg-white p-0.5 shadow-lg">
-            {/* [수정] 이 div는 이제 래퍼 역할만 함 */}
+          {/* [수정] DOM 구조 원복: panTargetRef가 패딩을 가짐 */}
+          <div ref={panTargetRef} className="bg-white p-0.5 shadow-lg"> {/* [수정] p-1.5 -> p-0.5 */}
+            {/* [수정] 원본 로직의 중간 래퍼 */}
             <div className="w-full h-full flex items-center justify-center overflow-hidden">
-              {/* zoomWrapperRef(검은 배경) */}
-              <div ref={zoomWrapperRef} className="bg-black overflow-hidden">
-                {/* artRef(캔버스 컨테이너) */}
-                <div ref={artRef} style={{ userSelect: 'none', fontFamily: FONT_FAMILY }}>
+              {/* [수정] zoomWrapperRef (검은 배경 + 스태킹 컨텍스트) */}
+              <div ref={zoomWrapperRef} className="bg-black overflow-hidden relative">
+                
+                {/* [수정] Layer 1: 원본 이미지 (바닥) */}
+                {previewUrl && (
+                  <Image // [수정] <img /> -> <Image />
+                    src={previewUrl}
+                    alt="Original"
+                    layout="fill" // [수정] layout="fill" 추가
+                    objectFit="fill" // [수정] objectFit="fill" 추가 (w-full h-full과 동일 효과)
+                    className="absolute top-0 left-0" // [수정] w-full h-full 제거 (layout="fill"이 대체)
+                    style={{ imageRendering: 'pixelated' }}
+                    onDragStart={(e: React.DragEvent) => e.preventDefault()} // [수정] 타입 추가 (오류 4 해결)
+                    priority // LCP 개선을 위해 priority 추가
+                  />
+                )}
+                
+                {/* [수정] Layer 2: ASCII 아트 (위) */}
+                <div 
+                  ref={artRef} 
+                  // [수정] 애니메이션을 위한 클래스 및 스타일
+                  className="relative transition-opacity duration-1500 ease-out" // [수정] duration-2000 -> duration-1500 (1.5초)
+                  style={{ 
+                    userSelect: 'none', 
+                    fontFamily: FONT_FAMILY,
+                    opacity: isRevealed ? 1 : 0 // [수정]
+                  }}
+                >
                   <canvas 
                     ref={displayCanvasRef}
                     style={{ 
@@ -462,13 +513,14 @@ export default function AsciiArtDisplay({
                       display: 'block',
                       imageRendering: 'pixelated',
                     }}
-                    // 브라우저 기본 이미지 드래그 방지
-                    onDragStart={(e) => e.preventDefault()}
+                    onDragStart={(e: React.DragEvent) => e.preventDefault()} // [수정] 타입 추가 (오류 4 해결)
                   />
                 </div>
               </div>
             </div>
           </div>
+          {/* [수정] End Art Container DOM Change */}
+
         </div> {/* End Art Container */}
 
         {/* 'relative' 및 'z-10' 추가 */}
@@ -477,7 +529,8 @@ export default function AsciiArtDisplay({
             <div className="flex-1 min-w-0">
                <div className="flex items-center mb-1 h-5">
                 <span className="block text-white text-sm font-normal">{resolution}px</span>
-                {isProcessing && <div className="ml-3"><InlineLoadingIndicator text="변환 중..." /></div>}
+                {/* [수정] isProcessing || !isRevealed 조건으로 변경 */}
+                {(isProcessing || !isRevealed) && <div className="ml-3"><InlineLoadingIndicator text="변환 중..." /></div>}
               </div>
               <ResolutionSlider
                 value={resolution}
