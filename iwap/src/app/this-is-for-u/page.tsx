@@ -24,6 +24,7 @@ import {
 import {
   initFourierSketch,
   type FourierSketchController,
+  type FourierSketchInput,
 } from "./fourier-sketch";
 
 const POSTCARD_RATIO = 3 / 2;
@@ -196,6 +197,27 @@ export default function ThisIsForUPage() {
 
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [canvasSize, setCanvasSize] = useState({ width: 720, height: 480 });
+  const [pendingFourierPaths, setPendingFourierPaths] = useState<FourierSketchInput[]>([]);
+  const pendingFourierPathsRef = useRef<FourierSketchInput[]>([]);
+  const buildFourierPendingPaths = useCallback<() => FourierSketchInput[]>(
+    () => {
+      const MIN_POINTS = 4;
+
+      return strokes
+        .filter(
+          (stroke) => stroke.mode === "draw" && stroke.points.length >= MIN_POINTS,
+        )
+        .map((stroke) => ({
+          points: stroke.points.map((point) => ({
+            x: point.x,
+            y: point.y,
+          })),
+          width: canvasSize.width,
+          height: canvasSize.height,
+        }));
+    },
+    [strokes, canvasSize.width, canvasSize.height],
+  );
 
   const fourierDemoRef = useRef<HTMLDivElement>(null);
   const fourierSketchRef = useRef<FourierSketchController | null>(null);
@@ -590,6 +612,18 @@ export default function ThisIsForUPage() {
   useEffect(() => {
     redrawStrokes();
   }, [redrawStrokes, strokes]);
+
+  useEffect(() => {
+    const nextPaths = buildFourierPendingPaths();
+    pendingFourierPathsRef.current = nextPaths;
+    setPendingFourierPaths(nextPaths);
+  }, [buildFourierPendingPaths]);
+
+  useEffect(() => {
+    const controller = fourierSketchRef.current;
+    if (!controller) return;
+    controller.loadPendingSketches(pendingFourierPaths);
+  }, [pendingFourierPaths]);
 
   // 포인터 이벤트 핸들러
   const handlePointerDown = useCallback(
@@ -1226,6 +1260,7 @@ export default function ThisIsForUPage() {
     if (!fourierDemoRef.current) return;
     const controller = initFourierSketch(fourierDemoRef.current);
     fourierSketchRef.current = controller;
+    controller.loadPendingSketches(pendingFourierPathsRef.current);
     return () => {
       controller.cleanup();
       fourierSketchRef.current = null;
@@ -1249,6 +1284,10 @@ export default function ThisIsForUPage() {
     fourierPathColor,
     fourierPathAlpha,
   ]);
+
+  const handleFourierConfirm = useCallback(() => {
+    fourierSketchRef.current?.confirmSketches();
+  }, []);
 
   return (
     <div className="min-h-dvh overflow-y-auto bg-gradient-to-br from-[#fdf2ec] via-white to-[#f4f9ff] text-slate-900">
@@ -1468,14 +1507,17 @@ export default function ThisIsForUPage() {
                     <div className="flex justify-end gap-2">
                       <button
                         type="button"
-                        onClick={() => fourierSketchRef.current?.confirmSketches()}
-                        className="inline-flex rounded-full border border-rose-200 bg-rose-500/80 px-4 py-1.5 text-[0.6rem] font-semibold uppercase tracking-[0.4em] text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-500/90"
+                        onClick={handleFourierConfirm}
+                        disabled={!pendingFourierPaths.length}
+                        className={`inline-flex rounded-full border border-rose-200 bg-rose-500/80 px-4 py-1.5 text-[0.6rem] font-semibold uppercase tracking-[0.4em] text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-500/90 ${pendingFourierPaths.length ? "" : "cursor-not-allowed opacity-40"}`}
                       >
                         확인
                       </button>
                       <button
                         type="button"
-                        onClick={() => fourierSketchRef.current?.clearSketches()}
+                        onClick={() => {
+                          fourierSketchRef.current?.clearSketches();
+                        }}
                         className="inline-flex rounded-full border border-white/30 bg-white/10 px-4 py-1.5 text-[0.6rem] font-semibold uppercase tracking-[0.4em] text-white transition hover:bg-white/20"
                       >
                         Clear

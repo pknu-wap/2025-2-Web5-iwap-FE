@@ -10,10 +10,17 @@ type FourierSketchStyles = {
   pathAlpha?: number;
 };
 
+export type FourierSketchInput = {
+  points: { x: number; y: number }[];
+  width: number;
+  height: number;
+};
+
 export type FourierSketchController = {
   updateStyles: (styles: FourierSketchStyles) => void;
   confirmSketches: () => void;
   clearSketches: () => void;
+  loadPendingSketches: (paths: FourierSketchInput[]) => void;
   cleanup: () => void;
 };
 
@@ -37,7 +44,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
 
   let clearSketchesFn: () => void = () => {};
   let confirmSketchesFn: () => void = () => {};
-
+  let loadPendingSketchesFn: (paths: FourierSketchInput[]) => void = () => {};
   const controller: FourierSketchController = {
     updateStyles,
     confirmSketches: () => {
@@ -45,6 +52,9 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
     },
     clearSketches: () => {
       clearSketchesFn();
+    },
+    loadPendingSketches: (paths) => {
+      loadPendingSketchesFn(paths);
     },
     cleanup() {
       if (instance) {
@@ -71,6 +81,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
 
       type FourierSketch = {
         fourier: FourierTerm[];
+        time: number;
         path: p5.Vector[];
         preview: p5.Vector[];
       };
@@ -79,8 +90,6 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
       const pendingSketches: FourierSketch[] = [];
       const activeSketches: FourierSketch[] = [];
       let state: "idle" | "drawing" | "pending" | "fourier" = "idle";
-      const SHARED_DT = 0.04;
-      let sharedTime = 0;
 
       const MAX_TERMS = 3000;
 
@@ -88,7 +97,6 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         drawing = [];
         pendingSketches.length = 0;
         activeSketches.length = 0;
-        sharedTime = 0;
         state = "idle";
       };
 
@@ -99,12 +107,50 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         activeSketches.length = 0;
         activeSketches.push(...pendingSketches);
         pendingSketches.length = 0;
-        sharedTime = 0;
         state = activeSketches.length > 0 ? "fourier" : "idle";
+      };
+
+      const loadPendingSketches = (paths: FourierSketchInput[]) => {
+        drawing = [];
+        pendingSketches.length = 0;
+        activeSketches.length = 0;
+        state = "idle";
+
+        if (!paths.length) return;
+
+        const rect = container.getBoundingClientRect();
+        const baseWidth = rect.width || 480;
+        const baseHeight = rect.height || 480;
+        const size = Math.min(baseWidth, baseHeight);
+
+        for (const payload of paths) {
+          if (payload.points.length < 4) continue;
+
+          const width = payload.width || baseWidth;
+          const height = payload.height || baseHeight;
+          const scaleX = size / width;
+          const scaleY = size / height;
+
+          const vectors = payload.points.map((point) => {
+            const x = (point.x - 0.5) * width;
+            const y = (point.y - 0.5) * height;
+            return p.createVector(x * scaleX, y * scaleY);
+          });
+
+          pendingSketches.push({
+            fourier: dft(vectors),
+            time: 0,
+            path: [],
+            preview: vectors,
+          });
+        }
+
+        state = pendingSketches.length > 0 ? "pending" : "idle";
       };
 
       clearSketchesFn = clearSketches;
       confirmSketchesFn = confirmSketches;
+      loadPendingSketchesFn = loadPendingSketches;
 
       // DFT 구현 (Daniel Shiffman 스타일)
       const dft = (points: p5.Vector[]): FourierTerm[] => {
@@ -273,7 +319,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
               const prevX = x;
               const prevY = y;
 
-              const angle = term.freq * sharedTime + term.phase;
+              const angle = term.freq * sketch.time + term.phase;
               x += term.amp * Math.cos(angle);
               y += term.amp * Math.sin(angle);
 
@@ -294,12 +340,13 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
               p.vertex(v.x, v.y);
             }
             p.endShape();
-          }
 
-          sharedTime += SHARED_DT;
-          if (sharedTime > 2 * Math.PI) {
-            sharedTime = 0;
-            for (const sketch of activeSketches) {
+            const N = sketch.fourier.length;
+            const dt = (2 * Math.PI) / N;
+            sketch.time += dt;
+
+            if (sketch.time > 2 * Math.PI) {
+              sketch.time = 0;
               sketch.path = [];
             }
           }
