@@ -12,6 +12,20 @@ const GRID_NEIGHBORS: Array<[number, number]> = [
   [0, -1],
   [0, 1],
 ];
+const OUTLINE_SAMPLE_SIZE = 480;
+const OUTLINE_ALPHA_THRESHOLD = 48;
+const OUTLINE_MIN_POINTS = 32;
+const OUTLINE_MAX_STEPS = OUTLINE_SAMPLE_SIZE * OUTLINE_SAMPLE_SIZE * 4;
+const NEIGHBOR_OFFSETS = [
+  { dx: 1, dy: 0 },
+  { dx: 1, dy: 1 },
+  { dx: 0, dy: 1 },
+  { dx: -1, dy: 1 },
+  { dx: -1, dy: 0 },
+  { dx: -1, dy: -1 },
+  { dx: 0, dy: -1 },
+  { dx: 1, dy: -1 },
+];
 
 function collectDrawablePoints(strokes: Stroke[]): StrokePoint[] {
   return strokes
@@ -131,8 +145,208 @@ export function computeDrawingFourier(
 ): FourierCoefficient[] {
   const points = collectDrawablePoints(strokes);
   if (!points.length) return [];
-  const resampled = resamplePoints(points, sampleCount);
+  const outlinePoints =
+    strokes.filter((stroke) => stroke.mode === "draw" && stroke.points.length > 1)
+      .length > 1
+      ? traceOutlineFromStrokes(strokes)
+      : null;
+  const workingPoints =
+    outlinePoints && outlinePoints.length >= OUTLINE_MIN_POINTS
+      ? outlinePoints
+      : points;
+  const resampled = resamplePoints(workingPoints, sampleCount);
   return discreteFourier(normalizePoints(resampled), maxHarmonics);
+}
+
+function traceOutlineFromStrokes(strokes: Stroke[]): StrokePoint[] | null {
+  if (typeof document === "undefined") return null;
+  const mask = rasterizeStrokes(strokes, OUTLINE_SAMPLE_SIZE);
+  if (!mask) return null;
+  const boundary = extractBoundaryMask(mask.data, mask.width, mask.height);
+  if (!boundary) return null;
+  const outlines = walkOutlines(boundary, mask.width, mask.height);
+  if (!outlines.length) return null;
+  outlines.sort((a, b) => b.length - a.length);
+  return outlines[0] ?? null;
+}
+
+function rasterizeStrokes(
+  strokes: Stroke[],
+  size: number,
+): ImageData | null {
+  const canvas = document.createElement("canvas");
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+  ctx.clearRect(0, 0, size, size);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  strokes.forEach((stroke) => {
+    if (!stroke.points.length) return;
+    const lineWidth = Math.max(1, stroke.sizeRatio * size);
+    if (stroke.mode === "erase") {
+      ctx.globalCompositeOperation = "destination-out";
+      ctx.strokeStyle = "rgba(0,0,0,1)";
+      ctx.fillStyle = "rgba(0,0,0,1)";
+    } else {
+      ctx.globalCompositeOperation = "source-over";
+      ctx.strokeStyle = "#ffffff";
+      ctx.fillStyle = "#ffffff";
+    }
+    let previous: { x: number; y: number } | null = null;
+    stroke.points.forEach((point) => {
+      const px = point.x * size;
+      const py = point.y * size;
+      if (!previous) {
+        ctx.beginPath();
+        ctx.arc(px, py, lineWidth / 2, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.moveTo(previous.x, previous.y);
+        ctx.lineTo(px, py);
+        ctx.stroke();
+      }
+      previous = { x: px, y: py };
+    });
+  });
+  return ctx.getImageData(0, 0, size, size);
+}
+
+function extractBoundaryMask(
+  data: Uint8ClampedArray,
+  width: number,
+  height: number,
+): Uint8Array | null {
+  const total = width * height;
+  const filled = new Uint8Array(total);
+  const boundary = new Uint8Array(total);
+  let filledCount = 0;
+  for (let index = 0; index < total; index += 1) {
+    const alpha = data[index * 4 + 3];
+    if (alpha > OUTLINE_ALPHA_THRESHOLD) {
+      filled[index] = 1;
+      filledCount += 1;
+    }
+  }
+  if (!filledCount) {
+    return null;
+  }
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const idx = y * width + x;
+      if (!filled[idx]) continue;
+      const edge =
+        x === 0 ||
+        y === 0 ||
+        x === width - 1 ||
+        y === height - 1 ||
+        !filled[idx - 1] ||
+        !filled[idx + 1] ||
+        !filled[idx - width] ||
+        !filled[idx + width];
+      if (edge) {
+        boundary[idx] = 1;
+      }
+    }
+  }
+  return boundary;
+}
+
+function walkOutlines(
+  boundary: Uint8Array,
+  width: number,
+  height: number,
+): StrokePoint[][] {
+  const visited = new Uint8Array(width * height);
+  const outlines: StrokePoint[][] = [];
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      const idx = y * width + x;
+      if (!boundary[idx] || visited[idx]) continue;
+      const outline = traceBoundary(x, y, boundary, visited, width, height);
+      if (outline && outline.length >= OUTLINE_MIN_POINTS) {
+        outlines.push(outline);
+      }
+    }
+  }
+  return outlines;
+}
+
+function traceBoundary(
+  startX: number,
+  startY: number,
+  boundary: Uint8Array,
+  visited: Uint8Array,
+  width: number,
+  height: number,
+): StrokePoint[] | null {
+  const outline: StrokePoint[] = [];
+  let currentX = startX;
+  let currentY = startY;
+  let previous: { x: number; y: number } | null = null;
+  let steps = 0;
+  while (steps < OUTLINE_MAX_STEPS) {
+    const index = currentY * width + currentX;
+    visited[index] = 1;
+    outline.push({
+      x: (currentX + 0.5) / width,
+      y: (currentY + 0.5) / height,
+    });
+    const next = findNextBoundaryNeighbor(
+      currentX,
+      currentY,
+      previous,
+      boundary,
+      width,
+      height,
+    );
+    if (!next) break;
+    previous = { x: currentX, y: currentY };
+    currentX = next.x;
+    currentY = next.y;
+    steps += 1;
+    if (currentX === startX && currentY === startY) {
+      outline.push({
+        x: (currentX + 0.5) / width,
+        y: (currentY + 0.5) / height,
+      });
+      break;
+    }
+  }
+  if (outline.length < OUTLINE_MIN_POINTS) return null;
+  return outline;
+}
+
+function findNextBoundaryNeighbor(
+  x: number,
+  y: number,
+  previous: { x: number; y: number } | null,
+  boundary: Uint8Array,
+  width: number,
+  height: number,
+): { x: number; y: number } | null {
+  let startIndex = 0;
+  if (previous) {
+    const previousIndex = NEIGHBOR_OFFSETS.findIndex(
+      (offset) => x + offset.dx === previous.x && y + offset.dy === previous.y,
+    );
+    startIndex =
+      previousIndex === -1
+        ? 0
+        : (previousIndex + NEIGHBOR_OFFSETS.length - 2) %
+          NEIGHBOR_OFFSETS.length;
+  }
+  for (let step = 0; step < NEIGHBOR_OFFSETS.length; step += 1) {
+    const dirIndex = (startIndex + step) % NEIGHBOR_OFFSETS.length;
+    const nx = x + NEIGHBOR_OFFSETS[dirIndex].dx;
+    const ny = y + NEIGHBOR_OFFSETS[dirIndex].dy;
+    if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
+    if (!boundary[ny * width + nx]) continue;
+    return { x: nx, y: ny };
+  }
+  return null;
 }
 
 function sampleTextOutlineSegments(text: string, fontCss: string): StrokePoint[][] {
@@ -255,4 +469,3 @@ export function computeTextFourier(
     })
     .filter((coeffs) => coeffs.length > 0);
 }
-
