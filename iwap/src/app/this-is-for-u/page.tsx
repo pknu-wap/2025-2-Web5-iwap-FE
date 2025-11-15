@@ -1465,7 +1465,14 @@ export default function ThisIsForUPage() {
                         {fourierPathAlpha}
                       </span>
                     </div>
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fourierSketchRef.current?.confirmSketches()}
+                        className="inline-flex rounded-full border border-rose-200 bg-rose-500/80 px-4 py-1.5 text-[0.6rem] font-semibold uppercase tracking-[0.4em] text-white shadow-lg shadow-rose-500/30 transition hover:bg-rose-500/90"
+                      >
+                        확인
+                      </button>
                       <button
                         type="button"
                         onClick={() => fourierSketchRef.current?.clearSketches()}
@@ -1478,9 +1485,8 @@ export default function ThisIsForUPage() {
                 </div>
                 <p className="text-xs text-slate-500">
                   마우스를 누른 채로 선을 그리고, 손을 떼면 Fourier 변환 결과가
-                  epicycles로 재생됩니다. 원의 반지름과 회전 속도(freq, amp,
-                  phase)가 합쳐져서 원래 궤적(path)을 복원하는 모습을 관찰할 수
-                  있습니다.
+                  pending 상태로 쌓입니다. 준비가 끝나면 오른쪽 확인 버튼을
+                  눌러 그린 선을 한꺼번에 Fourier epicycle로 재생해 보세요.
                 </p>
               </section>
             </div>

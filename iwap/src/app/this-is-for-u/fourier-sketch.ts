@@ -12,6 +12,7 @@ type FourierSketchStyles = {
 
 export type FourierSketchController = {
   updateStyles: (styles: FourierSketchStyles) => void;
+  confirmSketches: () => void;
   clearSketches: () => void;
   cleanup: () => void;
 };
@@ -35,9 +36,13 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
   };
 
   let clearSketchesFn: () => void = () => {};
+  let confirmSketchesFn: () => void = () => {};
 
   const controller: FourierSketchController = {
     updateStyles,
+    confirmSketches: () => {
+      confirmSketchesFn();
+    },
     clearSketches: () => {
       clearSketchesFn();
     },
@@ -66,21 +71,40 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
 
       type FourierSketch = {
         fourier: FourierTerm[];
-        time: number;
         path: p5.Vector[];
+        preview: p5.Vector[];
       };
 
       let drawing: p5.Vector[] = [];
-      const sketches: FourierSketch[] = [];
-      let state: "idle" | "drawing" | "fourier" = "idle";
+      const pendingSketches: FourierSketch[] = [];
+      const activeSketches: FourierSketch[] = [];
+      let state: "idle" | "drawing" | "pending" | "fourier" = "idle";
+      const SHARED_DT = 0.04;
+      let sharedTime = 0;
 
-      clearSketchesFn = () => {
+      const MAX_TERMS = 3000;
+
+      const clearSketches = () => {
         drawing = [];
-        sketches.length = 0;
+        pendingSketches.length = 0;
+        activeSketches.length = 0;
+        sharedTime = 0;
         state = "idle";
       };
 
-      const MAX_TERMS = 3000;
+      const confirmSketches = () => {
+        if (!pendingSketches.length) return;
+
+        drawing = [];
+        activeSketches.length = 0;
+        activeSketches.push(...pendingSketches);
+        pendingSketches.length = 0;
+        sharedTime = 0;
+        state = activeSketches.length > 0 ? "fourier" : "idle";
+      };
+
+      clearSketchesFn = clearSketches;
+      confirmSketchesFn = confirmSketches;
 
       // DFT 구현 (Daniel Shiffman 스타일)
       const dft = (points: p5.Vector[]): FourierTerm[] => {
@@ -153,6 +177,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         if (!isMouseInsideCanvas(p)) return;
 
         drawing = [];
+        activeSketches.length = 0;
         state = "drawing";
       };
 
@@ -170,27 +195,49 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         if (state !== "drawing") return;
         if (drawing.length < 4) {
           drawing = [];
-          state = sketches.length > 0 ? "fourier" : "idle";
+          state = pendingSketches.length > 0
+            ? "pending"
+            : activeSketches.length > 0
+              ? "fourier"
+              : "idle";
           return;
         }
 
         const nextFourier = dft(drawing);
         if (nextFourier.length) {
-          sketches.push({
+          const preview = drawing.map((v) => v.copy());
+          pendingSketches.push({
             fourier: nextFourier,
             time: 0,
             path: [],
+            preview,
           });
         }
 
         drawing = [];
-        state = "fourier";
+        state = pendingSketches.length > 0 ? "pending" : "idle";
       };
 
       p.draw = () => {
         p.background(styles.backgroundColor ?? "#000000");
 
         p.translate(p.width / 2, p.height / 2);
+
+        const renderPreviews = (list: FourierSketch[]) => {
+          if (!list.length) return;
+          p.noFill();
+          const previewColor = p.color(255, 255, 255, 80);
+          p.stroke(previewColor);
+          p.strokeWeight(1);
+          for (const item of list) {
+            if (!item.preview.length) continue;
+            p.beginShape();
+            for (const v of item.preview) {
+              p.vertex(v.x, v.y);
+            }
+            p.endShape();
+          }
+        };
 
         if (state === "drawing") {
           // Show the stroke as you draw it
@@ -201,10 +248,11 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
             p.vertex(v.x, v.y);
           }
           p.endShape();
+          renderPreviews(pendingSketches);
           return;
         }
 
-        if (sketches.length > 0) {
+        if (activeSketches.length > 0 && state === "fourier") {
           const circleColor = p.color(styles.epicycleColor ?? "#50a0ff");
           circleColor.setAlpha(
             Math.max(0, Math.min(255, styles.epicycleAlpha ?? 120)),
@@ -215,7 +263,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
             Math.max(0, Math.min(255, styles.pathAlpha ?? 255)),
           );
 
-          for (const sketch of sketches) {
+          for (const sketch of activeSketches) {
             if (!sketch.fourier.length) continue;
             let x = 0;
             let y = 0;
@@ -225,7 +273,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
               const prevX = x;
               const prevY = y;
 
-              const angle = term.freq * sketch.time + term.phase;
+              const angle = term.freq * sharedTime + term.phase;
               x += term.amp * Math.cos(angle);
               y += term.amp * Math.sin(angle);
 
@@ -246,15 +294,26 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
               p.vertex(v.x, v.y);
             }
             p.endShape();
+          }
 
-            const dt = (2 * Math.PI) / sketch.fourier.length;
-            sketch.time += dt;
-
-            if (sketch.time > 2 * Math.PI) {
-              sketch.time = 0;
+          sharedTime += SHARED_DT;
+          if (sharedTime > 2 * Math.PI) {
+            sharedTime = 0;
+            for (const sketch of activeSketches) {
               sketch.path = [];
             }
           }
+        } else if (state === "pending") {
+          p.noStroke();
+          p.fill(220);
+          p.textAlign(p.CENTER, p.CENTER);
+          p.textSize(13);
+          renderPreviews(pendingSketches);
+          p.text(
+            "그린 선이 준비되었습니다.\n확인을 눌러 Fourier Epicycle을 한꺼번에 재생하세요.",
+            0,
+            0,
+          );
         } else if (state === "idle") {
           p.noStroke();
           p.fill(200);
