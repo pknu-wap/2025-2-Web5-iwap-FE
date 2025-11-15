@@ -21,7 +21,10 @@ import {
   type StrokePoint,
   type Tool,
 } from "./types";
-import { initFourierSketch } from "./fourier-sketch";
+import {
+  initFourierSketch,
+  type FourierSketchController,
+} from "./fourier-sketch";
 
 const POSTCARD_RATIO = 3 / 2;
 const MAX_CANVAS_WIDTH = 860;
@@ -195,6 +198,13 @@ export default function ThisIsForUPage() {
   const [canvasSize, setCanvasSize] = useState({ width: 720, height: 480 });
 
   const fourierDemoRef = useRef<HTMLDivElement>(null);
+  const fourierSketchRef = useRef<FourierSketchController | null>(null);
+
+  const [fourierBackgroundColor, setFourierBackgroundColor] = useState("#000000");
+  const [fourierEpicycleColor, setFourierEpicycleColor] = useState("#50a0ff");
+  const [fourierEpicycleAlpha, setFourierEpicycleAlpha] = useState(120);
+  const [fourierPathColor, setFourierPathColor] = useState("#ffb6dc");
+  const [fourierPathAlpha, setFourierPathAlpha] = useState(255);
 
   // 색상 입력 normalize/validation
   const normalizedBrushHex = normalizeHex(customBrushHex);
@@ -1214,11 +1224,31 @@ export default function ThisIsForUPage() {
   // Fourier p5 데모 초기화
   useEffect(() => {
     if (!fourierDemoRef.current) return;
-    const cleanup = initFourierSketch(fourierDemoRef.current);
+    const controller = initFourierSketch(fourierDemoRef.current);
+    fourierSketchRef.current = controller;
     return () => {
-      cleanup?.();
+      controller.cleanup();
+      fourierSketchRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    const controller = fourierSketchRef.current;
+    if (!controller) return;
+    controller.updateStyles({
+      backgroundColor: fourierBackgroundColor,
+      epicycleColor: fourierEpicycleColor,
+      epicycleAlpha: fourierEpicycleAlpha,
+      pathColor: fourierPathColor,
+      pathAlpha: fourierPathAlpha,
+    });
+  }, [
+    fourierBackgroundColor,
+    fourierEpicycleColor,
+    fourierEpicycleAlpha,
+    fourierPathColor,
+    fourierPathAlpha,
+  ]);
 
   return (
     <div className="min-h-dvh overflow-y-auto bg-gradient-to-br from-[#fdf2ec] via-white to-[#f4f9ff] text-slate-900">
@@ -1356,6 +1386,95 @@ export default function ThisIsForUPage() {
                     ref={fourierDemoRef}
                     className="h-80 w-full rounded-xl bg-black"
                   />
+                  <div className="mt-4 space-y-3 rounded-2xl border border-white/10 bg-slate-900/70 p-4 text-[0.7rem] text-slate-300">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[0.6rem] uppercase tracking-[0.4em] text-slate-400">
+                        Background
+                      </span>
+                      <input
+                        type="color"
+                        value={fourierBackgroundColor}
+                        onChange={(event) =>
+                          setFourierBackgroundColor(event.target.value)
+                        }
+                        className="h-8 w-8 cursor-pointer rounded-full border border-white/30 bg-white/10 p-1"
+                        aria-label="Fourier background color"
+                      />
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[0.6rem] uppercase tracking-[0.4em] text-slate-400">
+                        Epicycle
+                      </span>
+                      <input
+                        type="color"
+                        value={fourierEpicycleColor}
+                        onChange={(event) =>
+                          setFourierEpicycleColor(event.target.value)
+                        }
+                        className="h-8 w-8 cursor-pointer rounded-full border border-white/30 bg-white/10 p-1"
+                        aria-label="Epicycle color"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 text-[0.6rem] text-slate-400">
+                      <span className="uppercase tracking-[0.4em]">
+                        Epicycle opacity
+                      </span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={255}
+                        value={fourierEpicycleAlpha}
+                        onChange={(event) =>
+                          setFourierEpicycleAlpha(Number(event.target.value))
+                        }
+                        className="h-1 flex-1 cursor-pointer accent-rose-400"
+                      />
+                      <span className="min-w-[36px] text-right">
+                        {fourierEpicycleAlpha}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="text-[0.6rem] uppercase tracking-[0.4em] text-slate-400">
+                        Path
+                      </span>
+                      <input
+                        type="color"
+                        value={fourierPathColor}
+                        onChange={(event) =>
+                          setFourierPathColor(event.target.value)
+                        }
+                        className="h-8 w-8 cursor-pointer rounded-full border border-white/30 bg-white/10 p-1"
+                        aria-label="Path color"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2 text-[0.6rem] text-slate-400">
+                      <span className="uppercase tracking-[0.4em]">
+                        Path opacity
+                      </span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={255}
+                        value={fourierPathAlpha}
+                        onChange={(event) =>
+                          setFourierPathAlpha(Number(event.target.value))
+                        }
+                        className="h-1 flex-1 cursor-pointer accent-rose-400"
+                      />
+                      <span className="min-w-[36px] text-right">
+                        {fourierPathAlpha}
+                      </span>
+                    </div>
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => fourierSketchRef.current?.clearSketches()}
+                        className="inline-flex rounded-full border border-white/30 bg-white/10 px-4 py-1.5 text-[0.6rem] font-semibold uppercase tracking-[0.4em] text-white transition hover:bg-white/20"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
                 </div>
                 <p className="text-xs text-slate-500">
                   마우스를 누른 채로 선을 그리고, 손을 떼면 Fourier 변환 결과가

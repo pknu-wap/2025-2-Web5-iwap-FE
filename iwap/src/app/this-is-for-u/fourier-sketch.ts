@@ -2,12 +2,53 @@
 
 import type p5 from "p5";
 
+type FourierSketchStyles = {
+  backgroundColor?: string;
+  epicycleColor?: string;
+  epicycleAlpha?: number;
+  pathColor?: string;
+  pathAlpha?: number;
+};
+
+export type FourierSketchController = {
+  updateStyles: (styles: FourierSketchStyles) => void;
+  clearSketches: () => void;
+  cleanup: () => void;
+};
+
 /**
  * This-is-for-u 페이지에서 오른쪽 Fourier 데모 박스에 붙는 p5 스케치 초기화 함수
  * page.tsx에서 import { initFourierSketch } from "./fourier-sketch"; 로 사용합니다.
  */
-export function initFourierSketch(container: HTMLElement): () => void {
+export function initFourierSketch(container: HTMLElement): FourierSketchController {
   let instance: p5 | null = null;
+  let styles: FourierSketchStyles = {
+    backgroundColor: "#000000",
+    epicycleColor: "#50a0ff",
+    epicycleAlpha: 120,
+    pathColor: "#ffb6dc",
+    pathAlpha: 255,
+  };
+
+  const updateStyles = (nextStyles: FourierSketchStyles) => {
+    styles = { ...styles, ...nextStyles };
+  };
+
+  let clearSketchesFn: () => void = () => {};
+
+  const controller: FourierSketchController = {
+    updateStyles,
+    clearSketches: () => {
+      clearSketchesFn();
+    },
+    cleanup() {
+      if (instance) {
+        instance.remove();
+        instance = null;
+      }
+      container.innerHTML = "";
+    },
+  };
 
   // p5는 window를 쓰기 때문에, Next 환경에서 안전하게 쓰려고 동적 import 사용
   (async () => {
@@ -23,13 +64,23 @@ export function initFourierSketch(container: HTMLElement): () => void {
         phase: number;
       };
 
+      type FourierSketch = {
+        fourier: FourierTerm[];
+        time: number;
+        path: p5.Vector[];
+      };
+
       let drawing: p5.Vector[] = [];
-      let path: p5.Vector[] = [];
-      let fourier: FourierTerm[] = [];
-      let time = 0;
+      const sketches: FourierSketch[] = [];
       let state: "idle" | "drawing" | "fourier" = "idle";
 
-      const MAX_TERMS =3000;
+      clearSketchesFn = () => {
+        drawing = [];
+        sketches.length = 0;
+        state = "idle";
+      };
+
+      const MAX_TERMS = 3000;
 
       // DFT 구현 (Daniel Shiffman 스타일)
       const dft = (points: p5.Vector[]): FourierTerm[] => {
@@ -82,7 +133,7 @@ export function initFourierSketch(container: HTMLElement): () => void {
         // 캔버스를 container 안에 붙이기
         cnv.parent(container);
 
-        p.background(0);
+        p.background(styles.backgroundColor ?? "#000000");
         p.stroke(255);
         p.noFill();
       };
@@ -93,22 +144,15 @@ export function initFourierSketch(container: HTMLElement): () => void {
         const h = rect.height || 480;
         const size = Math.min(w, h);
         p.resizeCanvas(size, size);
-        p.background(0);
-        drawing = [];
-        path = [];
-        fourier = [];
-        state = "idle";
-        time = 0;
+        p.background(styles.backgroundColor ?? "#000000");
+        clearSketchesFn();
       };
 
       p.mousePressed = () => {
-        // container 바깥 클릭은 무시
+        // Ignore clicks outside the canvas
         if (!isMouseInsideCanvas(p)) return;
 
         drawing = [];
-        path = [];
-        fourier = [];
-        time = 0;
         state = "drawing";
       };
 
@@ -125,25 +169,31 @@ export function initFourierSketch(container: HTMLElement): () => void {
       p.mouseReleased = () => {
         if (state !== "drawing") return;
         if (drawing.length < 4) {
-          state = "idle";
           drawing = [];
+          state = sketches.length > 0 ? "fourier" : "idle";
           return;
         }
 
-        // DFT 계산
-        fourier = dft(drawing);
-        time = 0;
-        path = [];
+        const nextFourier = dft(drawing);
+        if (nextFourier.length) {
+          sketches.push({
+            fourier: nextFourier,
+            time: 0,
+            path: [],
+          });
+        }
+
+        drawing = [];
         state = "fourier";
       };
 
       p.draw = () => {
-        p.background(0);
+        p.background(styles.backgroundColor ?? "#000000");
 
         p.translate(p.width / 2, p.height / 2);
 
         if (state === "drawing") {
-          // 사용자가 그리고 있는 궤적 보이기
+          // Show the stroke as you draw it
           p.noFill();
           p.stroke(200);
           p.beginShape();
@@ -154,59 +204,64 @@ export function initFourierSketch(container: HTMLElement): () => void {
           return;
         }
 
-        if (state === "fourier" && fourier.length > 0) {
-          let x = 0;
-          let y = 0;
+        if (sketches.length > 0) {
+          const circleColor = p.color(styles.epicycleColor ?? "#50a0ff");
+          circleColor.setAlpha(
+            Math.max(0, Math.min(255, styles.epicycleAlpha ?? 120)),
+          );
 
-          // epicycles 그리기
-          for (let i = 0; i < Math.min(MAX_TERMS, fourier.length); i += 1) {
-            const term = fourier[i];
-            const prevX = x;
-            const prevY = y;
+          const pathColor = p.color(styles.pathColor ?? "#ffb6dc");
+          pathColor.setAlpha(
+            Math.max(0, Math.min(255, styles.pathAlpha ?? 255)),
+          );
 
-            const angle = term.freq * time + term.phase;
-            x += term.amp * Math.cos(angle);
-            y += term.amp * Math.sin(angle);
+          for (const sketch of sketches) {
+            if (!sketch.fourier.length) continue;
+            let x = 0;
+            let y = 0;
 
-            // 원
-            p.stroke(80, 160, 255, 120);
+            for (let i = 0; i < Math.min(MAX_TERMS, sketch.fourier.length); i += 1) {
+              const term = sketch.fourier[i];
+              const prevX = x;
+              const prevY = y;
+
+              const angle = term.freq * sketch.time + term.phase;
+              x += term.amp * Math.cos(angle);
+              y += term.amp * Math.sin(angle);
+
+              p.stroke(circleColor);
+              p.noFill();
+              p.ellipse(prevX, prevY, term.amp * 2);
+
+              p.stroke(255);
+              p.line(prevX, prevY, x, y);
+            }
+
+            sketch.path.unshift(p.createVector(x, y));
+
             p.noFill();
-            p.ellipse(prevX, prevY, term.amp * 2);
+            p.stroke(pathColor);
+            p.beginShape();
+            for (const v of sketch.path) {
+              p.vertex(v.x, v.y);
+            }
+            p.endShape();
 
-            // 선분
-            p.stroke(255);
-            p.line(prevX, prevY, x, y);
-          }
+            const dt = (2 * Math.PI) / sketch.fourier.length;
+            sketch.time += dt;
 
-          // 현재 끝점(펜 위치)
-          path.unshift(p.createVector(x, y));
-
-          // 궤적 라인
-          p.noFill();
-          p.stroke(255, 180, 220);
-          p.beginShape();
-          for (const v of path) {
-            p.vertex(v.x, v.y);
-          }
-          p.endShape();
-
-          const N = fourier.length;
-          const dt = (2 * Math.PI) / N;
-          time += dt;
-
-          // 한 바퀴 돌면 다시 반복
-          if (time > 2 * Math.PI) {
-            time = 0;
-            path = [];
+            if (sketch.time > 2 * Math.PI) {
+              sketch.time = 0;
+              sketch.path = [];
+            }
           }
         } else if (state === "idle") {
-          // 안내 텍스트
           p.noStroke();
           p.fill(200);
           p.textAlign(p.CENTER, p.CENTER);
           p.textSize(14);
           p.text(
-            "드로잉 영역 안에서\n마우스를 누른 채로 선을 그려보세요.",
+            "여러 선을 그려보세요\n각각이 Fourier Epicycle로 다시 그려질 거예요.",
             0,
             0,
           );
@@ -226,13 +281,5 @@ export function initFourierSketch(container: HTMLElement): () => void {
     instance = new P5(sketch as any, container);
   })();
 
-  // cleanup 함수: page.tsx의 useEffect에서 반환값으로 사용
-  return () => {
-    if (instance) {
-      instance.remove();
-      instance = null;
-    }
-    // 혹시 남은 DOM 정리
-    container.innerHTML = "";
-  };
+  return controller;
 }
