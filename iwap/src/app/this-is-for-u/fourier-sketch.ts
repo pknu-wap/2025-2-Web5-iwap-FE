@@ -1,6 +1,7 @@
 // src/app/this-is-for-u/fourier-sketch.ts
 
 import type p5 from "p5";
+import type { FourierCoefficient } from "./types";
 
 type FourierSketchStyles = {
   backgroundColor?: string;
@@ -21,6 +22,7 @@ export type FourierSketchController = {
   confirmSketches: () => void;
   clearSketches: () => void;
   loadPendingSketches: (paths: FourierSketchInput[]) => void;
+  getFourierCoefficients: () => FourierCoefficient[][];
   cleanup: () => void;
 };
 
@@ -45,6 +47,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
   let clearSketchesFn: () => void = () => {};
   let confirmSketchesFn: () => void = () => {};
   let loadPendingSketchesFn: (paths: FourierSketchInput[]) => void = () => {};
+  let getFourierCoefficientsFn: () => FourierCoefficient[][] = () => [];
   const controller: FourierSketchController = {
     updateStyles,
     confirmSketches: () => {
@@ -55,6 +58,9 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
     },
     loadPendingSketches: (paths) => {
       loadPendingSketchesFn(paths);
+    },
+    getFourierCoefficients: () => {
+      return getFourierCoefficientsFn();
     },
     cleanup() {
       if (instance) {
@@ -110,6 +116,16 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         state = activeSketches.length > 0 ? "fourier" : "idle";
       };
 
+      const getFourierCoefficients = (): FourierCoefficient[][] => (
+        activeSketches.map((sketch) =>
+          sketch.fourier.map((term) => ({
+            amp: term.amp,
+            freq: term.freq,
+            phase: term.phase,
+          })),
+        )
+      );
+
       const loadPendingSketches = (paths: FourierSketchInput[]) => {
         drawing = [];
         pendingSketches.length = 0;
@@ -151,6 +167,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
       clearSketchesFn = clearSketches;
       confirmSketchesFn = confirmSketches;
       loadPendingSketchesFn = loadPendingSketches;
+      getFourierCoefficientsFn = getFourierCoefficients;
 
       // DFT 구현 (Daniel Shiffman 스타일)
       const dft = (points: p5.Vector[]): FourierTerm[] => {

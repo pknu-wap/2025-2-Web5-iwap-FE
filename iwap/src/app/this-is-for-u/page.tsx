@@ -20,6 +20,7 @@ import {
   type StrokeMode,
   type StrokePoint,
   type Tool,
+  type FourierCoefficient,
 } from "./types";
 import {
   initFourierSketch,
@@ -1285,9 +1286,49 @@ export default function ThisIsForUPage() {
     fourierPathAlpha,
   ]);
 
-  const handleFourierConfirm = useCallback(() => {
-    fourierSketchRef.current?.confirmSketches();
-  }, []);
+  const sendFourierCoefficients = useCallback(
+    async (coeffSets: FourierCoefficient[][]) => {
+      if (!coeffSets.length) return;
+
+      try {
+        const response = await fetch("/api/fourier", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            sketches: coeffSets,
+          }),
+        });
+
+        if (!response.ok) {
+          const message = await response.text();
+          throw new Error(message || "Network error");
+        }
+
+        showStatus("Fourier 데이터를 백엔드에 저장했어요.");
+      } catch (error) {
+        console.error("Failed to send Fourier coefficients", error);
+        showStatus("Fourier 데이터를 보내는 데 실패했어요.");
+      }
+    },
+    [showStatus],
+  );
+
+  const handleFourierConfirm = useCallback(async () => {
+    const controller = fourierSketchRef.current;
+    if (!controller) return;
+
+    controller.confirmSketches();
+
+    const coefficients = controller.getFourierCoefficients();
+    if (!coefficients.length) {
+      showStatus("Fourier 데이터를 만들 수 없어요.");
+      return;
+    }
+
+    await sendFourierCoefficients(coefficients);
+  }, [sendFourierCoefficients, showStatus]);
 
   return (
     <div className="min-h-dvh overflow-y-auto bg-gradient-to-br from-[#fdf2ec] via-white to-[#f4f9ff] text-slate-900">
