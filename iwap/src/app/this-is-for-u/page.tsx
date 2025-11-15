@@ -17,7 +17,7 @@ import { CanvasSection } from "./components/CanvasSection";
 import { MessageSection } from "./components/MessageSection";
 import { TemplateSelectorSection } from "./components/TemplateSelectorSection";
 import { ToolControlsSection } from "./components/ToolControlsSection";
-import { computeDrawingFourier, computeTextFourier } from "./fourier";
+import { computeDrawingFourier, computeTextFourier } from "./fourier-utils";
 import {
   type FourierCoefficient,
   type FourierMetadata,
@@ -194,6 +194,37 @@ function formatTimestampForFile(value: string) {
   return value.replace(/[:.]/g, "-");
 }
 
+type RgbColor = { r: number; g: number; b: number };
+const WHITE_RGB: RgbColor = { r: 255, g: 255, b: 255 };
+
+function hexToRgbColor(hex: string): RgbColor | null {
+  const normalized = hex.replace("#", "");
+  if (![3, 6].includes(normalized.length)) return null;
+  if (normalized.length === 3) {
+    const [r, g, b] = normalized.split("").map((char) => Number.parseInt(char + char, 16));
+    if ([r, g, b].some((value) => Number.isNaN(value))) return null;
+    return { r, g, b };
+  }
+  const r = Number.parseInt(normalized.slice(0, 2), 16);
+  const g = Number.parseInt(normalized.slice(2, 4), 16);
+  const b = Number.parseInt(normalized.slice(4, 6), 16);
+  if ([r, g, b].some((value) => Number.isNaN(value))) return null;
+  return { r, g, b };
+}
+
+function mixRgbColor(base: RgbColor, target: RgbColor, ratio: number): RgbColor {
+  const clampRatio = Math.max(0, Math.min(1, ratio));
+  return {
+    r: base.r + (target.r - base.r) * clampRatio,
+    g: base.g + (target.g - base.g) * clampRatio,
+    b: base.b + (target.b - base.b) * clampRatio,
+  };
+}
+
+function rgbToCss(rgb: RgbColor, alpha: number) {
+  return `rgba(${Math.round(rgb.r)},${Math.round(rgb.g)},${Math.round(rgb.b)},${alpha})`;
+}
+
 export default function ThisIsForUPage() {
   const [selectedTemplateId, setSelectedTemplateId] = useState(
 
@@ -304,6 +335,10 @@ export default function ThisIsForUPage() {
     () => computeTextFourier(message, activeFontOption.css),
     [message, activeFontOption.css],
   );
+  const textFourierCoefficientCount = useMemo(
+    () => textFourier.reduce((sum, segment) => sum + segment.length, 0),
+    [textFourier],
+  );
   const drawingPointCount = useMemo(
     () =>
       strokes.reduce((total, stroke) => {
@@ -312,6 +347,18 @@ export default function ThisIsForUPage() {
       }, 0),
     [strokes],
   );
+  const brushColorPalette = useMemo(() => {
+    const fallback: RgbColor = { r: 248, g: 113, b: 113 };
+    const baseRgb = hexToRgbColor(brushColor) ?? fallback;
+    const circleRgb = mixRgbColor(baseRgb, WHITE_RGB, 0.35);
+    const headRgb = mixRgbColor(baseRgb, WHITE_RGB, 0.15);
+    return {
+      circle: rgbToCss(circleRgb, 0.78),
+      vector: rgbToCss(baseRgb, 0.92),
+      trail: rgbToCss(baseRgb, 0.95),
+      head: rgbToCss(headRgb, 1),
+    };
+  }, [brushColor]);
   const metadataDraft = useMemo<FourierMetadataDraft>(
     () => ({
       version: 1,
@@ -335,7 +382,8 @@ export default function ThisIsForUPage() {
       textFourier,
     ],
   );
-  const hasFourierData = drawingFourier.length > 0 || textFourier.length > 0;
+  const hasFourierData =
+    drawingFourier.length > 0 || textFourier.some((segment) => segment.length > 0);
   const lastEncodedLabel = useMemo(() => {
     if (!lastFourierTimestamp) return "대기 중";
     const date = new Date(lastFourierTimestamp);
@@ -1267,9 +1315,9 @@ export default function ThisIsForUPage() {
     canvas.style.height = `${height}px`;
 
     const drawingTrail: Array<{ x: number; y: number }> = [];
-    const textTrail: Array<{ x: number; y: number }> = [];
     const drawingCoeffs = receiverMetadata.drawingFourier.slice(0, 28);
-    const textCoeffs = receiverMetadata.textFourier.slice(0, 28);
+    const textSegments = receiverMetadata.textFourier.map((segment) => segment.slice(0, 28));
+    const textTrails = textSegments.map(() => [] as Array<{ x: number; y: number }>);
     let time = 0;
 
     const drawEpicycles = (
@@ -1288,19 +1336,20 @@ export default function ThisIsForUPage() {
         if (radius > 0.2) {
           ctx.save();
           ctx.strokeStyle = circleColor;
-          ctx.globalAlpha = 0.24;
-          ctx.lineWidth = index === 0 ? 2 : 1;
+          ctx.globalAlpha = index === 0 ? 0.85 : 0.6;
+          ctx.lineWidth = index === 0 ? 2.4 : 1.4;
           ctx.beginPath();
           ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
           ctx.stroke();
           ctx.restore();
         }
         const tipX = centerX + Math.cos(angle) * radius;
-        const tipY = centerY + Math.sin(angle) * radius;
+        // flip Y so reconstructed path matches original canvas orientation
+        const tipY = centerY - Math.sin(angle) * radius;
         ctx.save();
         ctx.strokeStyle = vectorColor;
-        ctx.globalAlpha = 0.55;
-        ctx.lineWidth = 1.5;
+        ctx.globalAlpha = 1;
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
         ctx.moveTo(centerX, centerY);
         ctx.lineTo(tipX, tipY);
@@ -1330,14 +1379,14 @@ export default function ThisIsForUPage() {
           drawingCoeffs,
           width * 0.32,
           height * 0.42,
-          Math.min(width, height) * 0.38,
-          "rgba(255,255,255,0.45)",
-          "rgba(248,113,113,0.9)",
+          Math.min(width, height) * 0.48,
+          brushColorPalette.circle,
+          brushColorPalette.vector,
         );
         drawingTrail.push(head);
         if (drawingTrail.length > 720) drawingTrail.shift();
         ctx.save();
-        ctx.strokeStyle = "rgba(251,113,133,0.95)";
+        ctx.strokeStyle = brushColorPalette.trail;
         ctx.lineWidth = 2;
         ctx.beginPath();
         drawingTrail.forEach((point, index) => {
@@ -1346,7 +1395,7 @@ export default function ThisIsForUPage() {
         });
         ctx.stroke();
         ctx.restore();
-        ctx.fillStyle = "#fff7ed";
+        ctx.fillStyle = brushColorPalette.head;
         ctx.beginPath();
         ctx.arc(head.x, head.y, 4, 0, Math.PI * 2);
         ctx.fill();
@@ -1356,31 +1405,38 @@ export default function ThisIsForUPage() {
         ctx.fillText("앞면 · Fourier epicycles", 12, 20);
       }
 
-      if (textCoeffs.length) {
-        const head = drawEpicycles(
-          textCoeffs,
-          width * 0.72,
-          height * 0.65,
-          Math.min(width, height) * 0.25,
-          "rgba(226,232,240,0.35)",
-          "rgba(165,180,252,0.95)",
-        );
-        textTrail.push(head);
-        if (textTrail.length > 560) textTrail.shift();
-        ctx.save();
-        ctx.strokeStyle = "rgba(191,219,254,0.9)";
-        ctx.lineWidth = 1.5;
-        ctx.beginPath();
-        textTrail.forEach((point, index) => {
-          if (index === 0) ctx.moveTo(point.x, point.y);
-          else ctx.lineTo(point.x, point.y);
+      if (textSegments.some((segment) => segment.length > 0)) {
+        textSegments.forEach((segmentCoeffs, segmentIndex) => {
+          if (!segmentCoeffs.length) return;
+          const circleOpacity = Math.max(0.15, 0.35 - segmentIndex * 0.04);
+          const vectorOpacity = Math.max(0.5, 0.95 - segmentIndex * 0.08);
+          const head = drawEpicycles(
+            segmentCoeffs,
+            width * 0.72,
+            height * 0.65,
+            Math.min(width, height) * 0.32,
+            `rgba(226,232,240,${circleOpacity.toFixed(2)})`,
+            `rgba(165,180,252,${vectorOpacity.toFixed(2)})`,
+          );
+          const trail = textTrails[segmentIndex];
+          trail.push(head);
+          if (trail.length > 560) trail.shift();
+          ctx.save();
+          const trailOpacity = Math.max(0.35, 0.9 - segmentIndex * 0.15);
+          ctx.strokeStyle = `rgba(191,219,254,${trailOpacity.toFixed(2)})`;
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          trail.forEach((point, index) => {
+            if (index === 0) ctx.moveTo(point.x, point.y);
+            else ctx.lineTo(point.x, point.y);
+          });
+          ctx.stroke();
+          ctx.restore();
+          ctx.fillStyle = "#e0e7ff";
+          ctx.beginPath();
+          ctx.arc(head.x, head.y, 3, 0, Math.PI * 2);
+          ctx.fill();
         });
-        ctx.stroke();
-        ctx.restore();
-        ctx.fillStyle = "#e0e7ff";
-        ctx.beginPath();
-        ctx.arc(head.x, head.y, 3, 0, Math.PI * 2);
-        ctx.fill();
         ctx.fillStyle = "rgba(226,232,240,0.85)";
         ctx.font = "11px 'SUIT', sans-serif";
         ctx.textAlign = "right";
@@ -1396,7 +1452,7 @@ export default function ThisIsForUPage() {
         receiverAnimationRef.current = null;
       }
     };
-  }, [isPlayingEmotion, receiverMetadata]);
+  }, [brushColorPalette, isPlayingEmotion, receiverMetadata]);
   useEffect(() => {
     if (isPlayingEmotion) return;
     const canvas = receiverCanvasRef.current;
@@ -2107,7 +2163,7 @@ export default function ThisIsForUPage() {
 
               />
 
-              <section className="space-y-5 rounded-[28px] border border-rose-100 bg-gradient-to-br from-rose-50/70 via-white to-amber-50/40 p-5 shadow-inner shadow-white/70">
+              <section className="space-y-5 rounded-[28px] border border-rose-100 bg-gradient-to-br from-rose-50/70 via-white to-amber-50/40 p-5 shadow-inner shadow-white/70 w-200">
                 <div className="space-y-2">
                   <p className="text-xs font-semibold uppercase tracking-[0.35em] text-rose-400">
                     Fourier Transmission
@@ -2145,7 +2201,12 @@ export default function ThisIsForUPage() {
                       </div>
                       <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
                         <dt className="font-semibold text-slate-600">텍스트 계수</dt>
-                        <dd className="mt-1 text-base font-semibold text-slate-900">{textFourier.length}</dd>
+                        <dd className="mt-1 text-base font-semibold text-slate-900">
+                          {textFourierCoefficientCount}
+                          <span className="ml-2 text-[11px] font-medium text-slate-500">
+                            · {textFourier.length} segments
+                          </span>
+                        </dd>
                       </div>
                       <div className="rounded-2xl border border-slate-100 bg-slate-50/60 p-3">
                         <dt className="font-semibold text-slate-600">최근 생성</dt>

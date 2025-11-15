@@ -45,7 +45,7 @@ export type FourierMetadata = {
   templateName: string;
   background: string;
   drawingFourier: FourierCoefficient[];
-  textFourier: FourierCoefficient[];
+  textFourier: FourierCoefficient[][];
   createdAt: string;
   recipient?: string;
   signature?: string;
