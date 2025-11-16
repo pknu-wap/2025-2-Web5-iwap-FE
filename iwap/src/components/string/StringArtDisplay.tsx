@@ -1,16 +1,15 @@
-// src/components/string/StringArtDisplay.tsx
 'use client';
 
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import ProgressBar from './ProgressBar';
 
-// [수정] Point 타입을 컴포넌트 내부에 정의
 type Point = [number, number];
 
 // --- PROPS & CONSTANTS ---
 interface StringArtDisplayProps {
-  coordinates: number[]; // [수정] props 타입을 number[] (핀 인덱스 배열)로 변경
+  coordinates: number[];
+  colorImageUrl: string | null; 
   onClose: () => void;
 }
 
@@ -18,11 +17,10 @@ const CANVAS_WIDTH = 500;
 const CANVAS_HEIGHT = 500;
 const TARGET_ANIMATION_DURATION_MS = 15000; // 15초
 
-// [추가] 핀 좌표 계산을 위한 상수
 const TOTAL_PINS = 211; // 0-210 범위
 const CENTER_X = CANVAS_WIDTH / 2;
 const CENTER_Y = CANVAS_HEIGHT / 2;
-const RADIUS = (CANVAS_WIDTH / 2) - 5; // 캔버스 가장자리에서 5px 여유
+const RADIUS = (CANVAS_WIDTH / 2) - 5; 
 
 // --- HELPER ICONS ---
 const PlayIcon = () => (
@@ -38,49 +36,43 @@ const PauseIcon = () => (
 );
 
 // --- MAIN COMPONENT ---
-export default function StringArtDisplay({ coordinates, onClose }: StringArtDisplayProps) {
+export default function StringArtDisplay({ coordinates, onClose, colorImageUrl }: StringArtDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameId = useRef<number | null>(null);
   
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
-  const [playbackRate, setPlaybackRate] = useState(1); // 1: normal, 2: fast-forward, -2: rewind
+  const [playbackRate, setPlaybackRate] = useState(1); 
 
-  // 오버레이 할 색상 이미지 (테스트용)
-  const [sourceImg, setSourceImg] = useState<HTMLImageElement | null>(null);
+  const [overlayImage, setOverlayImage] = useState<HTMLImageElement | null>(null);
 
   useEffect(() => {
-    const img = new Image();
-    img.onload = () => setSourceImg(img);
-    img.onerror = () => {
-      console.error("Failed to load dummy image at /dummy_string_art_rgb.png");
-      setSourceImg(null);
-    };
-    // public 폴더의 리소스는 '/' (루트) 경로로 접근합니다.
-    img.src = "/dummy_string_art_rgb.png";
-  }, []); // 의존성 배열을 비워서 마운트 시 1회만 실행
+    if (colorImageUrl) {
+      const img = new Image();
+      img.onload = () => setOverlayImage(img);
+      img.onerror = () => {
+        console.error("Failed to load overlay image from URL:", colorImageUrl);
+        setOverlayImage(null);
+      };
+      img.src = colorImageUrl;
+    } else {
+      setOverlayImage(null);
+    }
+  }, [colorImageUrl]);
 
-  // [수정] 핀 인덱스 배열을 캔버스 [x, y] 좌표 배열로 변환
   const canvasCoordinates: Point[] = useMemo(() => {
     if (!coordinates) return [];
-
-    // 헬퍼 함수: 핀 인덱스를 [x, y] 좌표로 변환
     const getPointFromIndex = (index: number): Point => {
-      // 각도를 계산 (12시 방향( -Math.PI / 2 )에서 시작)
       const angle = (index / TOTAL_PINS) * 2 * Math.PI - Math.PI ;
       const x = CENTER_X + RADIUS * Math.cos(angle);
       const y = CENTER_Y + RADIUS * Math.sin(angle);
       return [x, y];
     };
-
-    // props로 받은 모든 핀 인덱스를 [x, y] 좌표로 매핑
     return coordinates.map(getPointFromIndex);
   }, [coordinates]);
 
-  // [수정] totalCoordinates가 props.coordinates 대신 canvasCoordinates를 기반으로 계산되도록 변경
   const totalCoordinates = useMemo(() => canvasCoordinates.length, [canvasCoordinates]);
 
-  // --- 일반 재생 속도 기준, 프레임당 그릴 라인 수 계산 ---
   const linesPerFrame = useMemo(() => {
     if (totalCoordinates <= 1) return 1;
     const totalFrames = TARGET_ANIMATION_DURATION_MS / (1000 / 60);
@@ -89,7 +81,6 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
   
   // --- 그리기 로직 ---
   useEffect(() => {
-    // [수정] props.coordinates 대신 변환된 canvasCoordinates를 사용
     if (totalCoordinates <= 1 || !canvasRef.current) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
@@ -102,25 +93,24 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
     ctx.globalAlpha = 0.1;
 
     ctx.beginPath();
-    // [수정] canvasCoordinates 사용
     ctx.moveTo(canvasCoordinates[0][0], canvasCoordinates[0][1]);
     
     const limit = Math.min(currentIndex + 1, totalCoordinates);
     for (let i = 1; i < limit; i++) {
-        // [수정] canvasCoordinates 사용
         const [x, y] = canvasCoordinates[i];
         ctx.lineTo(x, y);
     }
     ctx.stroke();
 
-    // 2. 로드된 sourceImg를 'overlay' 모드로 덧그립니다. (테스트용)
-    if (sourceImg) {
+    const isComplete = currentIndex >= totalCoordinates - 1;
+    if (overlayImage && isComplete) {
+      ctx.globalAlpha = 1.0; 
       ctx.globalCompositeOperation = 'overlay';
-      ctx.drawImage(sourceImg, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(overlayImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      ctx.globalCompositeOperation = 'source-over'; 
     }
 
-  }, [canvasCoordinates, currentIndex, totalCoordinates, sourceImg]);
+  }, [canvasCoordinates, currentIndex, totalCoordinates, overlayImage]); 
 
 
   // --- 애니메이션 루프 로직 ---
@@ -208,7 +198,7 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
               subtitle="선들로 이미지를 표현"
               onClose={onClose}
               isAbsolute={false}
-              padding="p-0 pb-8" // [수정] 여백을 pb-1로 조정하여 통일감 부여
+              padding="p-0 pb-8"
             />
             <div className="bg-white p-2 shadow-lg">
               <canvas
@@ -221,44 +211,36 @@ export default function StringArtDisplay({ coordinates, onClose }: StringArtDisp
           </div>
         </div>
 
-        {/* --- 애니메이션 컨트롤러 (레이아웃 수정) --- */}
+        {/* --- 애니메이션 컨트롤러 --- */}
         <div className="flex-shrink-0 w-full max-w-3xl mx-auto mt-4 h-[62px] flex items-center justify-center -translate-x-4 gap-x-4 px-4 z-20">
             <button 
-                onClick={handlePlayPause} 
-                className="p-2 rounded-full text-white hover:bg-white/20 transition-colors"
-                aria-label={isPlaying ? "Pause" : "Play"}
+              onClick={handlePlayPause} 
+              className="p-2 rounded-full text-white hover:bg-white/20 transition-colors"
+              aria-label={isPlaying ? "Pause" : "Play"}
             >
-                {isPlaying ? <PauseIcon /> : <PlayIcon />}
+              {isPlaying ? <PauseIcon /> : <PlayIcon />}
             </button>
             
             <div className="flex-1 flex items-center relative h-full">
-                {/* 진행률 텍스트 */}
                 <span className="absolute -top-1 left-0 text-white text-sm font-mono select-none">
-                    {/*                         currentIndex는 0부터 (totalCoordinates - 1)까지 증가합니다. 
-                        따라서 최대값은 (totalCoordinates - 1)이 맞습니다.
-                    */}
                     {currentIndex} / {totalCoordinates > 0 ? totalCoordinates - 1 : 0}
                 </span>
 
-                {/* 시작점 (역재생) */}
                 <div 
                     className="w-3 h-3 bg-white rounded-full z-10 cursor-pointer"
                     onClick={handleRewindClick}
                 />
 
-                {/* 프로그레스 바 */}
                 <div className="flex-1 mx-2">
                     {totalCoordinates > 1 && (
                         <ProgressBar
                             currentStep={currentIndex}
-                            // [수정] totalSteps는 currentStep의 최대값인 (totalCoordinates - 1)이 되어야 함
                             totalSteps={totalCoordinates - 1} 
                             onSeek={handleSeek}
                         />
                     )}
                 </div>
 
-                {/* 끝점 (빨리감기) */}
                 <div 
                     className="w-3 h-3 bg-white rounded-full z-10 cursor-pointer"
                     onClick={handleFastForwardClick}

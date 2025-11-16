@@ -1,4 +1,3 @@
-// src/app/string/page.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -8,8 +7,7 @@ import LoadingIndicator from "@/components/ui/LoadingIndicator";
 import StringArtDisplay from "@/components/string/StringArtDisplay";
 import UndoIcon from "@/components/ui/icons/UndoIcon";
 import SubmitIcon from "@/components/ui/icons/SubmitIcon";
-
-import { processImageToStringArt} from "@/components/string/StringArtProcessor";
+import { processImageToStringArt, StringArtParams } from "@/components/string/StringArtProcessor";
 
 export default function StringArtPage() {
   const [hasMounted, setHasMounted] = useState(false);
@@ -19,27 +17,48 @@ export default function StringArtPage() {
   const [sourceImage, setSourceImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [coordinates, setCoordinates] = useState<number[] | null>(null);
+  const [colorImageUrl, setColorImageUrl] = useState<string | null>(null);
+
+  // API 문서의 기본값으로 state 초기화
+  const [stringArtParams, setStringArtParams] = useState<StringArtParams>({
+    radius: 50,
+    limit: 5000,
+    rgb: true,
+    wb: true,
+    nail_step: 4,
+    strength: 0.1
+  });
 
   useEffect(() => { setHasMounted(true); }, []);
 
   const handleConversion = useCallback(async () => {
     if (!sourceImage) return;
-    
+
     setView('loading');
     try {
-      const result = await processImageToStringArt(sourceImage);
-      setCoordinates(result);
+      // API 요청 시 파라미터 객체 전달
+      const { coordinates, colorImageUrl } = await processImageToStringArt(
+        sourceImage,
+        stringArtParams 
+      );
+      setCoordinates(coordinates);
+      setColorImageUrl(colorImageUrl);
       setView('visualize');
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
       setView('upload');
     }
-  }, [sourceImage]);
+  }, [sourceImage, stringArtParams]); 
 
   const handleFileSelect = useCallback((file: File | null) => {
     setError(null);
     setCoordinates(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
+
+    if (colorImageUrl) {
+        URL.revokeObjectURL(colorImageUrl);
+        setColorImageUrl(null);
+    }
 
     if (file) {
       setSourceImage(file);
@@ -48,7 +67,7 @@ export default function StringArtPage() {
       setSourceImage(null);
       setPreviewUrl(null);
     }
-  }, [previewUrl]);
+  }, [previewUrl, colorImageUrl]);
 
   const pageBackgroundStyle = {
     backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #98B9C2), url('/images/string_background.jpg')`,
@@ -98,6 +117,7 @@ export default function StringArtPage() {
       {view === 'visualize' && coordinates ? (
         <StringArtDisplay
           coordinates={coordinates}
+          colorImageUrl={colorImageUrl}
           onClose={() => {
             handleFileSelect(null);
             setView('upload');
