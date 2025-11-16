@@ -8,6 +8,7 @@ import React, {
 } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import GraffitiToolbar from "./GraffitiToolbar";
+import { FilesetResolver, HandLandmarker } from "@mediapipe/tasks-vision";
 
 /* ------------------------- 배경 스타일 ------------------------- */
 const pageBackgroundStyle = {
@@ -76,24 +77,32 @@ type MPResults = {
 };
 
 // 어떤 손가락이 펴졌는지/접혔는지 판정용
-const OTHER_FINGER_TIP_IDS = [16, 20];          // 약지, 새끼만 "접힘" 체크
-const INDEX_EXTENSION_THRESHOLD = 0.20;         // 검지 기준 거리 (조금 완화)
-const MIDDLE_EXTENSION_THRESHOLD = 0.20;        // 중지 기준 거리 (새로 추가)
+const OTHER_FINGER_TIP_IDS = [16, 20]; // 약지, 새끼만 "접힘" 체크
+const INDEX_EXTENSION_THRESHOLD = 0.2; // 검지 기준 거리
+const MIDDLE_EXTENSION_THRESHOLD = 0.2; // 중지 기준 거리
 
 // pinch (엄지-검지) 제스처
-const FINGER_FOLDED_THRESHOLD = 0.45;  
-const PINCH_DISTANCE_THRESHOLD = 0.33;          // 좀 넉넉하게
+const FINGER_FOLDED_THRESHOLD = 0.45;
+const PINCH_DISTANCE_THRESHOLD = 0.33;
 
 // 제스처 온/오프 히스테리시스
-const GESTURE_ON_FRAMES = 4;                    // 최소 4프레임 연속 "on"이면 on
-const GESTURE_OFF_FRAMES = 6;                   // 최소 6프레임 연속 "off"면 off
+const GESTURE_ON_FRAMES = 4;
+const GESTURE_OFF_FRAMES = 6;
 
 const COLOR_PALETTE = ["#FA4051", "#FDD047", "#2FB665", "#FFFFFF", "#000000"];
 
+
+// 셀피 카메라 좌우 반전 여부
+const FLIP_X = true;
+
 export default function GraffitiClient() {
+  const drawConnectorsRef = useRef<any>(null);
   const [customPatterns, setCustomPatterns] = useState<string[]>([]);
   const colorPickerRef = useRef<HTMLInputElement>(null);
-  const [pendingCustomColor, setPendingCustomColor] = useState<string | null>(null);
+  const [pendingCustomColor, setPendingCustomColor] = useState<string | null>(
+    null
+  );
+
   const handleConfirmPendingCustomColor = useCallback(() => {
     if (!pendingCustomColor) return;
     setCustomPatterns((prev) =>
@@ -106,7 +115,6 @@ export default function GraffitiClient() {
     setPendingCustomColor(color);
     setBrushColor(color);
   }, []);
-
 
   /* -------------------- Intro / Camera 상태 -------------------- */
   const [showIntro, setShowIntro] = useState(true);
@@ -122,15 +130,13 @@ export default function GraffitiClient() {
   const [undoStack, setUndoStack] = useState<string[]>([]);
   const [redoStack, setRedoStack] = useState<string[]>([]);
 
-  /* -------------------- Refs (null 안전 처리!) -------------------- */
+  /* -------------------- Refs -------------------- */
   const videoRef = useRef<HTMLVideoElement>(null!);
   const overlayRef = useRef<HTMLCanvasElement>(null!);
   const drawRef = useRef<HTMLCanvasElement>(null!);
   const ctxRef = useRef<CanvasRenderingContext2D | null>(null);
 
   const handLandmarkerRef = useRef<any>(null);
-  const usingTasksRef = useRef(false);
-  const cameraRef = useRef<any>(null);
   const drawLandmarksRef = useRef<any>(null);
   const smoothLandmarksRef = useRef<
     Array<Array<{ x: number; y: number; z?: number }>> | null
@@ -187,12 +193,10 @@ export default function GraffitiClient() {
 
     let hands = results.multiHandLandmarks ?? [];
 
-    if (usingTasksRef.current && hands.length > 0) {
-      hands = hands.map((h) =>
-        h.map((p) => ({ ...p, x: 1 - p.x }))
-      );
+    // 셀피 카메라 좌우 반전
+    if (FLIP_X && hands.length > 0) {
+      hands = hands.map((h) => h.map((p) => ({ ...p, x: 1 - p.x })));
     }
-
 
     if (hands.length === 0) {
       lastPointRef.current = [];
@@ -216,8 +220,7 @@ export default function GraffitiClient() {
         if (!prevP) return p;
         const dx = p.x - prevP.x;
         const dy = p.y - prevP.y;
-        const motion =
-          Math.hypot(dx, dy) / Math.max(0.0001, ref);
+        const motion = Math.hypot(dx, dy) / Math.max(0.0001, ref);
         const adaptive = clamp(
           alphaBase + clamp(motion * 0.5, 0, 0.3),
           0.4,
@@ -262,75 +265,67 @@ export default function GraffitiClient() {
       const ref = getPalmWidth(lm);
       const palmCenter = getPalmCenter(lm);
 
-// ---- 새 제스처 판정 로직 ----
+      // ---- 새 제스처 판정 로직 ----
+      const dIndex = fingerTipDistance(lm, 8, palmCenter, ref);
+      const dMiddle = fingerTipDistance(lm, 12, palmCenter, ref);
 
-// 손바닥 기준 길이(ref)와 중심(palmCenter)은 위에서 이미 계산됨
-const dIndex = fingerTipDistance(lm, 8, palmCenter, ref);
-const dMiddle = fingerTipDistance(lm, 12, palmCenter, ref);
+      const indexExtended = dIndex > INDEX_EXTENSION_THRESHOLD;
+      const middleExtended = dMiddle > MIDDLE_EXTENSION_THRESHOLD;
 
-// 검지/중지 "펴짐" 판정
-const indexExtended = dIndex > INDEX_EXTENSION_THRESHOLD;
-const middleExtended = dMiddle > MIDDLE_EXTENSION_THRESHOLD;
+      const othersFolded = OTHER_FINGER_TIP_IDS.every((tip) => {
+        const dist = fingerTipDistance(lm, tip, palmCenter, ref);
+        return dist < FINGER_FOLDED_THRESHOLD;
+      });
 
-// 약지/새끼는 "접힘"이면 좋음 (완전 접히지 않아도 허용)
-const othersFolded = OTHER_FINGER_TIP_IDS.every((tip) => {
-  const dist = fingerTipDistance(lm, tip, palmCenter, ref);
-  return dist < FINGER_FOLDED_THRESHOLD;
-});
+      const thumbTip = lm[4];
+      const thumbIndexDistance =
+        thumbTip && indexTip
+          ? distance(thumbTip, indexTip) / Math.max(0.0001, ref)
+          : Infinity;
+      const pinchGesture = thumbIndexDistance < PINCH_DISTANCE_THRESHOLD;
 
-// pinch (엄지-검지)
-const thumbTip = lm[4];
-const thumbIndexDistance =
-  thumbTip && indexTip
-    ? distance(thumbTip, indexTip) / Math.max(0.0001, ref)
-    : Infinity;
-const pinchGesture = thumbIndexDistance < PINCH_DISTANCE_THRESHOLD;
+      const drawGesture =
+        (indexExtended && middleExtended && othersFolded) || pinchGesture;
 
-// 최종 제스처: (검지+중지 펴기) OR (pinch)
-const drawGesture =
-  ((indexExtended && middleExtended && othersFolded) || pinchGesture);
+      const lastState = lastPinchArr[hi] ?? false;
+      onCounts[hi] = onCounts[hi] ?? 0;
+      offCounts[hi] = offCounts[hi] ?? 0;
 
-// 히스테리시스 적용
-const lastState = lastPinchArr[hi] ?? false;
-onCounts[hi] = onCounts[hi] ?? 0;
-offCounts[hi] = offCounts[hi] ?? 0;
+      if (drawGesture) {
+        onCounts[hi]++;
+        offCounts[hi] = 0;
+      } else {
+        offCounts[hi]++;
+        onCounts[hi] = 0;
+      }
 
-if (drawGesture) {
-  onCounts[hi]++;
-  offCounts[hi] = 0;
-} else {
-  offCounts[hi]++;
-  onCounts[hi] = 0;
-}
+      let next = lastState;
+      if (!lastState && onCounts[hi] >= GESTURE_ON_FRAMES) next = true;
+      if (lastState && offCounts[hi] >= GESTURE_OFF_FRAMES) next = false;
 
-let next = lastState;
-if (!lastState && onCounts[hi] >= GESTURE_ON_FRAMES) next = true;
-if (lastState && offCounts[hi] >= GESTURE_OFF_FRAMES) next = false;
+      nextPinchArr[hi] = next;
 
-nextPinchArr[hi] = next;
+      const px = clamp(indexTip.x, 0, 1) * width;
+      const py = clamp(indexTip.y, 0, 1) * height;
 
-// 실제 그리기 좌표 (항상 검지 끝 기준)
-const px = clamp(indexTip.x, 0, 1) * width;
-const py = clamp(indexTip.y, 0, 1) * height;
+      const shouldDraw = next;
+      const lastPoint = lastPoints[hi] ?? null;
 
-const shouldDraw = next;
-const lastPoint = lastPoints[hi] ?? null;
+      // 새로 그리기 시작하는 순간 스냅샷 저장
+      if (shouldDraw && !lastPoint) {
+        const snapshot = drawCanvas.toDataURL();
+        setUndoStack((prev) => [...prev, snapshot]);
+        setRedoStack([]); // 새로운 stroke 시작 시 redo 비움
+      }
 
-// 새로 그리기 시작하는 순간 스냅샷 저장
-if (shouldDraw && !lastPoint) {
-  const snapshot = drawCanvas.toDataURL();
-  setUndoStack((prev) => [...prev, snapshot]);
-  setRedoStack([]); // 새로운 stroke 시작 시 redo 비움
-}
+      if (shouldDraw && lastPoint) {
+        drawCtx.beginPath();
+        drawCtx.moveTo(lastPoint.x, lastPoint.y);
+        drawCtx.lineTo(px, py);
+        drawCtx.stroke();
+      }
 
-if (shouldDraw && lastPoint) {
-  drawCtx.beginPath();
-  drawCtx.moveTo(lastPoint.x, lastPoint.y);
-  drawCtx.lineTo(px, py);
-  drawCtx.stroke();
-}
-
-lastPoints[hi] = { x: px, y: py };
+      lastPoints[hi] = { x: px, y: py };
     });
 
     lastPinchRef.current = nextPinchArr;
@@ -342,7 +337,41 @@ lastPoints[hi] = { x: px, y: py };
     let stopped = false;
     let introDelayTimer: number | null = null;
 
+    const loadScriptOnce = (src: string) =>
+      new Promise<void>((resolve, reject) => {
+        const existing = Array.from(document.scripts).find((s) => s.src === src);
+        if (existing) {
+          if (existing.getAttribute("data-loaded") === "true") {
+            resolve();
+          } else {
+            existing.addEventListener("load", () => resolve());
+            existing.addEventListener("error", () => reject());
+          }
+          return;
+        }
+        const s = document.createElement("script");
+        s.src = src;
+        s.async = true;
+        s.crossOrigin = "anonymous";
+        s.onload = () => {
+          s.setAttribute("data-loaded", "true");
+          resolve();
+        };
+        s.onerror = () => reject();
+        document.head.appendChild(s);
+      });
+
     async function init() {
+
+      /* ------- drawing_utils 로딩 추가 ------- */
+await loadScriptOnce(
+  "https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js"
+);
+
+// 전역에 등록
+drawLandmarksRef.current = (window as any).drawLandmarks;
+drawConnectorsRef.current = (window as any).drawConnectors;
+
       try {
         const video = videoRef.current;
 
@@ -352,7 +381,6 @@ lastPoints[hi] = { x: px, y: py };
           audio: false,
         });
 
-        /* ------- 허용됨! Intro 종료 ------- */
         introDelayTimer = window.setTimeout(() => {
           if (stopped) return;
           setShowIntro(false);
@@ -364,8 +392,7 @@ lastPoints[hi] = { x: px, y: py };
         }, 3000);
 
         video.srcObject = stream;
-  await video.play();
-
+        await video.play();
 
         /* ------- 캔버스 초기화 ------- */
         const overlay = overlayRef.current;
@@ -375,131 +402,53 @@ lastPoints[hi] = { x: px, y: py };
         draw.width = video.videoWidth;
         draw.height = video.videoHeight;
 
-    const ctx = draw.getContext("2d")!;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctxRef.current = ctx;
+        const ctx = draw.getContext("2d")!;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        ctxRef.current = ctx;
 
-        /* ------- Mediapipe 로딩 ------- */
-        const base = "https://cdn.jsdelivr.net/npm/@mediapipe";
+        /* ------- drawing_utils 로딩 (drawLandmarks) ------- */
 
-        const loadScriptOnce = (src: string) =>
-          new Promise<void>((resolve, reject) => {
-            const existing = Array.from(document.scripts).find(
-              (s) => s.src === src
-            );
-            if (existing) {
-              existing.addEventListener("load", () => resolve());
-              return;
-            }
-            const s = document.createElement("script");
-            s.src = src;
-            s.async = true;
-            s.crossOrigin = "anonymous";
-            s.onload = () => resolve();
-            s.onerror = () => reject();
-            document.head.appendChild(s);
-          });
+await loadScriptOnce("https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js");
 
-        await loadScriptOnce(`${base}/camera_utils/camera_utils.js`);
-        await loadScriptOnce(`${base}/drawing_utils/drawing_utils.js`);
+drawLandmarksRef.current = (window as any).drawLandmarks;
+(drawConnectorsRef as any).current = (window as any).drawConnectors;
 
-        const CameraCtor = (window as any).Camera;
-        drawLandmarksRef.current = (window as any).drawLandmarks;
+const fileset = await FilesetResolver.forVisionTasks("/wasm");
 
-        /* ------- TasksVision 로드 ------- */
-
-        const tryLoadTasksVision = async () => {
-          const candidates = [
-            "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@latest/vision_bundle.js",
-             "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/vision_bundle.js"
-          ];
-          for (const url of candidates) {
-            try {
-              const vision = await import(/* webpackIgnore: true */ url);
-              const root = url.replace(/\/vision_bundle\.js.*/, "");
-              return { vision, root };
-            } catch {}
+        const handLandmarker = await HandLandmarker.createFromOptions(
+          fileset,
+          {
+            baseOptions: {
+              modelAssetPath:"/models/hand_landmarker.task",
+              delegate: "GPU",
+            },
+            runningMode: "VIDEO",
+            numHands: 2,
           }
-          throw new Error("Load failed");
-        };
+        );
 
-        let camera: any;
+        handLandmarkerRef.current = handLandmarker;
 
-        try {
-          const { vision, root } = await tryLoadTasksVision();
-          const { FilesetResolver, HandLandmarker } =
-            vision as any;
+        /* ------------------ 메인 Tracking Loop ------------------ */
+        async function renderLoop() {
+          if (stopped) return;
+          if (!handLandmarkerRef.current) {
+            requestAnimationFrame(renderLoop);
+            return;
+          }
 
-          const fileset = await FilesetResolver.forVisionTasks(
-            `${root}/wasm`
-          );
+          const now = performance.now();
+          const result = handLandmarkerRef.current.detectForVideo(video, now);
 
-          let handLandmarker = await HandLandmarker.createFromOptions(
-            fileset,
-            {
-              baseOptions: {
-                modelAssetPath:
-                  "https://storage.googleapis.com/mediapipe-tasks/hand_landmarker/hand_landmarker.task",
-                delegate: "GPU",
-              },
-              runningMode: "VIDEO",
-              numHands: 2,
-              minHandDetectionConfidence: 0.5,
-              minHandPresenceConfidence: 0.5,
-              minTrackingConfidence: 0.6,
-            }
-          );
-
-          handLandmarkerRef.current = handLandmarker;
-          usingTasksRef.current = true;
-
-          camera = new CameraCtor(video, {
-            onFrame: async () => {
-              if (stopped) return;
-              const ts = performance.now();
-              const result =
-                handLandmarker.detectForVideo(video, ts);
-
-              const mpLike: MPResults = {
-                multiHandLandmarks: result?.landmarks ?? [],
-              };
-              onResults(mpLike);
-            },
-            width: video.videoWidth,
-            height: video.videoHeight,
-          });
-        } catch {
-          /* ------- Legacy Hands fallback ------- */
-          await loadScriptOnce(`${base}/hands/hands.js`);
-          const HandsCtor = (window as any).Hands;
-
-          const hands = new HandsCtor({
-            locateFile: (file: string) => `${base}/hands/${file}`,
+          onResults({
+            multiHandLandmarks: result?.landmarks ?? [],
           });
 
-          hands.setOptions({
-            maxNumHands: 2,
-            modelComplexity: 1,
-            selfieMode: true,
-            minDetectionConfidence: 0.5,
-            minTrackingConfidence: 0.6,
-          });
-
-          hands.onResults(onResults);
-          usingTasksRef.current = false;
-
-          camera = new CameraCtor(video, {
-            onFrame: async () => {
-              if (!stopped) await hands.send({ image: video });
-            },
-            width: video.videoWidth,
-            height: video.videoHeight,
-          });
+          requestAnimationFrame(renderLoop);
         }
 
-        camera.start();
-        cameraRef.current = camera;
+        requestAnimationFrame(renderLoop);
       } catch (err: any) {
         console.error(err);
       }
@@ -512,20 +461,16 @@ lastPoints[hi] = { x: px, y: py };
       if (introDelayTimer) {
         clearTimeout(introDelayTimer);
       }
-      try {
-        cameraRef.current?.stop?.();
-      } catch {}
 
       const stream = videoRef.current?.srcObject as MediaStream | null;
       stream?.getTracks()?.forEach((t) => t.stop());
     };
-  }, []);
+  }, [onResults]);
 
   /* -------------------- 브러시 스타일 반영 -------------------- */
   useEffect(() => {
     const ctx = ctxRef.current;
     if (!ctx) return;
-    // pattern 같은 특수 모드는 나중에 패턴 브러시 구현 시 분기
     if (brushColor !== "pattern") {
       ctx.strokeStyle = brushColor;
     }
@@ -596,10 +541,7 @@ lastPoints[hi] = { x: px, y: py };
   const videoReady = !showIntro && fingerAnimationDone;
 
   return (
-    <div
-      className="relative w-full h-dvh"
-      style={pageBackgroundStyle}
-    >
+    <div className="relative w-full h-dvh" style={pageBackgroundStyle}>
       {/* ------------------ Persistent Header ------------------ */}
       <div className="pointer-events-none inset-0 flex items-center justify-center p-6 animate-fadeIn">
         <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
@@ -691,16 +633,14 @@ lastPoints[hi] = { x: px, y: py };
       </div>
 
       {/* ------------------ 비디오 화면 ------------------ */}
-<div
-  className={`
-    relative w-full max-w-[1000px] aspect-video mx-auto md:translate-y-0 translate-y-50
-    ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
-    transition-opacity duration-500
-  `}
-  aria-hidden={!videoReady}
->
-
-
+      <div
+        className={`
+          relative w-full max-w-[1000px] aspect-video mx-auto md:translate-y-0 translate-y-50
+          ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
+          transition-opacity duration-500
+        `}
+        aria-hidden={!videoReady}
+      >
         <video
           ref={videoRef}
           className="absolute inset-0 w-full h-full object-contain -scale-x-100"
@@ -737,7 +677,6 @@ lastPoints[hi] = { x: px, y: py };
           />
         </div>
       )}
-
     </div>
   );
 }
