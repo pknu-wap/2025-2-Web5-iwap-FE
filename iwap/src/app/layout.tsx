@@ -49,11 +49,11 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body
-        className={`relative overflow-x-hidden bg-white text-black transition-colors duration-300 dark:bg-neutral-900 dark:text-neutral-100 ${Pretendard.className}`}
+        className={`relative overflow-x-hidden transition-colors duration-300 ${Pretendard.className}`}
       >
         <ThemeProvider>
           {showHeader && (
-            <header className="fixed top-0 left-0 z-50 flex h-[30px] w-full flex-col items-center justify-center bg-white text-black transition-colors duration-300 dark:bg-neutral-900 dark:text-neutral-100 md:h-[60px]">
+            <header className="fixed top-0 left-0 z-50 flex h-[30px] w-full flex-col items-center justify-center bg-background text-foreground transition-colors duration-300 md:h-[60px]">
               <div className="relative flex w-full max-w-4xl items-center justify-center px-4">
                 <Link href="/" className="select-none text-center">
                   <h1 className="text-[21px] font-semibold md:text-2xl">!WAP</h1>

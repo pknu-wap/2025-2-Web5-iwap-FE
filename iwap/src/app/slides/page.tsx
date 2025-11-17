@@ -3,6 +3,7 @@
 
 import { usePathname } from "next/navigation";
 import { CardSlider } from "@/components/slides/CardSlider"; // 경로에 맞게 수정
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 const images = [
   { src: "/images/home/slides/slide1.jpg", link: "/inside", text: "!nside", description: "인공지능이 숫자를 인식하는 과정" },
@@ -16,9 +17,10 @@ const images = [
 export default function SlidesPage() {
   const pathname = usePathname();
   const showHeader = pathname !== '/';
+  const { theme } = useTheme();
 
   return (
-    <main className={`relative bg-white flex items-center select-none overflow-hidden ${showHeader ? "h-screen md:h-[calc(100vh_-_60px)]" : "h-screen"}`}>
+    <main className={`relative bg-background text-foreground flex items-center select-none overflow-hidden ${showHeader ? "h-screen md:h-[calc(100vh-60px)]" : "h-screen"}`}>
       <CardSlider images={images} showHeader={showHeader} />
     </main>
   );

@@ -42,35 +42,47 @@ const applyThemeClass = (mode: ThemeMode) => {
 };
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
+  // Initialize state from localStorage or system preference, and apply class immediately.
   const [theme, setThemeState] = useState<ThemeMode>(() => {
     const initial = getInitialTheme();
+    // This runs only on the client, and before the first paint.
     applyThemeClass(initial);
     return initial;
   });
 
+  // This effect is now just for keeping the class in sync if theme changes
   useEffect(() => {
     applyThemeClass(theme);
-    window.localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
 
-  const setTheme = useCallback((mode: ThemeMode) => {
-    setThemeState(mode);
-  }, []);
-
-  const toggleTheme = useCallback(() => {
-    setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
-  }, []);
-
+  // Listen for system theme changes, but only if no theme is manually set
   useEffect(() => {
     if (typeof window === "undefined" || !window.matchMedia) return;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+    // This handler will only update the theme if the user hasn't set one
     const handler = (event: MediaQueryListEvent) => {
-      const newTheme = window.localStorage.getItem(STORAGE_KEY);
-      if (newTheme === "light" || newTheme === "dark") return;
-      setThemeState(event.matches ? "dark" : "light");
+      if (!window.localStorage.getItem(STORAGE_KEY)) {
+        setThemeState(event.matches ? "dark" : "light");
+      }
     };
     media.addEventListener("change", handler);
     return () => media.removeEventListener("change", handler);
+  }, []);
+
+  // When setTheme is called, it's a manual user choice, so store it.
+  const setTheme = useCallback((mode: ThemeMode) => {
+    window.localStorage.setItem(STORAGE_KEY, mode);
+    setThemeState(mode);
+  }, []);
+
+  // toggleTheme is also a manual choice.
+  const toggleTheme = useCallback(() => {
+    setThemeState((prev) => {
+      const newTheme = prev === "dark" ? "light" : "dark";
+      window.localStorage.setItem(STORAGE_KEY, newTheme);
+      return newTheme;
+    });
   }, []);
 
   const value = useMemo(

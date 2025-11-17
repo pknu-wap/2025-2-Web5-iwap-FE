@@ -37,7 +37,7 @@ export default function PageHeader({
     : 'relative flex-shrink-0';
 
   return (
-    <header className={`${positionClasses} w-full flex justify-between items-end text-white ${padding}`}>
+    <header className={`${positionClasses} w-full flex justify-between items-end text-foreground ${padding}`}>
       
       {/* 제목과 부제를 묶는 영역 */}
       {(title || subtitle) && (

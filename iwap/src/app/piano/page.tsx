@@ -50,6 +50,11 @@ export default function VoiceToPiano() {
     filename: string;
   } | null>(null);
   const conversionContextRef = useRef<ConversionContext | null>(null);
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const router = useRouter(); //  2. router 선언
   const mp3AudioRef = useRef<HTMLAudioElement | null>(null);
@@ -399,14 +404,16 @@ export default function VoiceToPiano() {
         closeButtonClassName={`${audioUrl ? "hidden" : ""} 
                                 md:block md:rotate-0 md:translate-y-0`}
       >
-        <PianoBackendManager
-          audioUrl={audioUrl}
-          onMidiEvent={handleMidi}
-          onStatusChange={setStatus}
-          onTransportReady={handleTransportReady}
-          onTransportReset={handleTransportReset}
-          onMidiReady={handleMidiReady}
-        />
+        {isClient && (
+          <PianoBackendManager
+            audioUrl={audioUrl}
+            onMidiEvent={handleMidi}
+            onStatusChange={setStatus}
+            onTransportReady={handleTransportReady}
+            onTransportReset={handleTransportReset}
+            onMidiReady={handleMidiReady}
+          />
+        )}
         {audioUrl && (
           <>
             <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[10%] to-[#1D263D]"></div>
@@ -470,7 +477,7 @@ export default function VoiceToPiano() {
                       overflow: "visible",
                     }}
                   >
-                    <Piano activeNotes={activeNotesRef.current} />
+                    {isClient && <Piano activeNotes={activeNotesRef.current} />}
                   </div>
                 </div>
               </div>
@@ -515,7 +522,7 @@ export default function VoiceToPiano() {
 
                   {/* 피아노 */}
                   <div className="transform origin-center scale-[0.5]">
-                    <Piano activeNotes={activeNotesRef.current} />
+                    {isClient && <Piano activeNotes={activeNotesRef.current} />}
                   </div>
                 </div>
 

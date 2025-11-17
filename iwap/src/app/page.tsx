@@ -40,14 +40,6 @@ export default function Home() {
   const h1Ref = useRef<HTMLHeadingElement>(null);
   const router = useRouter(); // useRouter 훅을 사용합니다.
   const { theme } = useTheme();
-  const isDarkTheme = theme === "dark";
-  const [isThemeReady, setIsThemeReady] = useState(false);
-
-  useEffect(() => {
-    setIsThemeReady(true);
-  }, []);
-
-  const shouldUseDarkTheme = isThemeReady && isDarkTheme;
 
   // 시각적 버튼의 위치와 크기를 저장할 state
   const [buttonRect, setButtonRect] = useState<{ top: number; left: number; width: number; height: number } | null>(null);
@@ -55,20 +47,7 @@ export default function Home() {
   const buttonRef = useRef<HTMLDivElement>(null);
   const [isMobile, setIsMobile] = useState(false);
 
-  // 위치를 계산하고 업데이트하는 함수
-  const handleResize = () => {
-    if (buttonRef.current) {
-      const rect = buttonRef.current.getBoundingClientRect();
-      setButtonRect({
-        top: rect.top,
-        left: rect.left,
-        width: rect.width,
-        height: rect.height,
-      });
-    }
-  };
-
-    useEffect(() => {
+  useEffect(() => {
     // 위치와 모바일 상태를 계산하고 업데이트하는 함수
     const handleResize = () => {
       // 버튼 위치 계산 (기존 로직)
@@ -78,7 +57,7 @@ export default function Home() {
       }
       // 모바일 여부 체크 (추가된 로직)
       // 768px을 기준으로 데스크톱/모바일을 나눕니다. (Tailwind의 'md' 기준)
-      setIsMobile(window.innerWidth < 768); 
+      setIsMobile(window.innerWidth < 768);
     };
 
     handleResize(); // 컴포넌트 마운트 시 한 번 실행
@@ -88,7 +67,7 @@ export default function Home() {
     return () => {
       window.removeEventListener("resize", handleResize);
     };
-  }, []);; // 의존성 배열은 비워두어 마운트/언마운트 시에만 실행되도록 합니다.
+  }, []); // 의존성 배열은 비워두어 마운트/언마운트 시에만 실행되도록 합니다. // 의존성 배열은 비워두어 마운트/언마운트 시에만 실행되도록 합니다.
 
   // 페이지 이동을 처리하는 함수
   const handleLinkClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
@@ -133,14 +112,14 @@ export default function Home() {
         alt="Background Light"
         fill
         priority
-        className={`object-cover ${shouldUseDarkTheme ? "hidden" : "block"}`}
+        className={`object-cover ${theme === 'dark' ? "hidden" : "block"}`}
       />
       <Image
         src="/images/home-black_background.jpg"
         alt="Background Dark"
         fill
         priority
-        className={`object-cover ${shouldUseDarkTheme ? "block" : "hidden"}`}
+        className={`object-cover ${theme === 'dark' ? "block" : "hidden"}`}
       />
 
       {/* padding 설정 컨테이너 */}
@@ -218,7 +197,7 @@ export default function Home() {
 
       {/* 페이지 전환 효과를 위한 그라데이션 오버레이 */}
       <div
-          className={`absolute inset-y-0 right-0 bg-gradient-to-l ${shouldUseDarkTheme ? "from-white/80" : "from-white"} to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${isOpen ? "w-[90vw]" : "w-0"}`}
+          className={`absolute inset-y-0 right-0 bg-gradient-to-l ${theme === 'dark' ? "from-black/80" : "from-white"} to-transparent transition-all duration-700 ease-out pointer-events-none z-10 ${isOpen ? "w-[90vw]" : "w-0"}`}
       ></div>
     </main>
   );

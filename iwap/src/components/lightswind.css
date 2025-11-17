@@ -14,11 +14,6 @@
 
 /* Light (default) theme variables */
 :root {
-  --primarylw: #173eff;
-  --primarylw-2: #3758f9;
-  --darklw: #11131b;
-  --darklw-2: #1a1d25;
-
   /* HSL values for theme colors */
   --background: 0 0% 100%;
   --foreground: 0 0% 0%;
@@ -49,23 +44,10 @@
   --ring: 0 0% 0%;
 
   --radius: 0.5rem; /* For rounded corners */
-
-  /* Scrollbar colors */
-  --scrollbar-thumb: 0 0% 75%;
-  --scrollbar-track: 0 0% 95%;
-  --scrollbar-hover: 0 0% 65%;
-
-  /* Custom named colors */
-  --greedy: #07eae6ff;
 }
 
 /* Dark theme variables */
 .dark {
-  --primarylw: #173eff;
-  --primarylw-2: #3758f9;
-  --darklw: #11131b;
-  --darklw-2: #1a1d25;
-
   /* HSL values for theme colors in dark mode */
   --background: 0 0% 0%;
   --foreground: 0 0% 100%;
@@ -91,17 +73,9 @@
   --destructive: 0 62% 30%;
   --destructive-foreground: 0 0% 100%;
 
-  --border: #000; /* Direct hex for dark border */
+  --border: 0 0% 20%;
   --input: 0 0% 20%;
   --ring: 0 0% 20%;
-
-  /* Scrollbar colors for dark mode */
-  --scrollbar-thumb: 0 0% 25%;
-  --scrollbar-track: 0 0% 10%;
-  --scrollbar-hover: 0 0% 35%;
-
-  /* Custom named colors (same as light, but can be overridden if needed) */
-  --greedy: #07eae6ff;
 }
 
 /* ==========================================================================
