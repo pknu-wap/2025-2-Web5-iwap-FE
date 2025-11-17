@@ -50,12 +50,12 @@ function isFingerExtendedByDistance(
 function isIndexFingerOnlyExtended(lms: Landmark[]): boolean {
   if (!lms || lms.length < 21) return false;
 
-  const indexExtended = isFingerExtendedByDistance(lms, 8);
+  const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.25);
   if (!indexExtended) return false;
 
-  const middleExtended = isFingerExtendedByDistance(lms, 12);
-  const ringExtended = isFingerExtendedByDistance(lms, 16);
-  const pinkyExtended = isFingerExtendedByDistance(lms, 20);
+  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.22);
+  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.22);
+  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.22);
 
   const othersCount =
     (middleExtended ? 1 : 0) +
@@ -74,13 +74,13 @@ function isIndexFingerOnlyExtended(lms: Landmark[]): boolean {
 // 엄지척
 function isThumbsUp(lms: Landmark[]): boolean {
   if (!lms || lms.length < 21) return false;
-  const thumbExtended = isFingerExtendedByDistance(lms, 4, 0, 0.2);
+  const thumbExtended = isFingerExtendedByDistance(lms, 4, 0, 0.13);
   if (!thumbExtended) return false;
 
-  const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.2);
-  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.2);
-  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.2);
-  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.2);
+  const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.14);
+  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.14);
+  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.14);
+  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.14);
 
   const othersCount =
     (indexExtended ? 1 : 0) +
@@ -88,85 +88,49 @@ function isThumbsUp(lms: Landmark[]): boolean {
     (ringExtended ? 1 : 0) +
     (pinkyExtended ? 1 : 0);
 
-  return othersCount <= 1;
+  return othersCount === 0;
 }
 
 // 두 손 하트
 // 두 손 하트: "양손의 엄지+검지만 펴져 있고, 서로 꽤 가까이 모여 있는 하트 포즈"에서만 true
 function isHeartGesture(hands: Landmark[][]): boolean {
-  if (!hands || hands.length !== 2) return false;
+  if (!hands || hands.length < 2) return false;
 
   const h1 = hands[0];
   const h2 = hands[1];
   if (!h1 || !h2 || h1.length < 21 || h2.length < 21) return false;
 
-  // x 좌표 기준으로 왼손/오른손 정렬 (영상이 좌우 반전이더라도 상관 없이 쓰려고)
-  const [left, right] = h1[0].x <= h2[0].x ? [h1, h2] : [h2, h1];
+  const thumb1 = h1[4];
+  const thumb2 = h2[4];
+  const index1 = h1[8];
+  const index2 = h2[8];
+  const wrist1 = h1[0];
+  const wrist2 = h2[0];
 
-  function fingerState(lms: Landmark[]) {
-    const thumb = isFingerExtendedByDistance(lms, 4);
-    const index = isFingerExtendedByDistance(lms, 8);
-    const middle = isFingerExtendedByDistance(lms, 12);
-    const ring = isFingerExtendedByDistance(lms, 16);
-    const pinky = isFingerExtendedByDistance(lms, 20);
-    return { thumb, index, middle, ring, pinky };
-  }
+  // 하트일 때는 엄지/검지가 더 확실히 펴져 있어야 함
+  const thumb1Ext = isFingerExtendedByDistance(h1, 4, 0, 0.20);
+  const thumb2Ext = isFingerExtendedByDistance(h2, 4, 0, 0.20);
+  const index1Ext = isFingerExtendedByDistance(h1, 8, 0, 0.20);
+  const index2Ext = isFingerExtendedByDistance(h2, 8, 0, 0.20);
+  if (!(thumb1Ext && thumb2Ext && index1Ext && index2Ext)) return false;
 
-  const leftFingers = fingerState(left);
-  const rightFingers = fingerState(right);
+  const handSpan = dist3(wrist1, wrist2);
 
-  // ✅ 양손 모두 "엄지+검지만 펴져 있고, 나머지 3개는 접혀 있어야" 하트로 인정
-  const leftShapeOk =
-    leftFingers.thumb &&
-    leftFingers.index &&
-    !leftFingers.middle &&
-    !leftFingers.ring &&
-    !leftFingers.pinky;
+  const thumbDist = dist3(thumb1, thumb2);
+  const indexDist = dist3(index1, index2);
 
-  const rightShapeOk =
-    rightFingers.thumb &&
-    rightFingers.index &&
-    !rightFingers.middle &&
-    !rightFingers.ring &&
-    !rightFingers.pinky;
+  // 더 가까이 모여야 하트로 인정 (0.7 → 0.45)
+  const closeFactor = 0.15;
+  const thumbsClose = thumbDist < handSpan * closeFactor;
+  const indexesClose = indexDist < handSpan * closeFactor;
 
-  if (!leftShapeOk || !rightShapeOk) return false;
+  // 검지가 엄지보다 "확실히 위"에 있어야 함 (y는 위가 더 작음)
+  const indexAboveThumb =
+    index1.y < thumb1.y + 0.01 && index2.y < thumb2.y + 0.01;
 
-  const leftWrist = left[0];
-  const rightWrist = right[0];
-  const wristSpan = dist3(leftWrist, rightWrist);
-  if (wristSpan <= 0) return false;
-
-  const leftThumb = left[4];
-  const rightThumb = right[4];
-  const leftIndex = left[8];
-  const rightIndex = right[8];
-
-  // 두 손 사이 전체 거리 대비, 엄지끼리 / 검지끼리 얼마나 가까운지
-  const thumbDist = dist3(leftThumb, rightThumb);
-  const indexDist = dist3(leftIndex, rightIndex);
-
-  // 꽤 타이트하게 (0.45 배 정도) 모여 있어야 함
-  const thumbsClose = thumbDist < wristSpan * 0.45;
-  const indexesClose = indexDist < wristSpan * 0.45;
-
-  // 각 손에서 검지가 엄지보다 약간 위에 있어야 하트 윗부분 모양 느낌
-  const leftIndexAboveThumb = leftIndex.y + 0.02 < leftThumb.y;
-  const rightIndexAboveThumb = rightIndex.y + 0.02 < rightThumb.y;
-
-  // x 방향으로도 "왼손 → 오른손" 순서가 유지되도록 (교차 반대 포즈 방지)
-  const orderOk =
-    leftThumb.x < rightThumb.x &&
-    leftIndex.x < rightIndex.x;
-
-  return (
-    thumbsClose &&
-    indexesClose &&
-    leftIndexAboveThumb &&
-    rightIndexAboveThumb &&
-    orderOk
-  );
+  return thumbsClose && indexesClose && indexAboveThumb;
 }
+
 
 
 /* ---------------- 제스처 → 이모지 ---------------- */
@@ -209,6 +173,7 @@ export default function HandLandmarkerPage() {
   const isWebcamRunningRef = useRef(false);
   const isDrawingRef = useRef(false);
   const lastPointRef = useRef<Array<{ x: number; y: number } | null>>([]);
+  const smoothPointRef = useRef<Array<{ x: number; y: number } | null>>([]);
 
   // 이모지
   const [activeEmoji, setActiveEmoji] = useState<string | null>(null);
@@ -226,7 +191,7 @@ export default function HandLandmarkerPage() {
       activeEmojiRef.current = null;
       setActiveEmoji(null);
       emojiTimeoutRef.current = null;
-    }, 5000);
+    }, 1000);
   }, []);
 
   /* ---- Graffiti 인트로 상태 ---- */
@@ -490,6 +455,7 @@ export default function HandLandmarkerPage() {
     isWebcamRunningRef.current = false;
     isDrawingRef.current = false;
     lastPointRef.current = [];
+    smoothPointRef.current = [];
     setIsWebcamRunning(false);
   }, []);
 
@@ -574,81 +540,104 @@ export default function HandLandmarkerPage() {
     overlayCtx.save();
     overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
 
-    const landmarksList = (results.landmarks || []) as Landmark[][];
+const landmarksList = (results.landmarks || []) as Landmark[][];
 
-    const prevLastPoints = lastPointRef.current || [];
-    const newLastPoints: Array<{ x: number; y: number } | null> = [];
+const prevLastPoints = lastPointRef.current || [];
+const newLastPoints: Array<{ x: number; y: number } | null> = [];
 
-    const hadDrawingPrev = prevLastPoints.some((p) => p != null);
-    let hasDrawingNow = false;
+// 추가: 이전 프레임의 “부드럽게 필터링된 포인트”
+const prevSmoothPoints = smoothPointRef.current || [];
+const newSmoothPoints: Array<{ x: number; y: number } | null> = [];
 
-    if (landmarksList.length > 0) {
-      const drawingUtils = new visionModule.DrawingUtils(overlayCtx);
+// 이전 프레임에 “어떤 손이든” 그리고 있었는지
+const hadDrawingPrev = prevLastPoints.some((p) => p != null);
+let hasDrawingNow = false;
 
-      landmarksList.forEach((lms, handIndex) => {
-        drawingUtils.drawConnectors(
-          lms,
-          visionModule.HandLandmarker.HAND_CONNECTIONS,
-          {
-            color: "#00FFFF",
-            lineWidth: 4,
-          }
-        );
-        drawingUtils.drawLandmarks(lms, {
-          color: "#FFFF00",
-          lineWidth: 1,
-          radius: 3,
-        });
+if (landmarksList.length > 0) {
+  const drawingUtils = new visionModule.DrawingUtils(overlayCtx);
 
-        let drawPoint: { x: number; y: number } | null = null;
-        if (isIndexFingerOnlyExtended(lms)) {
-          const tip = lms[8];
-          drawPoint = {
-            x: tip.x * drawCanvas.width,
-            y: tip.y * drawCanvas.height,
-          };
-        }
+  landmarksList.forEach((lms, handIndex) => {
+    drawingUtils.drawConnectors(
+      lms,
+      visionModule.HandLandmarker.HAND_CONNECTIONS,
+      {
+        color: "#00FFFF",
+        lineWidth: 4,
+      }
+    );
+    drawingUtils.drawLandmarks(lms, {
+      color: "#FFFF00",
+      lineWidth: 1,
+      radius: 3,
+    });
 
-        const prev = prevLastPoints[handIndex] ?? null;
+    // 1) 검지로 그릴지 여부
+    let rawPoint: { x: number; y: number } | null = null;
+    if (isIndexFingerOnlyExtended(lms)) {
+      const tip = lms[8];
+      rawPoint = {
+        x: tip.x * drawCanvas.width,
+        y: tip.y * drawCanvas.height,
+      };
+    }
 
-        if (drawPoint) {
-          hasDrawingNow = true;
+    // 2) 부드럽게 필터링 (low-pass)
+    let drawPoint: { x: number; y: number } | null = null;
+    if (rawPoint) {
+      const prevSmooth = prevSmoothPoints[handIndex] ?? null;
+      const alpha = 0.35; // 0~1 : 작을수록 더 부드럽고, 클수록 즉각적
 
-          drawCtx.lineCap = "round";
-          drawCtx.lineJoin = "round";
-          // ★ 여기서 항상 ref 기준 최신 색·두께 사용
-          drawCtx.strokeStyle = brushColorRef.current;
-          drawCtx.lineWidth = brushSizeRef.current;
-
-          if (prev) {
-            drawCtx.beginPath();
-            drawCtx.moveTo(prev.x, prev.y);
-            drawCtx.lineTo(drawPoint.x, drawPoint.y);
-            drawCtx.stroke();
-          }
-        }
-
-        newLastPoints[handIndex] = drawPoint;
-      });
-
-      const gesture = detectGesture(landmarksList);
-      if (gesture === "HEART") {
-        triggerEmoji("💖");
-      } else if (gesture === "THUMBS_UP") {
-        triggerEmoji("👍");
+      if (prevSmooth) {
+        drawPoint = {
+          x: prevSmooth.x + alpha * (rawPoint.x - prevSmooth.x),
+          y: prevSmooth.y + alpha * (rawPoint.y - prevSmooth.y),
+        };
+      } else {
+        // 첫 프레임은 그냥 raw 사용
+        drawPoint = rawPoint;
       }
     }
 
-    overlayCtx.restore();
+    const prev = prevLastPoints[handIndex] ?? null;
 
-    if (!hadDrawingPrev && hasDrawingNow) {
-      const snapshot = drawCanvas.toDataURL();
-      setUndoStack((prev) => [...prev, snapshot]);
-      setRedoStack([]);
+    if (drawPoint) {
+      hasDrawingNow = true;
+
+      drawCtx.lineCap = "round";
+      drawCtx.lineJoin = "round";
+      drawCtx.strokeStyle = brushColor;
+      drawCtx.lineWidth = brushSize;
+
+      if (prev) {
+        drawCtx.beginPath();
+        drawCtx.moveTo(prev.x, prev.y);
+        drawCtx.lineTo(drawPoint.x, drawPoint.y);
+        drawCtx.stroke();
+      }
     }
 
-    isDrawingRef.current = hasDrawingNow;
-    lastPointRef.current = newLastPoints;
+    newLastPoints[handIndex] = drawPoint;
+    newSmoothPoints[handIndex] = drawPoint; // 이번 프레임의 부드러운 포인트 저장
+  });
+
+  const gesture = detectGesture(landmarksList);
+  if (gesture === "HEART") triggerEmoji("💖");
+  else if (gesture === "THUMBS_UP") triggerEmoji("👍");
+}
+
+overlayCtx.restore();
+
+/** ---- stroke 시작/종료 상태 업데이트 ---- **/
+if (!hadDrawingPrev && hasDrawingNow) {
+  const snapshot = drawCanvas.toDataURL();
+  setUndoStack((prev) => [...prev, snapshot]);
+  setRedoStack([]);
+}
+
+isDrawingRef.current = hasDrawingNow;
+lastPointRef.current = newLastPoints;
+smoothPointRef.current = newSmoothPoints; // ← 추가
+
 
     if (isWebcamRunningRef.current) {
       animationFrameRef.current = requestAnimationFrame(() => {
