@@ -67,8 +67,8 @@ body {
   .piano-key-ripple {
     position: absolute;
     z-index: 999;
-    width: 340px;
-    height: 340px;
+    width: 600px;
+    height: 600px;
     transform: translate(-50%, -50%);
     border-radius: 9999px;
     border: 7px solid rgba(255, 255, 255, 0.28);
