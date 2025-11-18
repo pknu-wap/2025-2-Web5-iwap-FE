@@ -7,7 +7,7 @@ import LoadingIndicator from "@/components/ui/LoadingIndicator";
 import StringArtDisplay from "@/components/string/StringArtDisplay";
 import UndoIcon from "@/components/ui/icons/UndoIcon";
 import SubmitIcon from "@/components/ui/icons/SubmitIcon";
-import { processImageToStringArt, StringArtParams } from "@/components/string/StringArtProcessor";
+import { processImageToStringArt } from "@/components/string/StringArtProcessor";
 
 export default function StringArtPage() {
   const [hasMounted, setHasMounted] = useState(false);
@@ -18,16 +18,7 @@ export default function StringArtPage() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [coordinates, setCoordinates] = useState<number[] | null>(null);
   const [colorImageUrl, setColorImageUrl] = useState<string | null>(null);
-
-  // API 문서의 기본값으로 state 초기화
-  const [stringArtParams, setStringArtParams] = useState<StringArtParams>({
-    radius: 50,
-    limit: 5000,
-    rgb: true,
-    wb: true,
-    nail_step: 4,
-    strength: 0.1
-  });
+  const [nailCount, setNailCount] = useState<number>(0);
 
   useEffect(() => { setHasMounted(true); }, []);
 
@@ -36,19 +27,18 @@ export default function StringArtPage() {
 
     setView('loading');
     try {
-      // API 요청 시 파라미터 객체 전달
-      const { coordinates, colorImageUrl } = await processImageToStringArt(
-        sourceImage,
-        stringArtParams 
+      const { coordinates, colorImageUrl, nailCount } = await processImageToStringArt(
+        sourceImage
       );
       setCoordinates(coordinates);
       setColorImageUrl(colorImageUrl);
+      setNailCount(nailCount);
       setView('visualize');
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
       setView('upload');
     }
-  }, [sourceImage, stringArtParams]); 
+  }, [sourceImage]); 
 
   const handleFileSelect = useCallback((file: File | null) => {
     setError(null);
@@ -118,6 +108,7 @@ export default function StringArtPage() {
         <StringArtDisplay
           coordinates={coordinates}
           colorImageUrl={colorImageUrl}
+          nailCount={nailCount}
           onClose={() => {
             handleFileSelect(null);
             setView('upload');

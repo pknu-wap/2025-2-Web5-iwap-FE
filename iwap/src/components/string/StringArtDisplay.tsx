@@ -11,13 +11,13 @@ interface StringArtDisplayProps {
   coordinates: number[];
   colorImageUrl: string | null; 
   onClose: () => void;
+  nailCount: number;
 }
 
 const CANVAS_WIDTH = 500;
 const CANVAS_HEIGHT = 500;
 const TARGET_ANIMATION_DURATION_MS = 15000; // 15초
 
-const TOTAL_PINS = 211; // 0-210 범위
 const CENTER_X = CANVAS_WIDTH / 2;
 const CENTER_Y = CANVAS_HEIGHT / 2;
 const RADIUS = (CANVAS_WIDTH / 2) - 5; 
@@ -36,7 +36,7 @@ const PauseIcon = () => (
 );
 
 // --- MAIN COMPONENT ---
-export default function StringArtDisplay({ coordinates, onClose, colorImageUrl }: StringArtDisplayProps) {
+export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, nailCount }: StringArtDisplayProps) {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameId = useRef<number | null>(null);
   
@@ -63,13 +63,13 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl }
   const canvasCoordinates: Point[] = useMemo(() => {
     if (!coordinates) return [];
     const getPointFromIndex = (index: number): Point => {
-      const angle = (index / TOTAL_PINS) * 2 * Math.PI - Math.PI ;
+      const angle = (index / nailCount) * 2 * Math.PI - Math.PI ;
       const x = CENTER_X + RADIUS * Math.cos(angle);
       const y = CENTER_Y + RADIUS * Math.sin(angle);
       return [x, y];
     };
     return coordinates.map(getPointFromIndex);
-  }, [coordinates]);
+  }, [coordinates, nailCount]);
 
   const totalCoordinates = useMemo(() => canvasCoordinates.length, [canvasCoordinates]);
 
@@ -81,17 +81,27 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl }
   
   // --- 그리기 로직 ---
   useEffect(() => {
-    if (totalCoordinates <= 1 || !canvasRef.current) return;
+    if (!canvasRef.current || !canvasCoordinates || canvasCoordinates.length === 0) return;
     const canvas = canvasRef.current;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
+    // 1. 항상 캔버스를 깨끗하게 지우고 흰색 배경을 설정
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = 'white';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // 2. 그려야 할 선이 없으면 여기서 함수를 종료
+    if (currentIndex <= 0) {
+      return;
+    }
+
+    // 3. 선 그리기 설정
     ctx.strokeStyle = "black";
     ctx.lineWidth = 0.25;
-    ctx.globalAlpha = 0.1;
+    ctx.globalAlpha = 0.5;
 
+    // 4. 경로 생성 및 그리기
     ctx.beginPath();
     ctx.moveTo(canvasCoordinates[0][0], canvasCoordinates[0][1]);
     
@@ -212,7 +222,7 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl }
         </div>
 
         {/* --- 애니메이션 컨트롤러 --- */}
-        <div className="flex-shrink-0 w-full max-w-3xl mx-auto mt-4 h-[62px] flex items-center justify-center -translate-x-4 gap-x-4 px-4 z-20">
+        <div className="shrink-0 w-full max-w-3xl mx-auto mt-4 h-[62px] flex items-center justify-center -translate-x-4 gap-x-4 px-4 z-20">
             <button 
               onClick={handlePlayPause} 
               className="p-2 rounded-full text-white hover:bg-white/20 transition-colors"

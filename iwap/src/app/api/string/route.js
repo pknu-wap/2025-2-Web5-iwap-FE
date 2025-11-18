@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 import fs from 'fs/promises';
 import path from 'path';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL;
+const BACKEND_URL = process.env.ASYNC_BACKEND_API_URL;
 const DEBUG_DIR = path.join(process.cwd(), 'debug_files', 'string');
 
 // --- 헬퍼 함수: 디렉터리 및 파일 관리 ---
@@ -45,6 +45,7 @@ async function saveDebugFile(subDir, fileName, content) {
 
 // --- API 라우트 핸들러 (POST) ---
 export async function POST(request) {
+  const startTime = Date.now();
   let logMessage = `CLIENT REQUEST: POST /api/string/ (Start Job)`;
 
   try {
@@ -65,43 +66,50 @@ export async function POST(request) {
       logMessage += "\n  - No input file found in FormData (expected 'file' field).";
     }
 
-    // 2. 백엔드로 쿠키(세션) 전달
-    const cookie = request.headers.get('Cookie');
-    const fetchHeaders = new Headers();
-    if (cookie) {
-      fetchHeaders.append('Cookie', cookie);
-    }
-
     // 3. 백엔드에 요청 전달
-    const response = await fetch(`${BACKEND_URL}/api/string/`, {
+    const response = await fetch(`${BACKEND_URL}/api/string`, {
       method: 'POST',
-      headers: fetchHeaders,
       body: formData, 
     });
     
-    logMessage += `\n  -> BACKEND RESPONSE: ${response.status} ${response.statusText}`;
+    const duration = Date.now() - startTime;
+    logMessage += `\n  -> BACKEND RESPONSE: ${response.status} ${response.statusText} (took ${duration}ms)`;
 
-    // 4. 백엔드 응답 처리 (성공/실패)
+    // 4. 백엔드 응답 처리
+    const responseBody = await response.text();
+
     if (!response.ok) {
-        const errorText = await response.text();
-        logMessage += `\n  -> BACKEND ERROR BODY: ${errorText}`;
-        // 이 오류는 catch 블록으로 전달됨
+        let decodedError = responseBody;
+        try {
+          const errorJson = JSON.parse(responseBody);
+          decodedError = JSON.stringify(errorJson, null, 2);
+        } catch (e) { /* no-op */ }
+        logMessage += `\n  -> BACKEND ERROR BODY:\n${decodedError}`;
+        await logToFile(logMessage);
         throw new Error(`Backend responded with status ${response.status}`);
     }
 
-    // 5. 성공 로그 기록
+    try {
+        const responseData = JSON.parse(responseBody);
+        logMessage += `\n  -> SUCCESS: Received task_id: ${responseData.task_id}`;
+    } catch (e) {
+        logMessage += `\n  -> SUCCESS: Received non-JSON response from backend.`;
+    }
+
+    // 5. 성공 로그 기록 및 응답 전달
     await logToFile(logMessage);
 
-    return new NextResponse(JSON.stringify({ message: 'Processing started' }), { 
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
+    return new NextResponse(responseBody, { 
+        status: response.status,
+        headers: { 'Content-Type': response.headers.get('Content-Type') || 'application/json' }
     });
 
   } catch (error) {
+    const duration = Date.now() - startTime;
     // 6. 실패 로그 기록
-    const errorMessage = logMessage + `\n  -> PROXY ERROR: ${error.message}`;
+    const errorMessage = logMessage + `\n  -> PROXY ERROR: ${error.message} (total time: ${duration}ms)`;
     console.error(`[/api/string] API Proxy Error:`, error);
-    await logToFile(errorMessage); // try 블록에서 생성된 로그 메시지를 포함하여 기록
+    await logToFile(errorMessage);
     
     return new NextResponse(JSON.stringify({ message: 'API 프록시 서버에서 내부 오류가 발생했습니다.' }), {
       status: 500,

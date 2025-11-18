@@ -1,43 +1,61 @@
-interface CoordinatesResponse {
-  coordinates: number[];
+interface StringTaskResponse {
+  task_id: string;
 }
 
-// API가 요구하는 파라미터 타입을 정의
-export interface StringArtParams {
-  radius: number;
-  limit: number;
-  rgb: boolean;
-  wb: boolean;
-  nail_step: number;
-  strength: number;
+interface CoordinatesResponse {
+  pull_orders: number[][];
+  nail_count: number;
 }
+
+// Helper function to poll an endpoint until it returns a 200 OK response
+const pollEndpoint = async (
+  url: string,
+  interval: number = 2000, // 2-second interval
+  maxAttempts: number = 90  // 90 attempts * 2s = 3 minutes timeout
+): Promise<Response> => {
+  for (let i = 0; i < maxAttempts; i++) {
+    const response = await fetch(url);
+
+    if (response.status === 200) {
+      return response; // Success, return the response object
+    }
+
+    if (response.status !== 202) {
+      // If it's not "Pending" or "Success", it's an unrecoverable error
+      const errorText = await response.text();
+      throw new Error(`Failed to fetch data. Status: ${response.status}, Body: ${errorText}`);
+    }
+
+    // If status is 202, wait for the interval before the next attempt
+    await new Promise(resolve => setTimeout(resolve, interval));
+  }
+
+  throw new Error("Processing timed out. The task took too long.");
+};
 
 export const processImageToStringArt = async (
   imageFile: File,
-  params: StringArtParams 
-): Promise<{ coordinates: number[]; colorImageUrl: string }> => {
+): Promise<{ coordinates: number[]; colorImageUrl: string; nailCount: number }> => {
   
   const formData = new FormData();
-  
-  // API 문서에 명시된 'file' 필드 이름으로 변경
   formData.append("file", imageFile); 
-  
-  // 나머지 파라미터를 FormData에 추가
-  formData.append("radius", String(params.radius));
-  formData.append("limit", String(params.limit));
-  formData.append("rgb", String(params.rgb));
-  formData.append("wb", String(params.wb));
-  formData.append("nail_step", String(params.nail_step));
-  formData.append("strength", String(params.strength));
+
+  // 필수가 아닌 값들은 필드를 비워서 전송
+  formData.append("random_nails", "");
+  formData.append("limit", "");
+  formData.append("nail_step", "");
+  formData.append("radius", "");
+  formData.append("rgb", "true");
+  formData.append("wb", "");
+  formData.append("strength", "");
 
   try {
-    // 1. POST 요청으로 처리 시작
+    // 1. POST 요청으로 처리 시작, task_id 받기
     const postRes = await fetch("/api/string", {
       method: "POST",
       body: formData,
     });
 
-    // 422 (Validation Error) 등 응답 실패 시 상세 메시지 파싱
     if (!postRes.ok) {
       const errorText = await postRes.text();
       let detailedMessage = `API Error (Status: ${postRes.status})`;
@@ -56,7 +74,7 @@ export const processImageToStringArt = async (
         } else {
           detailedMessage = `Unknown JSON Error: ${errorText}`;
         }
-      } catch (parseError) {
+      } catch (e) {
         detailedMessage = `Non-JSON Error (Status: ${postRes.status}): ${errorText.substring(0, 200)}...`;
       }
       
@@ -64,30 +82,41 @@ export const processImageToStringArt = async (
       throw new Error(detailedMessage);
     }
 
-    // 2. POST 성공 시, 좌표와 이미지를 병렬로 GET 요청
+    const postData: StringTaskResponse = await postRes.json();
+    const { task_id } = postData;
+
+    if (!task_id) {
+      throw new Error("API did not return a task_id.");
+    }
+
+    // 2. task_id로 좌표와 이미지를 병렬로 폴링
     const [coordRes, imageRes] = await Promise.all([
-      fetch("/api/string/coordinates"),
-      fetch("/api/string/image")
+      pollEndpoint(`/api/string/array/${task_id}`),
+      pollEndpoint(`/api/string/image/${task_id}`)
     ]);
 
     // 3. 좌표값 응답 처리
-    if (!coordRes.ok) {
+    if (!coordRes.ok) { // Should not happen due to pollEndpoint logic, but for safety
       throw new Error(`Failed to fetch coordinates. (Status: ${coordRes.status})`);
     }
     const coordData: CoordinatesResponse = await coordRes.json();
-    if (!coordData.coordinates || coordData.coordinates.length === 0) {
-      throw new Error("Server did not return valid coordinate data.");
+    if (!coordData.pull_orders || coordData.pull_orders.length === 0 || coordData.pull_orders[0].length === 0) {
+      throw new Error("Server did not return valid coordinate data (pull_orders is missing or empty).");
     }
 
     // 4. 이미지 응답 처리
-    if (!imageRes.ok) {
+    if (!imageRes.ok) { // Safety check
       throw new Error(`Failed to fetch color image. (Status: ${imageRes.status})`);
     }
     const imageBlob = await imageRes.blob();
     const colorImageUrl = URL.createObjectURL(imageBlob);
 
-    // 5. 결과 반환
-    return { coordinates: coordData.coordinates, colorImageUrl };
+    // 5. 결과 반환 (nail_count 포함)
+    return { 
+        coordinates: coordData.pull_orders[0], 
+        colorImageUrl, 
+        nailCount: coordData.nail_count 
+    };
 
   } catch (err) {
     if (err instanceof Error) {
