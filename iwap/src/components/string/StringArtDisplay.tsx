@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import ProgressBar from './ProgressBar';
@@ -41,6 +42,8 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
   const animationFrameId = useRef<number | null>(null);
   
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
+  const [seekTarget, setSeekTarget] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1); 
   const [overlayScale] = useState(0.98);
@@ -49,7 +52,7 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
 
   useEffect(() => {
     if (colorImageUrl) {
-      const img = new Image();
+      const img = new window.Image();
       img.onload = () => setOverlayImage(img);
       img.onerror = () => {
         console.error("Failed to load overlay image from URL:", colorImageUrl);
@@ -113,22 +116,7 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
     }
     ctx.stroke();
 
-    const isComplete = currentIndex >= totalCoordinates - 1;
-    if (overlayImage && isComplete) {
-      ctx.globalAlpha = 1.0; 
-      ctx.globalCompositeOperation = 'overlay';
-      
-      // Calculate scaled dimensions and position
-      const scaledWidth = CANVAS_WIDTH * overlayScale;
-      const scaledHeight = CANVAS_HEIGHT * overlayScale;
-      const x = (CANVAS_WIDTH - scaledWidth) / 2;
-      const y = (CANVAS_HEIGHT - scaledHeight) / 2;
-      
-      ctx.drawImage(overlayImage, x, y, scaledWidth, scaledHeight);
-      ctx.globalCompositeOperation = 'source-over'; 
-    }
-
-  }, [canvasCoordinates, currentIndex, totalCoordinates, overlayImage, overlayScale]);
+  }, [canvasCoordinates, currentIndex, totalCoordinates]);
 
   // --- 애니메이션 루프 로직 ---
   useEffect(() => {
@@ -136,20 +124,36 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
       setCurrentIndex(prevIndex => {
         const step = Math.round(linesPerFrame * playbackRate);
         const nextIndex = prevIndex + step;
+        const isForward = playbackRate > 0;
 
-        if (playbackRate < 0) {
+        // --- Seeking Logic ---
+        if (seekTarget !== null) {
+          if ((isForward && nextIndex >= seekTarget) || (!isForward && nextIndex <= seekTarget)) {
+            setIsPlaying(false);
+            setSeekTarget(null);
+            setPlaybackRate(1);
+            if (seekTarget >= totalCoordinates - 1) {
+              setIsComplete(true);
+            }
+            return seekTarget;
+          }
+          return nextIndex;
+        }
+
+        // --- Normal Playback Logic ---
+        if (isForward) {
+          if (nextIndex >= totalCoordinates - 1) {
+            setIsPlaying(false);
+            setIsComplete(true);
+            setPlaybackRate(1);
+            return totalCoordinates - 1;
+          }
+        } else { // Backward
           if (nextIndex <= 0) {
             setIsPlaying(false);
             setPlaybackRate(1);
             return 0;
           }
-          return nextIndex;
-        }
-
-        if (nextIndex >= totalCoordinates - 1) {
-          setIsPlaying(false);
-          setPlaybackRate(1);
-          return totalCoordinates - 1;
         }
         return nextIndex;
       });
@@ -165,14 +169,47 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
     return () => {
       if (animationFrameId.current) cancelAnimationFrame(animationFrameId.current);
     };
-  }, [isPlaying, playbackRate, totalCoordinates, linesPerFrame]);
+  }, [isPlaying, playbackRate, totalCoordinates, linesPerFrame, seekTarget]);
 
   // --- 사용자 인터랙션 핸들러 ---
   const handleSeek = useCallback((index: number) => {
+    const targetIndex = Math.round(index);
+
+    // 이미 해당 지점에 있거나, 진행 중인 탐색 애니메이션이 같은 곳을 향하고 있다면 아무것도 하지 않음
+    if (targetIndex === currentIndex) {
+      return;
+    }
+
+    const performSeek = () => {
+      const seekRate = 4;
+
+      if (targetIndex > currentIndex) {
+        setPlaybackRate(seekRate);
+      } else if (targetIndex < currentIndex) {
+        setPlaybackRate(-seekRate);
+      } else {
+        return; // 현재 위치와 목표가 같으면 중단
+      }
+      
+      setSeekTarget(targetIndex);
+      setIsPlaying(true);
+    };
+
+    if (isComplete) {
+      setIsComplete(false);
+      setTimeout(performSeek, 500); 
+    } else {
+      performSeek();
+    }
+  }, [isComplete, currentIndex]);
+
+  const handleScrub = useCallback((index: number) => {
     setIsPlaying(false);
+    setSeekTarget(null);
     setPlaybackRate(1);
-    setCurrentIndex(Math.round(index));
-  }, []);
+    setIsComplete(index >= totalCoordinates - 1);
+    setCurrentIndex(index);
+  }, [totalCoordinates]);
 
   const handlePlayPause = useCallback(() => {
     if (isPlaying) {
@@ -180,6 +217,7 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
     } else {
       setPlaybackRate(1);
       if (currentIndex >= totalCoordinates - 1) {
+        setIsComplete(false);
         setCurrentIndex(0);
       }
       setIsPlaying(true);
@@ -187,9 +225,17 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
   }, [isPlaying, currentIndex, totalCoordinates]);
   
   const handleRewindClick = useCallback(() => {
-    setIsPlaying(true);
-    setPlaybackRate(-2);
-  }, []);
+    if (isComplete) {
+      setIsComplete(false);
+      setTimeout(() => {
+        setIsPlaying(true);
+        setPlaybackRate(-2);
+      }, 500); // fade-out duration
+    } else {
+      setIsPlaying(true);
+      setPlaybackRate(-2);
+    }
+  }, [isComplete]);
 
   const handleFastForwardClick = useCallback(() => {
     setIsPlaying(true);
@@ -217,13 +263,27 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
               isAbsolute={false}
               padding="p-0 pb-8"
             />
-            <div className="bg-white p-2 shadow-lg">
+            <div className="bg-white p-2 shadow-lg relative">
               <canvas
                 ref={canvasRef}
                 width={CANVAS_WIDTH}
                 height={CANVAS_HEIGHT}
                 className="max-w-full max-h-full object-contain"
               />
+              {overlayImage && colorImageUrl && (
+                <Image
+                  src={colorImageUrl}
+                  alt="Color Overlay"
+                  width={CANVAS_WIDTH}
+                  height={CANVAS_HEIGHT}
+                  className="absolute top-2 left-2 pointer-events-none transition-opacity duration-500"
+                  style={{
+                    opacity: isComplete ? 1 : 0,
+                    transform: `scale(${overlayScale})`,
+                    mixBlendMode: 'overlay',
+                  }}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -255,6 +315,7 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
                               currentStep={currentIndex}
                               totalSteps={totalCoordinates - 1} 
                               onSeek={handleSeek}
+                              onScrub={handleScrub}
                           />
                       )}
                   </div>
