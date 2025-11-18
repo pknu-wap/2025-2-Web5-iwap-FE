@@ -49,105 +49,80 @@ export const processImageToStringArt = async (
   formData.append("wb", "");
   formData.append("strength", "");
 
-//   try {
-  //     // 1. POST 요청으로 처리 시작, task_id 받기
-  //     const postRes = await fetch("/api/string", {
-  //       method: "POST",
-  //       body: formData,
-  //     });
-
-  //     if (!postRes.ok) {
-  //       const errorText = await postRes.text();
-  //       let detailedMessage = `API Error (Status: ${postRes.status})`;
-
-  //       try {
-  //         const errorJson = JSON.parse(errorText);
-  //         if (errorJson.detail && Array.isArray(errorJson.detail) && errorJson.detail.length > 0) {
-  //           const firstError = errorJson.detail[0];
-  //           const loc = firstError.loc ? firstError.loc.join(' > ') : 'N/A';
-  //           const msg = firstError.msg || 'Unknown validation error';
-  //           detailedMessage = `Validation Error: ${msg} (at: ${loc})`;
-  //         } else if (errorJson.detail) {
-  //           detailedMessage = `Error: ${errorJson.detail}`;
-  //         } else if (errorJson.message) {
-  //           detailedMessage = `Error: ${errorJson.message}`;
-  //         } else {
-  //           detailedMessage = `Unknown JSON Error: ${errorText}`;
-  //         }
-  //       } catch (e) {
-  //         detailedMessage = `Non-JSON Error (Status: ${postRes.status}): ${errorText.substring(0, 200)}...`;
-  //       }
-        
-  //       console.error("[StringArtProcessor] Detailed Backend Error:", detailedMessage, {rawResponse: errorText});
-  //       throw new Error(detailedMessage);
-  //     }
-
-  //     const postData: StringTaskResponse = await postRes.json();
-  //     const { task_id } = postData;
-
-  //     if (!task_id) {
-  //       throw new Error("API did not return a task_id.");
-  //     }
-
-  //     // 2. task_id로 좌표와 이미지를 병렬로 폴링
-  //     const [coordRes, imageRes] = await Promise.all([
-  //       pollEndpoint(`/api/string/array/${task_id}`),
-  //       pollEndpoint(`/api/string/image/${task_id}`)
-  //     ]);
-
-  //     // 3. 좌표값 응답 처리
-  //     if (!coordRes.ok) { // Should not happen due to pollEndpoint logic, but for safety
-  //       throw new Error(`Failed to fetch coordinates. (Status: ${coordRes.status})`);
-  //     }
-  //     const coordData: CoordinatesResponse = await coordRes.json();
-  //     if (!coordData.pull_orders || coordData.pull_orders.length === 0 || coordData.pull_orders[0].length === 0) {
-  //       throw new Error("Server did not return valid coordinate data (pull_orders is missing or empty).");
-  //     }
-
-  //     // 4. 이미지 응답 처리
-  //     if (!imageRes.ok) { // Safety check
-  //       throw new Error(`Failed to fetch color image. (Status: ${imageRes.status})`);
-  //     }
-  //     const imageBlob = await imageRes.blob();
-  //     const colorImageUrl = URL.createObjectURL(imageBlob);
-
-  //     // 5. 결과 반환 (nail_count 포함)
-  //     return { 
-  //         coordinates: coordData.pull_orders[0], 
-  //         colorImageUrl, 
-  //         nailCount: coordData.nail_count 
-  //     };
-
-  //   } catch (err) {
-  //     if (err instanceof Error) {
-  //       throw err;
-  //     } else {
-  //       throw new Error("An unknown error occurred during the API request.");
-  //     }
-  //   }
-  // };
   try {
-    // 1. 로컬 더미 데이터 가져오기
-    const response = await fetch('/dummy_string_art.json');
-    if (!response.ok) {
-      throw new Error('Failed to fetch dummy data');
+    // 1. POST 요청으로 처리 시작, task_id 받기
+    const postRes = await fetch("/api/string", {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!postRes.ok) {
+      const errorText = await postRes.text();
+      let detailedMessage = `API Error (Status: ${postRes.status})`;
+
+      try {
+        const errorJson = JSON.parse(errorText);
+        if (errorJson.detail && Array.isArray(errorJson.detail) && errorJson.detail.length > 0) {
+          const firstError = errorJson.detail[0];
+          const loc = firstError.loc ? firstError.loc.join(' > ') : 'N/A';
+          const msg = firstError.msg || 'Unknown validation error';
+          detailedMessage = `Validation Error: ${msg} (at: ${loc})`;
+        } else if (errorJson.detail) {
+          detailedMessage = `Error: ${errorJson.detail}`;
+        } else if (errorJson.message) {
+          detailedMessage = `Error: ${errorJson.message}`;
+        } else {
+          detailedMessage = `Unknown JSON Error: ${errorText}`;
+        }
+      } catch (e) {
+        detailedMessage = `Non-JSON Error (Status: ${postRes.status}): ${errorText.substring(0, 200)}...`;
+      }
+      
+      console.error("[StringArtProcessor] Detailed Backend Error:", detailedMessage, {rawResponse: errorText});
+      throw new Error(detailedMessage);
     }
-    const data = await response.json();
 
-    // 2. 이미지 파일에 대한 Object URL 생성
-    const colorImageUrl = '/dummy_string_art_rgb.png';
+    const postData: StringTaskResponse = await postRes.json();
+    const { task_id } = postData;
 
-    // 3. 결과 반환
-    return {
-      coordinates: data.coordinates,
-      colorImageUrl,
-      nailCount: 211, // 더미 데이터에 맞는 값으로 설정
+    if (!task_id) {
+      throw new Error("API did not return a task_id.");
+    }
+
+    // 2. task_id로 좌표와 이미지를 병렬로 폴링
+    const [coordRes, imageRes] = await Promise.all([
+      pollEndpoint(`/api/string/array/${task_id}`),
+      pollEndpoint(`/api/string/image/${task_id}`)
+    ]);
+
+    // 3. 좌표값 응답 처리
+    if (!coordRes.ok) { // Should not happen due to pollEndpoint logic, but for safety
+      throw new Error(`Failed to fetch coordinates. (Status: ${coordRes.status})`);
+    }
+    const coordData: CoordinatesResponse = await coordRes.json();
+    if (!coordData.pull_orders || coordData.pull_orders.length === 0 || coordData.pull_orders[0].length === 0) {
+      throw new Error("Server did not return valid coordinate data (pull_orders is missing or empty).");
+    }
+
+    // 4. 이미지 응답 처리
+    if (!imageRes.ok) { // Safety check
+      throw new Error(`Failed to fetch color image. (Status: ${imageRes.status})`);
+    }
+    const imageBlob = await imageRes.blob();
+    const colorImageUrl = URL.createObjectURL(imageBlob);
+
+    // 5. 결과 반환 (nail_count 포함)
+    return { 
+        coordinates: coordData.pull_orders[0], 
+        colorImageUrl, 
+        nailCount: coordData.nail_count 
     };
+
   } catch (err) {
     if (err instanceof Error) {
       throw err;
     } else {
-      throw new Error('An unknown error occurred during local data processing.');
+      throw new Error("An unknown error occurred during the API request.");
     }
   }
 };
