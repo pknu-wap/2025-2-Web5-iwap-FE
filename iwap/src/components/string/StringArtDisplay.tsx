@@ -43,6 +43,7 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(true);
   const [playbackRate, setPlaybackRate] = useState(1); 
+  const [overlayScale] = useState(0.98);
 
   const [overlayImage, setOverlayImage] = useState<HTMLImageElement | null>(null);
 
@@ -116,12 +117,18 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
     if (overlayImage && isComplete) {
       ctx.globalAlpha = 1.0; 
       ctx.globalCompositeOperation = 'overlay';
-      ctx.drawImage(overlayImage, 0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+      
+      // Calculate scaled dimensions and position
+      const scaledWidth = CANVAS_WIDTH * overlayScale;
+      const scaledHeight = CANVAS_HEIGHT * overlayScale;
+      const x = (CANVAS_WIDTH - scaledWidth) / 2;
+      const y = (CANVAS_HEIGHT - scaledHeight) / 2;
+      
+      ctx.drawImage(overlayImage, x, y, scaledWidth, scaledHeight);
       ctx.globalCompositeOperation = 'source-over'; 
     }
 
-  }, [canvasCoordinates, currentIndex, totalCoordinates, overlayImage]); 
-
+  }, [canvasCoordinates, currentIndex, totalCoordinates, overlayImage, overlayScale]);
 
   // --- 애니메이션 루프 로직 ---
   useEffect(() => {
@@ -222,40 +229,42 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
         </div>
 
         {/* --- 애니메이션 컨트롤러 --- */}
-        <div className="shrink-0 w-full max-w-3xl mx-auto mt-4 h-[62px] flex items-center justify-center -translate-x-4 gap-x-4 px-4 z-20">
-            <button 
-              onClick={handlePlayPause} 
-              className="p-2 rounded-full text-white hover:bg-white/20 transition-colors"
-              aria-label={isPlaying ? "Pause" : "Play"}
-            >
-              {isPlaying ? <PauseIcon /> : <PlayIcon />}
-            </button>
-            
-            <div className="flex-1 flex items-center relative h-full">
-                <span className="absolute -top-1 left-0 text-white text-sm font-mono select-none">
-                    {currentIndex} / {totalCoordinates > 0 ? totalCoordinates - 1 : 0}
-                </span>
+        <div className="shrink-0 w-full max-w-3xl mx-auto mt-4 flex flex-col items-center justify-center gap-y-2">
+          <div className="w-full h-[62px] flex items-center justify-center -translate-x-4 gap-x-4 px-4 z-20">
+              <button 
+                onClick={handlePlayPause} 
+                className="p-2 rounded-full text-white hover:bg-white/20 transition-colors"
+                aria-label={isPlaying ? "Pause" : "Play"}
+              >
+                {isPlaying ? <PauseIcon /> : <PlayIcon />}
+              </button>
+              
+              <div className="flex-1 flex items-center relative h-full">
+                  <span className="absolute -top-1 left-0 text-white text-sm font-mono select-none">
+                      {currentIndex} / {totalCoordinates > 0 ? totalCoordinates - 1 : 0}
+                  </span>
 
-                <div 
-                    className="w-3 h-3 bg-white rounded-full z-10 cursor-pointer"
-                    onClick={handleRewindClick}
-                />
+                  <div 
+                      className="w-3 h-3 bg-white rounded-full z-10 cursor-pointer"
+                      onClick={handleRewindClick}
+                  />
 
-                <div className="flex-1 mx-2">
-                    {totalCoordinates > 1 && (
-                        <ProgressBar
-                            currentStep={currentIndex}
-                            totalSteps={totalCoordinates - 1} 
-                            onSeek={handleSeek}
-                        />
-                    )}
-                </div>
+                  <div className="flex-1 mx-2">
+                      {totalCoordinates > 1 && (
+                          <ProgressBar
+                              currentStep={currentIndex}
+                              totalSteps={totalCoordinates - 1} 
+                              onSeek={handleSeek}
+                          />
+                      )}
+                  </div>
 
-                <div 
-                    className="w-3 h-3 bg-white rounded-full z-10 cursor-pointer"
-                    onClick={handleFastForwardClick}
-                />
-            </div>
+                  <div 
+                      className="w-3 h-3 bg-white rounded-full z-10 cursor-pointer"
+                      onClick={handleFastForwardClick}
+                  />
+              </div>
+          </div>
         </div>
       </div>
     </div>
