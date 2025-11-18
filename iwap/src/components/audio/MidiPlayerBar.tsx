@@ -150,7 +150,7 @@ export default function MidiPlayerBar({
               type="button"
               onClick={onDownload}
               disabled={downloadDisabled}
-              aria-label="Download MIDI file"
+              aria-label="Download audio file"
               className={buttonClasses}
             >
               <DownloadIcon />
