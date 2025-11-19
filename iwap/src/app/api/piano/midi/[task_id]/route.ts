@@ -4,8 +4,8 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function getBackendBase() {
-  // Prefer server-only env, fall back for compatibility
-  const base = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL;
+  const base =
+    process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL;
   if (!base) throw new Error("Missing BACKEND_API_URL");
   return base.endsWith("/") ? base.slice(0, -1) : base;
 }
@@ -16,8 +16,6 @@ function buildProxyHeaders(res: Response) {
     "content-type",
     "content-disposition",
     "cache-control",
-    "pragma",
-    "expires",
     "set-cookie",
   ];
   for (const key of passThrough) {
@@ -27,32 +25,33 @@ function buildProxyHeaders(res: Response) {
   return headers;
 }
 
-export async function POST(req: NextRequest) {
+type RouteParams = {
+  task_id?: string;
+};
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: RouteParams }
+) {
   try {
-    const base = getBackendBase();
-    const targetUrl = `${base}/api/piano/`;
-
-    const contentType = req.headers.get("content-type") || "";
-    const headers: Record<string, string> = {
-      ...(req.headers.get("cookie") ? { cookie: req.headers.get("cookie")! } : {}),
-      ...(req.headers.get("authorization")
-        ? { authorization: req.headers.get("authorization")! }
-        : {}),
-      ...(contentType ? { "content-type": contentType } : {}),
-    };
-
-    const init: RequestInit & { duplex?: "half" } = {
-      method: "POST",
-      headers,
-      body: req.body,
-      cache: "no-store",
-    };
-    if (req.body) {
-      init.duplex = "half";
+    const taskId = params.task_id?.trim();
+    if (!taskId) {
+      return new Response(JSON.stringify({ error: "Missing task_id" }), {
+        status: 400,
+        headers: { "content-type": "application/json" },
+      });
     }
-
-    const res = await fetch(targetUrl, init);
-
+    const base = getBackendBase();
+    const targetUrl = `${base}/api/piano/midi/${encodeURIComponent(taskId)}`;
+    const res = await fetch(targetUrl, {
+      cache: "no-store",
+      headers: {
+        ...(req.headers.get("cookie") ? { cookie: req.headers.get("cookie")! } : {}),
+        ...(req.headers.get("authorization")
+          ? { authorization: req.headers.get("authorization")! }
+          : {}),
+      },
+    });
     return new Response(res.body, {
       status: res.status,
       statusText: res.statusText,
@@ -60,7 +59,6 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Proxy error";
-    console.error("[proxy:/api/piano]", message);
     return new Response(JSON.stringify({ error: message }), {
       status: 502,
       headers: { "content-type": "application/json" },

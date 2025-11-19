@@ -28,6 +28,7 @@ export default function VoiceToPiano() {
   const {
     isRecording,
     audioUrl,
+    audioFile,
     startRecording,
     stopRecording,
     setAudioFromFile,
@@ -242,9 +243,7 @@ export default function VoiceToPiano() {
       const effectiveContext = context ?? conversionContextRef.current;
       const remoteSource = effectiveContext
         ? getBackendUrl(
-            `/api/piano/mp3?request_id=${encodeURIComponent(
-              effectiveContext.requestId
-            )}`
+            `/api/piano/mp3/${encodeURIComponent(effectiveContext.requestId)}`
           )
         : getBackendUrl("/api/piano/mp3");
       const shouldUseRemote = Boolean(effectiveContext) || !localSource;
@@ -401,6 +400,7 @@ export default function VoiceToPiano() {
       >
         <PianoBackendManager
           audioUrl={audioUrl}
+          audioFile={audioFile}
           onMidiEvent={handleMidi}
           onStatusChange={setStatus}
           onTransportReady={handleTransportReady}

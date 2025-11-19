@@ -31,6 +31,7 @@ type ConversionResponsePayload = ConversionContext & {
 
 type PianoBackendManagerProps = {
   audioUrl: string | null;
+  audioFile?: File | null;
   onMidiEvent: (event: { type: "on" | "off"; note: number }) => void;
   onStatusChange?: (status: string) => void;
   onTransportReady?: (
@@ -50,6 +51,17 @@ export const getBackendUrl = (path: string) => {
   // Always prefer same-origin API route to avoid CORS and hide backend URL.
   // The Next.js API route will proxy to the real backend server.
   return path.startsWith("/") ? path : `/${path}`;
+};
+
+const normalizeAudioMime = (mime: string | undefined | null) => {
+  if (!mime) return "audio/webm";
+  const lower = mime.toLowerCase();
+  if (lower.startsWith("audio/webm")) return "audio/webm";
+  if (lower.startsWith("audio/mpeg") || lower.startsWith("audio/mp3")) {
+    return "audio/mpeg";
+  }
+  if (lower.startsWith("audio/wav")) return "audio/wav";
+  return mime;
 };
 
 const describeFetchError = (err: unknown) => {
@@ -102,6 +114,7 @@ const parseConversionResponse = async (
  */
 export default function PianoBackendManager({
   audioUrl,
+  audioFile,
   onMidiEvent,
   onStatusChange,
   onTransportReady,
@@ -109,7 +122,7 @@ export default function PianoBackendManager({
   onMidiReady,
 }: PianoBackendManagerProps) {
   useEffect(() => {
-    if (!audioUrl) return;
+    if (!audioUrl && !audioFile) return;
 
     let isCancelled = false;
     const activeMidiNotes = new Set<number>();
@@ -133,16 +146,49 @@ export default function PianoBackendManager({
       flushActiveNotes();
     };
 
+    const wait = (ms: number) =>
+      new Promise((resolve) => {
+        setTimeout(resolve, ms);
+      });
+
+    const pollForBinaryResponse = async (
+      url: string,
+      pendingMessage: string,
+      failureMessage: string
+    ) => {
+      const MAX_ATTEMPTS = 30;
+      const DELAY_MS = 2000;
+      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+        if (isCancelled) {
+          throw new Error("요청이 취소되었습니다.");
+        }
+        const res = await fetch(url, {
+          cache: "no-store",
+        });
+        if (res.status === 202) {
+          onStatusChange?.(
+            `${pendingMessage} (대기 중... ${attempt}/${MAX_ATTEMPTS})`
+          );
+          await wait(DELAY_MS);
+          continue;
+        }
+        if (!res.ok) {
+          throw new Error(failureMessage);
+        }
+        return res;
+      }
+      throw new Error("결과 파일이 아직 준비되지 않았습니다. 잠시 후 다시 시도해 주세요.");
+    };
+
     const fetchAndPlayMidi = async (conversion: ConversionContext) => {
       try {
         onStatusChange?.("MIDI 변환 중...");
         const requestToken = encodeURIComponent(conversion.requestId);
-        const midiRes = await fetch(
-          getBackendUrl(`/api/piano/midi?request_id=${requestToken}`)
+        const midiRes = await pollForBinaryResponse(
+          getBackendUrl(`/api/piano/midi/${requestToken}`),
+          "MIDI 변환 중...",
+          "MIDI 파일 다운로드에 실패했습니다."
         );
-        if (!midiRes.ok) {
-          throw new Error("MIDI 파일 다운로드에 실패했습니다.");
-        }
 
         const midiArray = await midiRes.arrayBuffer();
         const downloadBaseName = new Date().toISOString().replace(/[:.]/g, "-");
@@ -152,12 +198,11 @@ export default function PianoBackendManager({
         let downloadFilename = conversion.midiFilename ?? `piano-${downloadBaseName}.mid`;
 
         try {
-          const mp3Res = await fetch(
-            getBackendUrl(`/api/piano/mp3?request_id=${requestToken}`)
+          const mp3Res = await pollForBinaryResponse(
+            getBackendUrl(`/api/piano/mp3/${requestToken}`),
+            "MP3 변환 중...",
+            "MP3 파일 다운로드에 실패했습니다."
           );
-          if (!mp3Res.ok) {
-            throw new Error("MP3 파일 다운로드에 실패했습니다.");
-          }
           const mp3Array = await mp3Res.arrayBuffer();
           downloadBlob = new Blob([mp3Array], { type: "audio/mpeg" });
           downloadFilename =
@@ -258,13 +303,52 @@ export default function PianoBackendManager({
 
     const sendAudioToBackend = async () => {
       try {
-        onStatusChange?.("MIDI 변환 중...");
+        onStatusChange?.("오디오 업로드 중...");
 
-        const res = await fetch(audioUrl);
-        const blob = await res.blob();
+        let payloadBlob: Blob | File | null = null;
+        let filename = "voice.webm";
+        let mimeType = "audio/webm";
+
+        if (audioFile) {
+          payloadBlob = audioFile;
+          filename = audioFile.name || filename;
+          mimeType = normalizeAudioMime(audioFile.type || mimeType);
+        } else if (audioUrl) {
+          const res = await fetch(audioUrl);
+          if (!res.ok) {
+            throw new Error("녹음한 오디오를 불러오지 못했습니다.");
+          }
+          const blob = await res.blob();
+          payloadBlob = blob;
+          mimeType = normalizeAudioMime(
+            blob.type ||
+              (audioUrl.startsWith("data:audio/mpeg")
+                ? "audio/mpeg"
+                : mimeType)
+          );
+          const extension = mimeType.split("/")[1] || "webm";
+          filename = `voice-${Date.now()}.${extension}`;
+        }
+
+        if (!payloadBlob) {
+          throw new Error("업로드할 오디오 데이터를 찾을 수 없습니다.");
+        }
+
+        let uploadFile =
+          payloadBlob instanceof File
+            ? payloadBlob
+            : new File([payloadBlob], filename, {
+                type: mimeType || "audio/webm",
+              });
+
+        if (mimeType && uploadFile.type !== mimeType) {
+          uploadFile = new File([uploadFile], uploadFile.name || filename, {
+            type: mimeType,
+          });
+        }
 
         const formData = new FormData();
-        formData.append("voice", blob, "voice.webm");
+        formData.append("voice", uploadFile, uploadFile.name || filename);
 
         const uploadRes = await fetch(getBackendUrl("/api/piano"), {
           method: "POST",
@@ -300,6 +384,7 @@ export default function PianoBackendManager({
     };
   }, [
     audioUrl,
+    audioFile,
     onMidiEvent,
     onStatusChange,
     onTransportReady,

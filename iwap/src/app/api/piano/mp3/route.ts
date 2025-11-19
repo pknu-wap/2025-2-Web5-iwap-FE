@@ -27,8 +27,11 @@ function buildProxyHeaders(res: Response) {
 export async function GET(req: NextRequest) {
   try {
     const base = getBackendBase();
-    const search = req.nextUrl.search;
-    const targetUrl = `${base}/api/piano/mp3${search}`;
+    const url = req.nextUrl;
+    const requestId = url.searchParams.get("request_id")?.trim();
+    const targetUrl = requestId
+      ? `${base}/api/piano/mp3/${encodeURIComponent(requestId)}`
+      : `${base}/api/piano/mp3${url.search}`;
     const res = await fetch(targetUrl, {
       cache: "no-store",
       headers: {

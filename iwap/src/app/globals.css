@@ -70,12 +70,14 @@ body {
     width: 600px;
     height: 600px;
     transform: translate(-50%, -50%);
+    will-change: transform, opacity, clip-path;
     border-radius: 9999px;
     border: 7px solid rgba(255, 255, 255, 0.28);
     box-shadow: 0 0 120px 32px rgba(255, 255, 255, 0.18);
     filter: blur(5px);
     pointer-events: none;
     opacity: 0;
+    clip-path: circle(1px at center);
     background: radial-gradient(
       circle,
       rgba(255, 255, 255, 0.12) 0%,
@@ -90,24 +92,28 @@ body {
   }
 }
 
-@keyframes piano-key-ripple {
-  0% {
-    transform: translate(-50%, -50%) scale(0);
+  @keyframes piano-key-ripple {
+    0% {
+    transform: translate(-50%, -50%) scale(0.02);
+    clip-path: circle(1px at center);
     opacity: 0;
   }
 
-  60% {
+  55% {
     transform: translate(-50%, -50%) scale(0.98);
-    opacity: 0.3;
+    clip-path: circle(45% at center);
+    opacity: 0.32;
   }
 
   75% {
     transform: translate(-50%, -50%) scale(1.08);
+    clip-path: circle(55% at center);
     opacity: 0.22;
   }
 
   100% {
     transform: translate(-50%, -50%) scale(1.18);
+    clip-path: circle(55% at center);
     opacity: 0;
   }
 }
