@@ -760,7 +760,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
       </div>
 
       {/* 우상단 웹캠 토글 버튼 */}
-      <div className="absolute top-6 right-6 z-40">
+      {/* <div className="absolute top-6 right-6 z-40">
         <button
           type="button"
           onClick={() => void handleToggleWebcam()}
@@ -772,7 +772,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
         >
           {isWebcamRunning ? "OFF" : "ON"}
         </button>
-      </div>
+      </div> */}
 
       {/* 비디오 + 인트로 + 툴바: 한 그룹으로 중앙 기준 스케일 */}
       <div className="absolute inset-0 flex items-center justify-center">
