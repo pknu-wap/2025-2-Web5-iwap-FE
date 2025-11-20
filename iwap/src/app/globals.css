@@ -270,6 +270,118 @@ body {
   }
 }
 
+.emoji-reaction,
+.emoji-reaction-blur {
+  position: absolute;
+  filter: drop-shadow(0 0 20px rgba(255, 255, 255, 0.6));
+  line-height: 1;
+  animation: emojiLift 1.6s cubic-bezier(0.21, 0.4, 0.35, 1) forwards;
+}
+
+.emoji-reaction {
+  font-size: 4rem;
+  text-shadow:
+    0 0 20px rgba(255, 255, 255, 0.8),
+    0 10px 25px rgba(255, 255, 255, 0.3);
+}
+
+.emoji-reaction-blur {
+  font-size: 5rem;
+  animation-delay: 0.2s;
+  filter: blur(30px);
+  opacity: 0.4;
+}
+
+@keyframes emojiLift {
+  0% {
+    transform: translate3d(0, 40px, 0) scale(0.6);
+    opacity: 0;
+  }
+  25% {
+    transform: translate3d(0, 0, 0) scale(1.25);
+    opacity: 1;
+  }
+  55% {
+    transform: translate3d(0, -24px, 0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translate3d(0, -70px, 0) scale(0.8);
+    opacity: 0;
+  }
+}
+
+.heart-burst {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  z-index: 25;
+}
+
+.heart-burst-dot {
+  position: absolute;
+  font-size: 2.6rem;
+  color: #ff79c0;
+  filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.8));
+  animation: heartBurst 1.4s ease-out forwards;
+  opacity: 0;
+  --dx: 0px;
+  --dy: 0px;
+}
+
+.heart-burst-dot:nth-child(1) {
+  --dx: -40px;
+  --dy: -10px;
+  animation-delay: 0s;
+}
+
+.heart-burst-dot:nth-child(2) {
+  --dx: 35px;
+  --dy: -5px;
+  animation-delay: 0.08s;
+}
+
+.heart-burst-dot:nth-child(3) {
+  --dx: -5px;
+  --dy: -40px;
+  animation-delay: 0.05s;
+}
+
+.heart-burst-dot:nth-child(4) {
+  --dx: 25px;
+  --dy: -35px;
+  animation-delay: 0.12s;
+}
+
+.heart-burst-dot:nth-child(5) {
+  --dx: 0px;
+  --dy: -55px;
+  animation-delay: 0.15s;
+}
+
+@keyframes heartBurst {
+  0% {
+    opacity: 0;
+    transform: translate(0, 0) scale(0.4);
+  }
+  25% {
+    opacity: 1;
+    transform: translate(0, 0) scale(1.2);
+  }
+  70% {
+    opacity: 1;
+    transform: translate(var(--dx), var(--dy)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(calc(var(--dx) + 12px), calc(var(--dy) - 18px)) scale(0.9);
+  }
+}
+
+
 @keyframes graffiti-intro-zoom {
   0% {
     transform: scale(1);

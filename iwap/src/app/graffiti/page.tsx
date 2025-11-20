@@ -178,21 +178,31 @@ export default function HandLandmarkerPage() {
 
   // 이모지
   const [activeEmoji, setActiveEmoji] = useState<string | null>(null);
+  const [showHeartBurst, setShowHeartBurst] = useState(false);
   const emojiTimeoutRef = useRef<number | null>(null);
+  const heartBurstTimeoutRef = useRef<number | null>(null);
   const activeEmojiRef = useRef<string | null>(null);
 
   const triggerEmoji = useCallback((emoji: string) => {
     if (activeEmojiRef.current === emoji) return;
     activeEmojiRef.current = emoji;
     setActiveEmoji(emoji);
+    setShowHeartBurst(true);
     if (emojiTimeoutRef.current !== null) {
       window.clearTimeout(emojiTimeoutRef.current);
+    }
+    if (heartBurstTimeoutRef.current !== null) {
+      window.clearTimeout(heartBurstTimeoutRef.current);
     }
     emojiTimeoutRef.current = window.setTimeout(() => {
       activeEmojiRef.current = null;
       setActiveEmoji(null);
       emojiTimeoutRef.current = null;
     }, 1000);
+    heartBurstTimeoutRef.current = window.setTimeout(() => {
+      setShowHeartBurst(false);
+      heartBurstTimeoutRef.current = null;
+    }, 1600);
   }, []);
 
   /* ---- Graffiti 인트로 상태 ---- */
@@ -410,6 +420,9 @@ export default function HandLandmarkerPage() {
       }
       if (emojiTimeoutRef.current !== null) {
         window.clearTimeout(emojiTimeoutRef.current);
+      }
+      if (heartBurstTimeoutRef.current !== null) {
+        window.clearTimeout(heartBurstTimeoutRef.current);
       }
     };
   }, []);
@@ -657,7 +670,6 @@ if (landmarksList.length > 0) {
 
   const gesture = detectGesture(landmarksList);
   if (gesture === "HEART") triggerEmoji("💖");
-  else if (gesture === "THUMBS_UP") triggerEmoji("👍");
 }
 
 overlayCtx.restore();
@@ -765,80 +777,80 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
       {/* 비디오 + 인트로 + 툴바: 한 그룹으로 중앙 기준 스케일 */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="relative w-full max-w-[1000px] origin-center md:scale-100 scale-[0.9] flex flex-col items-center">
-          {/* 인트로 1: 카메라 허용 안내 (스케일 영역 안으로 이동) */}
+          {/* Intro 1: camera access prompt */}
           {showIntro && (
-          <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
-            <button
-              type="button"
-              onClick={handleIntroReady}
-              className="
-                pointer-events-auto
-                w-[300px] h-[80px]
-                md:w-[500px] md:h-[100px]
-                rounded-[84px]
-                border border-white
-                bg-white/60 backdrop-blur-[4px]
-                shadow-[0_0_50px_20px_rgba(0,0,0,0.25)]
-                flex flex-col items-center justify-center
-                text-center
-                focus-visible:outline focus-visible:outline-2 focus-visible:outline-white
-              "
-            >
-              <span className="hidden md:block text-black text-[20px]">
-                손동작 인식을 위해 카메라 접근을 허용해주세요.
-              </span>
-              <span className="md:hidden text-black text-[18px] leading-snug">
-                손동작 인식을 위해
-                <br />
-                카메라 접근을 허용해주세요.
-              </span>
-            </button>
-          </div>
+            <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+              <button
+                type="button"
+                onClick={handleIntroReady}
+                className="
+                  pointer-events-auto
+                  w-[300px] h-[80px]
+                  md:w-[500px] md:h-[100px]
+                  rounded-[84px]
+                  border border-white
+                  bg-white/60 backdrop-blur-[4px]
+                  shadow-[0_0_50px_20px_rgba(0,0,0,0.25)]
+                  flex flex-col items-center justify-center
+                  text-center
+                  focus-visible:outline focus-visible:outline-2 focus-visible:outline-white
+                "
+              >
+                <span className="hidden md:block text-black text-[20px]">
+                  손동작 인식을 위해 카메라 접근을 허용해주세요.
+                </span>
+                <span className="md:hidden text-black text-[18px] leading-snug">
+                  손동작 인식을 위해
+                  <br />
+                  카메라 접근을 허용해주세요.
+                </span>
+              </button>
+            </div>
           )}
 
-          {/* 인트로 2: 손 모양 따라하기 안내 (스케일 영역 안으로 이동) */}
+          {/* Intro 2: follow the hand pose */}
           {introFinished && !overlayExpanded && (
             <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
-              <div
-                className={`
-                  pointer-events-auto
-                  flex flex-col items-center justify-center
-                  px-6 py-8
-                  bg-white/40
-                  border border-white/80
-                  backdrop-blur-[6px]
-              shadow-[0_20px_60px_rgba(0,0,0,0.35)]
-              transition-all duration-[1200ms] ease-in-out
-              w-[280px] h-[280px]
-              sm:w-[320px] sm:h-[300px]
-              md:w-[500px] md:h-[480px]
-              gap-6
-              ${overlayExpanding ? "scale-[1.25] opacity-0" : "scale-100 opacity-100"}
-                `}
-              >
-                <p className="text-white text-center text-[18px] md:text-[24px] font-semibold">
-                  손 모양을 따라해 보세요.
-                </p>
-                <div className="relative w-[200px] h-[180px] flex items-center justify-center">
-                  <div className="relative w-full h-full">
+              <div className="flex items-center justify-center scale-[0.64] md:scale-100">
+                <div
+                  className={`
+                    pointer-events-auto
+                    flex flex-col items-center justify-center
+                    px-6 py-8
+                    bg-white/40
+                    border border-white/80
+                    backdrop-blur-[6px]
+                    shadow-[0_20px_60px_rgba(0,0,0,0.35)]
+                    transition-all duration-[1200ms] ease-in-out
+                    w-[500px] h-[480px]
+                    gap-6
+                    ${overlayExpanding ? "scale-[1.25] opacity-0" : "scale-100 opacity-100"}
+                  `}
+                >
+                  <p className="text-white text-center text-[18px] md:text-[24px] font-semibold scale-[1.5] md:scale-[1.0]">
+                    손 모양을 따라 해보세요.
+                  </p>
+                  <div className="relative w-[200px] h-[180px] flex items-center justify-center">
+                    <div className="relative w-full h-full">
+                      <img
+                        src="/icons/Vector1.png"
+                        alt="Hand shape 1"
+                        className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_0_4.6px_#fff] pointer-events-none -translate-x-[30px] translate-y-[8px] vector-highlight"
+                      />
+                      <img
+                        src="/icons/Vector2.png"
+                        alt="Hand shape 2"
+                        className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_0_4.6px_#fff] pointer-events-none translate-x-[120px] -translate-y-[6px] vector-highlight-2"
+                      />
+                    </div>
                     <img
-                      src="/icons/Vector1.png"
-                      alt="손 모양 1"
-                      className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_0_4.6px_#fff] pointer-events-none -translate-x-[30px] translate-y-[8px] vector-highlight"
-                    />
-                    <img
-                      src="/icons/Vector2.png"
-                      alt="손 모양 2"
-                      className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_0_4.6px_#fff] pointer-events-none translate-x-[120px] -translate-y-[6px] vector-highlight-2"
+                      src="/icons/graffiti_finger.png"
+                      alt="Demonstration finger"
+                      className="finger-trace-icon"
+                      style={{ "--finger-trace-size": "100px" } as CSSProperties}
+                      onAnimationEnd={handleFingerAnimationComplete}
                     />
                   </div>
-                  <img
-                    src="/icons/graffiti_finger.png"
-                    alt="손가락 시연 아이콘"
-                    className="finger-trace-icon"
-                    style={{ "--finger-trace-size": "100px" } as CSSProperties}
-                    onAnimationEnd={handleFingerAnimationComplete}
-                  />
                 </div>
               </div>
             </div>
@@ -848,8 +860,8 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
           <div
             ref={containerRef}
             className={`
-              relative w-full aspect-video mx-auto md:translate-y-0 translate-y-50
-              max-w-[780px] md:max-w-[1040px]
+              relative w-full aspect-video mx-auto md:translate-y-0 
+              max-w-[200px] md:max-w-[1040px]
               ${videoScaleClass}
               ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
               transition-transform transition-opacity duration-500
@@ -871,16 +883,23 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
               ref={drawCanvasRef}
               className="absolute inset-0 w-full h-full pointer-events-none -scale-x-100"
             />
-            {activeEmoji && (
-              <div className="absolute inset-0 z-20 flex items-center justify-center pointer-events-none text-7xl drop-shadow-[0_0_20px_rgba(0,0,0,0.7)]">
-                {activeEmoji}
+            {showHeartBurst && (
+              <div className="heart-burst" aria-hidden="true">
+                {Array.from({ length: 5 }).map((_, idx) => (
+                  <span
+                    key={idx}
+                    className={`heart-burst-dot heart-burst-dot-${idx + 1}`}
+                  >
+                    {activeEmoji ?? "💖"}
+                  </span>
+                ))}
               </div>
             )}
           </div>
 
           {/* 하단 툴바 */}
           {videoReady && (
-            <div className="pointer-events-auto mt-6 flex justify-center md:scale-100 scale-[0.85] ">
+            <div className="pointer-events-auto mt-6 flex justify-center md:scale-100 scale-[0.45] ">
               <GraffitiToolbar
                 colorPalette={COLOR_PALETTE}
                 brushColor={brushColor}
