@@ -1,7 +1,10 @@
 // src/workers/ascii.worker.ts
 
 // --- Constants (워커는 독립된 스코프를 가지므로 필요한 상수를 가져와야 합니다) ---
-const ASCII_CHARS = ' `^\',.:;-_Il!i~+<>()[]{}|\\/│─tfjrxnuczXYUJCLQ0OZmwqpdbkhao·○1?*±=≤≥×÷≈√ΣΠΩΔδ∞YV#MW&8%B@$┌┐└┘├┤┬┴┼═║╔╗╚╝╠╣╦╩╬░▒▓';
+
+// (세밀한 94단계 명암 - 표준 ASCII 전체)
+const SAFE_ASCII_CHARS_FULL = ' !"#$%&\'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~';
+
 const CHAR_WIDTH_PX = 5;
 const CHAR_HEIGHT_PX = 7;
 
@@ -44,12 +47,15 @@ self.onmessage = async (e: MessageEvent<{ imageSrc: string; maxWidth: number }>)
 
     // 4. 핵심 변환 로직 (기존과 동일)
     for (let y = 0; y < canvasHeight; y++) {
-      const rowData: AsciiCell[] = [];
+    const rowData: AsciiCell[] = [];
       for (let x = 0; x < canvasWidth; x++) {
         const i = (y * canvasWidth + x) * 4;
         const [r, g, b] = [data[i], data[i + 1], data[i + 2]];
         const gray = 0.21 * r + 0.72 * g + 0.07 * b;
-        const char = ASCII_CHARS[Math.floor((gray / 255) * (ASCII_CHARS.length - 1))] || ' ';
+        
+        // [수정] SAFE_ASCII_CHARS_FULL을 사용하도록 변경
+        const char = SAFE_ASCII_CHARS_FULL[Math.floor((gray / 255) * (SAFE_ASCII_CHARS_FULL.length - 1))] || ' ';
+        
         const color = `rgb(${r},${g},${b})`;
         rowData.push({ char, color });
       }

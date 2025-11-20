@@ -182,6 +182,7 @@ export default function AsciiPage() {
           onClose={handleReturnToUpload}
           onResolutionChange={handleResolutionChange}
           isProcessing={isReProcessing}
+          previewUrl={previewUrl} // [수정] 이 prop을 추가합니다.
         />
       ) : (
         <div className="w-[90%] md:w-full h-[90%] md:h-full translate-x-5 md:translate-x-0 flex items-center justify-center p-4 sm:p-8">

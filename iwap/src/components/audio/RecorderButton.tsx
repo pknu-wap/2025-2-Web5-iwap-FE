@@ -55,12 +55,17 @@ export default function RecorderButton({
     stopRecording();
   };
 
+  const handlePrimaryClick = () => {
+    if (showRecordingUI) return;
+    void handleStart();
+  };
+
   return (
     <div className="relative flex flex-col items-center justify-center pb-28 ">
       {/* 녹음 준비 버튼 */}
       {!showRecordingUI ? (
         <button
-          onClick={handleStart}
+          onClick={handlePrimaryClick}
           className="relative w-[130px] h-[130px] md:w-[170px] md:h-[170px] rounded-full flex items-center justify-center bg-[#D9D9D9] transition-transform"
         >
           <div className="absolute inset-[4px] md:inset-[5px] rounded-full bg-gradient-to-b from-white to-[#F3F4F6]" />

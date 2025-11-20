@@ -6,6 +6,7 @@ import {
   useEffect,
   useLayoutEffect,
   useCallback,
+  type ChangeEvent,
 } from "react";
 import { useRouter } from "next/navigation"; //  1. useRouter import
 import FullScreenView from "@/components/ui/FullScreenView";
@@ -15,13 +16,22 @@ import RecorderButton from "@/components/audio/RecorderButton";
 import Piano from "@/components/piano/Piano";
 import PianoBackendManager, {
   type MidiTransportControls,
+  type ConversionContext,
+  type MidiReadyPayload,
+  getBackendUrl,
 } from "@/app/api/piano/PianoBackendManager";
 import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
 
 export default function VoiceToPiano() {
   const pageTitle = "P!ano";
   const pageSubtitle = "음성을 피아노로 변환하기";
-  const { isRecording, audioUrl, startRecording, stopRecording } = useRecorder();
+  const {
+    isRecording,
+    audioUrl,
+    startRecording,
+    stopRecording,
+    setAudioFromFile,
+  } = useRecorder();
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(max-width: 767px)").matches;
@@ -39,8 +49,10 @@ export default function VoiceToPiano() {
     url: string;
     filename: string;
   } | null>(null);
+  const conversionContextRef = useRef<ConversionContext | null>(null);
 
   const router = useRouter(); //  2. router 선언
+  const mp3AudioRef = useRef<HTMLAudioElement | null>(null);
 
   // ... (handleMidi 및 기타 useEffect, useCallback 함수들은 이전과 동일) ...
   // (생략된 코드는 이전 답변과 동일하게 유지해 주세요)
@@ -124,6 +136,37 @@ export default function VoiceToPiano() {
   }, []);
 
   const headerHiddenRef = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handlePickUpload = useCallback(() => {
+    fileInputRef.current?.click();
+  }, []);
+
+  const handleFileSelected = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const files = event.target.files;
+      const file = files && files[0];
+      if (!file) return;
+
+      const allowedTypes = new Set([
+        "audio/mpeg",
+        "audio/mp3",
+        "audio/webm",
+        "audio/wav",
+      ]);
+
+      if (!allowedTypes.has(file.type)) {
+        setStatus("MP3, WAV, WEBM 파일만 업로드할 수 있습니다.");
+        event.target.value = "";
+        return;
+      }
+
+      setStatus("파일 업로드 준비 중...");
+      setAudioFromFile(file);
+      event.target.value = "";
+    },
+    [setAudioFromFile, setStatus]
+  );
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
@@ -149,24 +192,89 @@ export default function VoiceToPiano() {
     };
   }, []);
 
-  const handleTransportReady = useCallback((controls: MidiTransportControls) => {
-    setTransport(controls);
-    setTransportDuration(controls.duration);
-    setTransportPosition(0);
-    setIsTransportPlaying(false);
-  }, []);
-
   const clearMidiDownload = useCallback(() => {
     if (midiDownloadUrlRef.current) {
       URL.revokeObjectURL(midiDownloadUrlRef.current);
       midiDownloadUrlRef.current = null;
     }
+    conversionContextRef.current = null;
     setMidiDownload(null);
   }, []);
 
+  const disposeMp3Audio = useCallback(() => {
+    const audio = mp3AudioRef.current;
+    if (!audio) return;
+    audio.pause();
+    audio.src = "";
+    mp3AudioRef.current = null;
+  }, []);
+
+  const syncMp3Position = useCallback(
+    (nextPosition?: number) => {
+      const audio = mp3AudioRef.current;
+      if (!audio) return;
+      const fallbackPosition = transport?.getPosition() ?? 0;
+      const target =
+        typeof nextPosition === "number" ? nextPosition : fallbackPosition;
+      if (!Number.isFinite(target)) return;
+      if (Math.abs(audio.currentTime - target) > 0.05) {
+        audio.currentTime = target;
+      }
+    },
+    [transport]
+  );
+
+  const handleTransportReady = useCallback(
+    (controls: MidiTransportControls, context?: ConversionContext) => {
+      if (context) {
+        conversionContextRef.current = context;
+      }
+      setTransport(controls);
+      setTransportDuration(controls.duration);
+      setTransportPosition(0);
+      setIsTransportPlaying(false);
+      disposeMp3Audio();
+
+      const localSource =
+        audioUrl && (audioUrl.startsWith("blob:") || audioUrl.startsWith("data:"))
+          ? audioUrl
+          : null;
+      const effectiveContext = context ?? conversionContextRef.current;
+      const remoteSource = effectiveContext
+        ? getBackendUrl(
+            `/api/piano/mp3?request_id=${encodeURIComponent(
+              effectiveContext.requestId
+            )}`
+          )
+        : getBackendUrl("/api/piano/mp3");
+      const shouldUseRemote = Boolean(effectiveContext) || !localSource;
+      const source = shouldUseRemote ? remoteSource : localSource;
+
+      const mp3 = new Audio(source);
+      mp3.preload = "auto";
+      if (!localSource) {
+        mp3.crossOrigin = "anonymous";
+      }
+      mp3.volume = 0.2; // keep slightly under the MIDI sampler
+      mp3AudioRef.current = mp3;
+    },
+    [audioUrl, disposeMp3Audio]
+  );
+
   const handleMidiReady = useCallback(
-    ({ blob, filename }: { blob: Blob; filename: string }) => {
+    ({
+      blob,
+      filename,
+      requestId,
+      midiFilename,
+      mp3Filename,
+    }: MidiReadyPayload) => {
       clearMidiDownload();
+      conversionContextRef.current = {
+        requestId,
+        midiFilename,
+        mp3Filename,
+      };
       const url = URL.createObjectURL(blob);
       midiDownloadUrlRef.current = url;
       setMidiDownload({ url, filename });
@@ -177,8 +285,9 @@ export default function VoiceToPiano() {
   useEffect(() => {
     return () => {
       clearMidiDownload();
+      disposeMp3Audio();
     };
-  }, [clearMidiDownload]);
+  }, [clearMidiDownload, disposeMp3Audio]);
 
   const handleTransportReset = useCallback(() => {
     setTransport(null);
@@ -187,22 +296,35 @@ export default function VoiceToPiano() {
     setIsTransportPlaying(false);
     setStatus("");
     clearMidiDownload();
+    disposeMp3Audio();
     noteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
     noteTimeoutsRef.current.clear();
     activeNotesRef.current.clear();
     forceRender((t) => t ^ 1);
-  }, [clearMidiDownload, forceRender]);
+  }, [clearMidiDownload, disposeMp3Audio, forceRender]);
 
   const handleTogglePlayback = useCallback(() => {
     if (!transport) return;
     if (isTransportPlaying) {
       transport.pause();
+      mp3AudioRef.current?.pause();
       setIsTransportPlaying(false);
-    } else {
-      void transport.start();
-      setIsTransportPlaying(true);
+      return;
     }
-  }, [transport, isTransportPlaying]);
+    setIsTransportPlaying(true);
+    void (async () => {
+      await transport.start();
+      const audio = mp3AudioRef.current;
+      if (audio) {
+        syncMp3Position();
+        try {
+          await audio.play();
+        } catch (err) {
+          console.warn("MP3 playback failed", err);
+        }
+      }
+    })();
+  }, [transport, isTransportPlaying, syncMp3Position]);
 
   const handleSeek = useCallback(
     (seconds: number, resume: boolean) => {
@@ -210,6 +332,17 @@ export default function VoiceToPiano() {
       const clamped = Math.max(0, Math.min(transportDuration, seconds));
       transport.seek(clamped, resume);
       setTransportPosition(clamped);
+      const audio = mp3AudioRef.current;
+      if (audio) {
+        audio.currentTime = clamped;
+        if (resume) {
+          void audio.play().catch((err) => {
+            console.warn("MP3 resume failed", err);
+          });
+        } else {
+          audio.pause();
+        }
+      }
     },
     [transport, transportDuration]
   );
@@ -218,6 +351,17 @@ export default function VoiceToPiano() {
     if (!transport) return;
     transport.seek(0, isTransportPlaying);
     setTransportPosition(0);
+    const audio = mp3AudioRef.current;
+    if (audio) {
+      audio.currentTime = 0;
+      if (isTransportPlaying) {
+        void audio.play().catch((err) => {
+          console.warn("MP3 rewind failed", err);
+        });
+      } else {
+        audio.pause();
+      }
+    }
   }, [transport, isTransportPlaying]);
 
   const handleDownloadMidi = useCallback(() => {
@@ -271,22 +415,42 @@ export default function VoiceToPiano() {
         )}
 
         <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible">
-          {!audioUrl ? (
-            // === '녹음' 뷰 (변경 없음) ===
-            <div className="flex flex-col items-center justify-center gap-8">
+          <>
+            <div className={`${audioUrl ? "hidden" : "flex"} flex-col items-center justify-center gap-8 transform translate-y-[35px]`}>
               <h1 className="text-2xl md:text-3xl font-bold text-center">음성을 입력해주세요</h1>
-              <RecorderButton
-                isRecording={isRecording}
-                startRecording={startRecording}
-                stopRecording={stopRecording}
-              />
-            </div>
-          ) : (
-            // === '피아노/재생' 뷰 ===
+                <RecorderButton
+                  isRecording={isRecording}
+                  startRecording={startRecording}
+                  stopRecording={stopRecording}
+                />
+                {!isRecording ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handlePickUpload}
+                      className="w-[144px] h-[32px] md:w-[180px] md:h-[40px] rounded-[6px] text-[16px] md:text-[20px] font-SemiBold border-[1px] border-[#9D9DC5] bg-white text-[#9D9DC5] transition hover:border-[#9D9DC5] hover:bg-[#9D9DC5] hover:text-white -translate-y-20 inline-flex items-center justify-center gap-2 group"
+                    >
+                      <img src="/icons/Upload.svg" alt="" className="w-5 h-5 block group-hover:hidden" aria-hidden="true" />
+                      <img src="/icons/Upload_white.svg" alt="" className="w-5 h-5 hidden group-hover:block" aria-hidden="true" />
+                      <span className="relative top-[1px]">MP3 업로드</span>
+                    </button>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="audio/mpeg,audio/mp3,audio/webm,audio/wav"
+                      className="hidden"
+                      onChange={handleFileSelected}
+                    />
+                  </>
+                ) : (
+                  <div className="w-[144px] h-[32px] md:w-[180px] md:h-[40px]" aria-hidden="true" />
+                )}
+              </div>
+          
             <>
               {/* === 데스크탑 뷰 (md:flex) === */}
               {/* (기존 코드와 동일) */}
-              <div className="hidden w-full flex-col items-center gap-6 md:flex">
+              <div className={`hidden w-full flex-col items-center gap-6 ${audioUrl ? "md:flex" : ""}`}>
                 {status ? (
                   <p className="text-lg text-center whitespace-nowrap">{status}</p>
                 ) : null}
@@ -312,7 +476,7 @@ export default function VoiceToPiano() {
               </div>
 
               {/* === 💡 모바일 뷰 (md:hidden) === */}
-              <div className="
+              <div className={`${audioUrl ? "" : "hidden"}
                 md:hidden /* 모바일에서만 보임 */
                 absolute top-1/2 left-1/2 
                 w-dvh h-dvw 
@@ -322,7 +486,7 @@ export default function VoiceToPiano() {
                 
                 flex flex-col items-center justify-center
                 overflow-hidden p-4 text-white
-              ">
+              `}>
                 
                 {/* 1. 모바일용 헤더 */}
                 <header className="w-full flex justify-between items-start px-6 pt-4">
@@ -364,8 +528,8 @@ export default function VoiceToPiano() {
                       position={transportPosition}
                       onTogglePlay={handleTogglePlayback}
                       onSeek={handleSeek}
-                      // onRewind={handleRewind}
-                      // onDownload={handleDownloadMidi}
+                      onRewind={handleRewind}
+                      onDownload={handleDownloadMidi}
                       canDownload={Boolean(midiDownload)}
                       disabled={!hasTransport || transportDuration <= 0}
                       className="max-w-xl" 
@@ -374,7 +538,7 @@ export default function VoiceToPiano() {
                 )}
               </div>
             </>
-          )}
+          </>
         </main>
         
         {/* === 데스크탑용 MIDI 플레이어 바 === */}
@@ -386,8 +550,8 @@ export default function VoiceToPiano() {
               position={transportPosition}
               onTogglePlay={handleTogglePlayback}
               onSeek={handleSeek}
-              // onRewind={handleRewind}
-              // onDownload={handleDownloadMidi}
+              onRewind={handleRewind}
+              onDownload={handleDownloadMidi}
               canDownload={Boolean(midiDownload)}
               disabled={!hasTransport || transportDuration <= 0}
               className="max-w-4xl"

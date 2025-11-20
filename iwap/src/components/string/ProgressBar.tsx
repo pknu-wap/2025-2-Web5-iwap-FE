@@ -8,34 +8,45 @@ interface ProgressBarProps {
   currentStep: number;
   totalSteps: number;
   onSeek: (step: number) => void;
+  onScrub: (step: number) => void;
 }
 
 export default function ProgressBar({
   currentStep,
   totalSteps,
   onSeek,
+  onScrub,
 }: ProgressBarProps) {
   const barRef = useRef<HTMLDivElement>(null);
 
-  const bind = useDrag(({ down, xy: [x], tap }) => {
+  const bind = useDrag(
+    ({ down, xy: [x] }) => {
+      if (!barRef.current || !down) return;
+      const { left, width } = barRef.current.getBoundingClientRect();
+      const progress = Math.max(0, Math.min(1, (x - left) / width));
+      const targetStep = Math.round(progress * totalSteps);
+      onScrub(targetStep);
+    },
+    { filterTaps: true, eventOptions: { passive: false } }
+  );
+
+  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!barRef.current) return;
     const { left, width } = barRef.current.getBoundingClientRect();
-    const progress = Math.max(0, Math.min(1, (x - left) / width));
-    const targetStep = Math.round(progress * (totalSteps - 1));
-
-    if (down || tap) {
-      onSeek(targetStep);
-    }
-  });
+    const progress = Math.max(0, Math.min(1, (e.clientX - left) / width));
+    const targetStep = Math.round(progress * totalSteps);
+    onSeek(targetStep);
+  };
 
   if (totalSteps <= 1) return null;
   
-  const progressPercent = totalSteps > 1 ? (currentStep / (totalSteps - 1)) * 100 : 0;
+  const progressPercent = totalSteps > 1 ? (currentStep / totalSteps) * 100 : 0;
 
   return (
     <div
       ref={barRef}
       {...bind()}
+      onClick={handleClick}
       className="relative w-full h-8 flex items-center cursor-pointer touch-none"
     >
       <div className="relative w-full h-2">

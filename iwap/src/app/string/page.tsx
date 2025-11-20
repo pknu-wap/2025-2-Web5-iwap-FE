@@ -1,4 +1,3 @@
-// src/app/string/page.tsx
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
@@ -8,8 +7,7 @@ import LoadingIndicator from "@/components/ui/LoadingIndicator";
 import StringArtDisplay from "@/components/string/StringArtDisplay";
 import UndoIcon from "@/components/ui/icons/UndoIcon";
 import SubmitIcon from "@/components/ui/icons/SubmitIcon";
-
-import { processImageToStringArt, Point } from "@/components/string/StringArtProcessor";
+import { processImageToStringArt } from "@/components/string/StringArtProcessor";
 
 export default function StringArtPage() {
   const [hasMounted, setHasMounted] = useState(false);
@@ -18,28 +16,39 @@ export default function StringArtPage() {
 
   const [sourceImage, setSourceImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [coordinates, setCoordinates] = useState<Point[] | null>(null);
+  const [coordinates, setCoordinates] = useState<number[] | null>(null);
+  const [colorImageUrl, setColorImageUrl] = useState<string | null>(null);
+  const [nailCount, setNailCount] = useState<number>(0);
 
   useEffect(() => { setHasMounted(true); }, []);
 
   const handleConversion = useCallback(async () => {
     if (!sourceImage) return;
-    
+
     setView('loading');
     try {
-      const result = await processImageToStringArt(sourceImage);
-      setCoordinates(result);
+      const { coordinates, colorImageUrl, nailCount } = await processImageToStringArt(
+        sourceImage
+      );
+      setCoordinates(coordinates);
+      setColorImageUrl(colorImageUrl);
+      setNailCount(nailCount);
       setView('visualize');
     } catch (err) {
       setError(err instanceof Error ? err.message : "An unknown error occurred.");
       setView('upload');
     }
-  }, [sourceImage]);
+  }, [sourceImage]); 
 
   const handleFileSelect = useCallback((file: File | null) => {
     setError(null);
     setCoordinates(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
+
+    if (colorImageUrl) {
+        URL.revokeObjectURL(colorImageUrl);
+        setColorImageUrl(null);
+    }
 
     if (file) {
       setSourceImage(file);
@@ -48,7 +57,7 @@ export default function StringArtPage() {
       setSourceImage(null);
       setPreviewUrl(null);
     }
-  }, [previewUrl]);
+  }, [previewUrl, colorImageUrl]);
 
   const pageBackgroundStyle = {
     backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #98B9C2), url('/images/string_background.jpg')`,
@@ -98,6 +107,8 @@ export default function StringArtPage() {
       {view === 'visualize' && coordinates ? (
         <StringArtDisplay
           coordinates={coordinates}
+          colorImageUrl={colorImageUrl}
+          nailCount={nailCount}
           onClose={() => {
             handleFileSelect(null);
             setView('upload');

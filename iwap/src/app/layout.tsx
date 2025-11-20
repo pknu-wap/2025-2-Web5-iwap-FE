@@ -1,24 +1,28 @@
-// layout.tsx
 "use client";
 
 import "./globals.css";
-import localFont from "next/font/local";
-import { usePathname } from "next/navigation";
 import "@/components/lightswind.css";
 import Link from "next/link";
+import localFont from "next/font/local";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const Pretendard = localFont({
   src: "../../public/fonts/PretendardVariable.woff2",
   display: "swap",
 });
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const [forceHideHeader, setForceHideHeader] = useState(false);
   const showHeader = pathname !== "/" && !forceHideHeader;
 
-  // 스크롤 제어
   useEffect(() => {
     const isMobile = window.matchMedia("(max-width: 767px)").matches;
 
@@ -51,27 +55,37 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
   return (
     <html lang="ko">
-      <body className={`relative overflow-x-hidden ${Pretendard.className} text-black`}>
-        {showHeader && (
-          <header className="w-full h-[30px] md:h-[60px] bg-white flex md:flex flex-col items-center justify-center fixed top-0 left-0 z-50">
-            <Link href="/" className="select-none text-center">
-              <h1 className="text-black text-[21px] md:text-2xl font-semibold">!WAP</h1>
-              <p className="hidden md:block text-black text-base font-extralight -translate-y-0.5">
-                !nteractive Web Art Project
-              </p>
-            </Link>
-          </header>
-        )}
+      <body
+        className={`relative overflow-x-hidden bg-white text-black transition-colors duration-300 dark:bg-neutral-900 dark:text-neutral-100 ${Pretendard.className}`}
+      >
+        <ThemeProvider>
+          {showHeader && (
+            <header className="fixed top-0 left-0 z-50 flex h-[30px] w-full flex-col items-center justify-center bg-white text-black transition-colors duration-300 dark:bg-neutral-900 dark:text-neutral-100 md:h-[60px]">
+              <div className="relative flex w-full max-w-4xl items-center justify-center px-4">
+                <Link href="/" className="select-none text-center">
+                  <h1 className="text-[21px] font-semibold md:text-2xl">!WAP</h1>
+                  <p className="hidden text-base font-extralight -translate-y-0.5 md:block">
+                    !nteractive Web Art Project
+                  </p>
+                </Link>
+              </div>
+            </header>
+          )}
 
-        <main
-          className={
-            showHeader
-              ? "pt-[30px] md:pt-[60px] min-h-dvh"
-              : "min-h-dvh"
-          }
-        >
-          {children}
-        </main>
+          <div className="fixed bottom-4 right-4 z-50 md:bottom-6 md:right-6">
+            <ThemeToggle className="scale-90 md:scale-100 shadow-lg shadow-black/10 dark:shadow-none" />
+          </div>
+
+          <main
+            className={
+              showHeader
+                ? "fixed inset-0 top-[30px] h-dvh overflow-hidden pt-0 md:top-[60px] md:pt-0"
+                : "h-dvh overflow-hidden"
+            }
+          >
+            {children}
+          </main>
+        </ThemeProvider>
       </body>
     </html>
   );

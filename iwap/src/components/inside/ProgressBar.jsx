@@ -6,12 +6,19 @@ import { useDrag } from '@use-gesture/react';
 /**
  * 레이어 인덱스 탐색을 위한 프로그레스 바 컴포넌트
  * @param {object} props
- * @param {number} props.currentIndex - 현재 활성화된 레이어 인덱스
+ * @param {number} props.liveIndex - 현재 활성화된 레이어의 실시간 인덱스 (핸들 위치 계산용)
+ * @param {number} props.displayIndex - 화면에 표시될 반올림된 인덱스 (텍스트 표시용)
  * @param {number} props.totalLayers - 전체 레이어 수
  * @param {(index: number) => void} props.onSeek - 인덱스 변경 시 호출될 콜백 함수
  * @param {number[]} props.sizeChangeIndices - 크기 변경이 일어나는 레이어 인덱스 배열
  */
-export default function ProgressBar({ currentIndex, totalLayers, onSeek, sizeChangeIndices = [] }) {
+export default function ProgressBar({ 
+  liveIndex, 
+  displayIndex, 
+  totalLayers, 
+  onSeek, 
+  sizeChangeIndices = [] 
+}) {
   const barRef = useRef(null);
 
   // 경계값 계산 로직
@@ -107,7 +114,7 @@ export default function ProgressBar({ currentIndex, totalLayers, onSeek, sizeCha
 
   if (totalLayers <= 1) return null;
 
-  // --- 렌더링 로직 수정 ---
+  // --- 렌더링 로직 ---
   let visualProgressPercent = 0; // 핸들의 최종 시각적 위치
   let cumulativeLeftPercent = 0; // 세그먼트가 그려질 시각적 left 위치
 
@@ -115,7 +122,7 @@ export default function ProgressBar({ currentIndex, totalLayers, onSeek, sizeCha
     <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-[80%] max-w-4xl h-8 flex flex-col items-center justify-center z-10">
       {/* 인덱스 텍스트 */}
       <span className="absolute left-0 -top-5 text-white text-sm font-mono select-none">
-        {currentIndex} / {totalLayers - 1}
+        {displayIndex} / {totalLayers - 1}
       </span>
       
       {/* 바 + 점 컨테이너 */}
@@ -136,7 +143,7 @@ export default function ProgressBar({ currentIndex, totalLayers, onSeek, sizeCha
           {...bind()}
           className="relative flex-1 h-8 mx-2 flex items-center cursor-pointer touch-none"
         >
-          {/* 바 트랙 - 높이 조정 (h-2 -> h-3) */}
+          {/* 바 트랙 */}
           <div className="relative w-full h-3">
             
             {/* 1. 각 세그먼트를 개별적으로 렌더링 */}
@@ -164,30 +171,30 @@ export default function ProgressBar({ currentIndex, totalLayers, onSeek, sizeCha
 
               // --- (fillRatio 로직) ---
               const segmentLengthInIndices = endNode - startNode;
-              const progressInIndices = currentIndex - startNode;
+              const progressInIndices = liveIndex - startNode; 
               
               let fillRatio = 0;
               if (segmentLengthInIndices > 0) {
                 fillRatio = Math.max(0, Math.min(1, progressInIndices / segmentLengthInIndices));
-              } else if (currentIndex >= endNode) {
+              } else if (liveIndex >= endNode) {
                 fillRatio = 1; 
               }
               
-              if (currentIndex > endNode) fillRatio = 1;
-              if (currentIndex < startNode) fillRatio = 0;
+              if (liveIndex > endNode) fillRatio = 1;
+              if (liveIndex < startNode) fillRatio = 0;
 
               const fillPercentForSegment = fillRatio * 100;
               // --- (fillRatio 로직 끝) ---
               
               // --- 핸들 위치 계산 ---
-              if (currentIndex >= startNode && currentIndex <= endNode) {
+              if (liveIndex >= startNode && liveIndex <= endNode) {
                  // 이 세그먼트가 활성 세그먼트
                  const visualProgressInSegment = fillRatio * segmentWidthPercent;
                  visualProgressPercent = visualLeftPercent + visualProgressInSegment;
-              } else if (currentIndex > endNode && isLastSegment) {
+              } else if (liveIndex > endNode && isLastSegment) {
                  // 마지막 세그먼트를 지난 경우 (100%)
                  visualProgressPercent = 100;
-              } else if (currentIndex === 0) {
+              } else if (liveIndex === 0) {
                  visualProgressPercent = 0;
               }
               // --- 핸들 위치 계산 끝 ---
@@ -204,8 +211,8 @@ export default function ProgressBar({ currentIndex, totalLayers, onSeek, sizeCha
                   key={`segment-${startNode}`}
                   className="absolute top-0 h-full"
                   style={{
-                    left: `${visualLeftPercent}%`, // 수정: 시각적 left 사용
-                    width: `${segmentWidthPercent}%`, // 수정: 시각적 width 사용
+                    left: `${visualLeftPercent}%`, 
+                    width: `${segmentWidthPercent}%`,
                   }}
                 >
                   {/* 회색 배경 */}
@@ -225,8 +232,8 @@ export default function ProgressBar({ currentIndex, totalLayers, onSeek, sizeCha
             <div 
               className="absolute -top-1 w-1 h-5 bg-white pointer-events-none z-20 rounded-full"
               style={{ 
-                left: `${visualProgressPercent}%`,  // 수정: 시각적 위치 사용
-                transform: `translateX(-50%)`
+                left: `${visualProgressPercent}%`,
+                transform: `translateX(-50%)`,
               }}
             />
           </div>

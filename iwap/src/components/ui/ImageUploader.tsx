@@ -27,8 +27,26 @@ export default function ImageUploader({
 }: ImageUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
 
+  const handleFileValidation = (file: File | null, inputToClear?: HTMLInputElement) => {
+    const allowedExtensions = [".jpeg", ".jpg", ".png"];
+    if (file) {
+      const lastDot = file.name.lastIndexOf(".");
+      const fileExtension = lastDot === -1 ? "" : file.name.substring(lastDot).toLowerCase();
+
+      if (!allowedExtensions.includes(fileExtension)) {
+        alert("jpeg, jpg, png 형식의 파일만 업로드 가능합니다.");
+        if (inputToClear) {
+          inputToClear.value = "";
+        }
+        onFileSelect(null);
+        return;
+      }
+    }
+    onFileSelect(file);
+  };
+
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
-    onFileSelect(e.target.files?.[0] || null);
+    handleFileValidation(e.target.files?.[0] || null, e.target);
   };
 
   const handleDragEnter = (e: DragEvent<HTMLDivElement>) => {
@@ -49,7 +67,7 @@ export default function ImageUploader({
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setIsDragging(false);
-    onFileSelect(e.dataTransfer.files?.[0] || null);
+    handleFileValidation(e.dataTransfer.files?.[0] || null);
   };
 
   return (
@@ -70,7 +88,7 @@ export default function ImageUploader({
         type="file"
         id={id}
         className="hidden"
-        accept="image/*"
+        accept=".jpeg,.jpg,.png"
         onChange={handleFileChange}
       />
       {previewUrl ? (
