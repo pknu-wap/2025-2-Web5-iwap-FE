@@ -163,19 +163,47 @@ body {
 }
 
 .finger-trace-path {
-  stroke-dasharray: 320;
-  stroke-dashoffset: 320;
-  animation: fingerStroke 3s ease-in-out forwards;
+  stroke: rgba(255, 255, 255, 0.09);
+  stroke-width: 4px;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+  stroke-dasharray: 1400;
+  stroke-dashoffset: 1400;
+  filter: drop-shadow(0 0 4.6px rgba(255, 255, 255, 0.8));
+  animation: fingerStroke 3.5s ease-in-out forwards;
 }
 
 .finger-trace-icon {
-  transform: translate(-50%, -50%) translate(-80px, 60px);
-  animation: fingerTrace 3s ease-in-out forwards;
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: var(--finger-trace-size, 64px);
+  height: var(--finger-trace-size, 64px);
+  transform: translate(calc(-50% - 50px), calc(-50% + 10px));
   filter: drop-shadow(0 12px 24px rgba(0, 0, 0, 0.35));
+  offset-path: path("M6.59961 144.6C64.6041 95.6876 188.81 -0.310323 221.6 6.99387C235.999 41.6484 263.518 115.429 258.403 133.315");
+  offset-distance: 0%;
+  offset-rotate: 0deg;
+  offset-anchor: 50% 50%;
+  animation: fingerTrace 3.5s ease-in-out forwards;
 }
 
 @keyframes fingerStroke {
-  to {
+  0% {
+    opacity: 0;
+    stroke-dashoffset: 1400;
+  }
+  55% {
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+  75% {
+    opacity: 1;
+    stroke-dashoffset: 0;
+  }
+  100% {
+    opacity: 0;
     stroke-dashoffset: 0;
   }
 }
@@ -183,22 +211,83 @@ body {
 @keyframes fingerTrace {
   0% {
     opacity: 0;
-    transform: translate(-50%, -50%) translate(-80px, 60px);
+    offset-distance: 0%;
   }
   15% {
     opacity: 1;
   }
-  45% {
-    transform: translate(-50%, -50%) translate(30px, -80px);
+  63% {
+    opacity: 1;
+    offset-distance: 63%;
+  }
+  70% {
+    opacity: 1;
+    offset-distance: 63%;
   }
   100% {
     opacity: 1;
-    transform: translate(-50%, -50%) translate(80px, 0px);
+    offset-distance: 100%;
   }
 }
 
-/* global.css 또는 <style jsx global> */
-/* * {
-  outline: 1px solid red !important;
-} */
+.vector-highlight {
+  opacity: 0;
+  animation: vectorPulse 3.5s ease-in-out forwards;
+}
+
+@keyframes vectorPulse {
+  0% {
+    opacity: 0;
+  }
+  40.0% {
+    opacity: 0;
+  }
+  48.5% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+.vector-highlight-2 {
+  opacity: 0;
+  animation: vectorPulse2 3.5s ease-in-out forwards;
+}
+
+@keyframes vectorPulse2 {
+  0% {
+    opacity: 0;
+  }
+  90% {
+    opacity: 0;
+  }
+  95.5% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes graffiti-intro-zoom {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+    border-radius: 48px;
+  }
+  60% {
+    transform: scale(1.05);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.4);
+    opacity: 0;
+    border-radius: 0px;
+  }
+}
+
+.graffiti-intro-zoom {
+  animation: graffiti-intro-zoom 900ms ease-in-out forwards;
+}
 

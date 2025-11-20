@@ -11,6 +11,7 @@ type GraffitiToolbarProps = {
   onSizeChange: (size: number) => void;
   onCustomColorPick: (color: string) => void;
   onConfirmCustomColor: () => void;
+  onRemoveCustomColor: (color: string) => void;
   onUndo: () => void;
   onRedo: () => void;
   onClear: () => void;
@@ -28,16 +29,31 @@ export default function GraffitiToolbar({
   onSizeChange,
   onCustomColorPick,
   onConfirmCustomColor,
+  onRemoveCustomColor,
   onUndo,
   onRedo,
   onClear,
   onSave,
 }: GraffitiToolbarProps) {
+  const normalizedPendingColor = pendingCustomColor?.toLowerCase();
   const isPendingDuplicate =
-    Boolean(pendingCustomColor) &&
-    customPatterns.includes(pendingCustomColor as string);
+    Boolean(normalizedPendingColor) &&
+    customPatterns.some(
+      (pattern) => pattern.toLowerCase() === normalizedPendingColor
+    );
 
   const confirmDisabled = !pendingCustomColor || isPendingDuplicate;
+  const normalizedBrushColor = brushColor.toLowerCase();
+  const isBrushColorCustom = customPatterns.some(
+    (pattern) => pattern.toLowerCase() === normalizedBrushColor
+  );
+  const showDeleteAction = !pendingCustomColor && isBrushColorCustom;
+  const sliderMin = 2;
+  const sliderMax = 40;
+  const sliderRange = sliderMax - sliderMin;
+  const calculatedPercentage =
+    sliderRange === 0 ? 0 : ((brushSize - sliderMin) / sliderRange) * 100;
+  const sliderPercentage = Math.min(Math.max(calculatedPercentage, 0), 100);
 
   return (
     <div
@@ -79,37 +95,53 @@ export default function GraffitiToolbar({
       </div>
 
       <div className="flex items-center gap-3">
-        {colorPalette.map((color) => (
-          <button
-            key={color}
-            type="button"
-            className="
-              h-[30px] w-[30px]
-              rounded-full border-2
-              transition
-            "
-            style={{
-              backgroundColor: color,
-              borderColor:
-                brushColor === color ? "#ffffff" : "rgba(255,255,255,0.3)",
-            }}
-            onClick={() => onBrushColorChange(color)}
-          />
-        ))}
+        {colorPalette.map((color) => {
+          const normalizedColor = color.toLowerCase();
+          const isSelected = normalizedBrushColor === normalizedColor;
+          const borderColor = isSelected
+            ? normalizedColor === "#ffffff"
+              ? "#000000"
+              : "#ffffff"
+            : "rgba(255,255,255,0.3)";
+          return (
+            <button
+              key={color}
+              type="button"
+              className="
+                h-[30px] w-[30px]
+                rounded-full border-2
+                transition
+              "
+              style={{
+                backgroundColor: color,
+                borderColor,
+              }}
+              onClick={() => onBrushColorChange(color)}
+            />
+          );
+        })}
 
-        {customPatterns.map((hex) => (
-          <button
-            key={hex}
-            type="button"
-            className="h-[30px] w-[30px] rounded-full border-2 transition"
-            style={{
-              backgroundColor: hex,
-              borderColor:
-                brushColor === hex ? "#ffffff" : "rgba(255,255,255,0.3)",
-            }}
-            onClick={() => onBrushColorChange(hex)}
-          />
-        ))}
+        {customPatterns.map((hex) => {
+          const normalizedColor = hex.toLowerCase();
+          const isSelected = normalizedBrushColor === normalizedColor;
+          const borderColor = isSelected
+            ? normalizedColor === "#ffffff"
+              ? "#000000"
+              : "#ffffff"
+            : "rgba(255,255,255,0.3)";
+          return (
+            <button
+              key={hex}
+              type="button"
+              className="h-[30px] w-[30px] rounded-full border-2 transition"
+              style={{
+                backgroundColor: hex,
+                borderColor,
+              }}
+              onClick={() => onBrushColorChange(hex)}
+            />
+          );
+        })}
 
         <input
           type="color"
@@ -124,10 +156,9 @@ export default function GraffitiToolbar({
             rounded-full border-2 transition
           "
           style={{
-            borderColor:
-              customPatterns.includes(brushColor)
-                ? "#ffffff"
-                : "rgba(255,255,255,0.3)",
+            borderColor: isBrushColorCustom
+              ? "#ffffff"
+              : "rgba(255,255,255,0.3)",
             background:
               "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
           }}
@@ -138,8 +169,12 @@ export default function GraffitiToolbar({
         />
         <button
           type="button"
-          onClick={onConfirmCustomColor}
-          disabled={confirmDisabled}
+          onClick={
+            showDeleteAction
+              ? () => onRemoveCustomColor(brushColor)
+              : onConfirmCustomColor
+          }
+          disabled={showDeleteAction ? false : confirmDisabled}
           className="
             px-2 py-1
             rounded-full border border-white/30
@@ -148,22 +183,35 @@ export default function GraffitiToolbar({
             disabled:opacity-40 disabled:cursor-not-allowed
           "
         >
-          Confirm
+          {showDeleteAction ? "Delete" : "Confirm"}
         </button>
       </div>
 
-      <div className="flex items-center gap-2 w-[170px] h-[4px]">
+      <div className="flex items-center gap-3">
         <p className="flex items-center text-[20px] text-white font-light">
           size
         </p>
-        <input
-          type="range"
-          min={2}
-          max={40}
-          value={brushSize}
-          onChange={(event) => onSizeChange(Number(event.target.value))}
-          className="w-full accent-white"
-        />
+        <div className="relative h-[32px] w-[150px]">
+          <div className="absolute inset-0 flex items-center">
+            <div className="h-[4px] w-full rounded-full bg-white/20" />
+          </div>
+          <div
+            className="absolute left-0 top-1/2 h-[4px] rounded-full bg-white"
+            style={{ width: `${sliderPercentage}%`, transform: "translateY(-50%)" }}
+          />
+          <div
+            className="pointer-events-none absolute top-1/2 flex h-[15px] w-[4px] rounded-[2px] bg-white"
+            style={{ left: `${sliderPercentage}%`, transform: "translate(-50%, -50%)" }}
+          />
+          <input
+            type="range"
+            min={sliderMin}
+            max={sliderMax}
+            value={brushSize}
+            onChange={(event) => onSizeChange(Number(event.target.value))}
+            className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+          />
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
