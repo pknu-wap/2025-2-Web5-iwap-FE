@@ -82,7 +82,7 @@ export default function ThreeDImageRing({
   );
 
   const angle = parsedImages.length ? 360 / parsedImages.length : 0;
-  const FRONT_THRESHOLD = 180;
+  const FRONT_THRESHOLD = 140; // 정면 판정 각도
 
   const getFacingState = (index: number, baseRotation: number) => {
     const rotation = index * -angle;
@@ -135,7 +135,7 @@ export default function ThreeDImageRing({
     []
   );
 
-  const rotateToIndex = (index: number) => {
+  const rotateToIndex = (index: number, onComplete?: () => void) => {
     const target = -index * angle;
     const current = ((currentRotationY.current % 360) + 360) % 360;
     let delta = target - current;
@@ -151,6 +151,9 @@ export default function ThreeDImageRing({
         currentRotationY.current = clamped;
         if (clamped !== v) rotationY.set(clamped);
       },
+      onComplete: () => {
+        if (onComplete) onComplete();
+      },
     });
   };
 
@@ -159,18 +162,21 @@ export default function ThreeDImageRing({
     const item = parsedImages[index];
     const now = Date.now();
     const isMobile = window.innerWidth <= mobileBreakpoint;
+    const navigateToLink = () => {
+      if (item?.link) router.push(item.link);
+    };
 
     const { isFacing } = getFacingState(index, currentRotationY.current);
 
     if (!isFacing) {
-      rotateToIndex(index);
+      rotateToIndex(index, !isMobile ? navigateToLink : undefined);
       setHoverIndex(index);
       return;
     }
 
     if (isMobile) {
       if (lastTappedIndex.current === index && now - lastTapTime.current < 1000) {
-        if (item?.link) router.push(item.link);
+        navigateToLink();
         lastTappedIndex.current = null;
       } else {
         setHoverIndex(index);
@@ -180,9 +186,7 @@ export default function ThreeDImageRing({
       return;
     }
 
-    if (item?.link) {
-      router.push(item.link);
-    }
+    navigateToLink();
   };
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -202,7 +206,7 @@ export default function ThreeDImageRing({
   const handleDrag = (e: MouseEvent | TouchEvent) => {
     const p = "touches" in e ? e.touches[0] : (e as MouseEvent);
     const dx = p.clientX - startX.current;
-    if ("touches" in e) e.preventDefault();
+    if ("touches" in e && e.cancelable) e.preventDefault();
     if (!isDragging.current && Math.abs(dx) > 6) isDragging.current = true;
     if (isDragging.current) {
       moved.current = true;
@@ -287,9 +291,9 @@ export default function ThreeDImageRing({
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                       backfaceVisibility: "hidden",
-                      pointerEvents: isFacing ? "auto" : "none",
+                      pointerEvents: distance <= FRONT_THRESHOLD ? "auto" : "none",
                     }}
-                    aria-hidden={!isFacing}
+                    aria-hidden={distance > FRONT_THRESHOLD}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
