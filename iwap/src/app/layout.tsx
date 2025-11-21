@@ -21,10 +21,30 @@ export default function RootLayout({
 }) {
   const pathname = usePathname();
   const [forceHideHeader, setForceHideHeader] = useState(false);
+  const isLanding = (pathname || "").toLowerCase() === "/landing";
+  const [isMobile, setIsMobile] = useState(false);
   const showHeader = pathname !== "/" && !forceHideHeader;
 
   useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    if (typeof mq.addEventListener === "function") mq.addEventListener("change", update);
+    else mq.addListener(update as any);
+    return () => {
+      if (typeof mq.removeEventListener === "function") mq.removeEventListener("change", update);
+      else mq.removeListener(update as any);
+    };
+  }, []);
+
+  useEffect(() => {
     const isMobile = window.matchMedia("(max-width: 767px)").matches;
+    if (isLanding) {
+      document.body.style.overflow = "auto";
+      document.documentElement.style.overflow = "auto";
+      return;
+    }
+
     if (isMobile) {
       document.body.style.overflow = "hidden";
       document.documentElement.style.overflow = "hidden";
@@ -32,7 +52,7 @@ export default function RootLayout({
       document.body.style.overflow = "auto";
       document.documentElement.style.overflow = "auto";
     }
-  }, []);
+  }, [isLanding]);
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -55,7 +75,7 @@ export default function RootLayout({
           {showHeader && (
             <header className="fixed top-0 left-0 z-50 flex h-[30px] w-full flex-col items-center justify-center bg-white text-black transition-colors duration-300 dark:bg-neutral-900 dark:text-neutral-100 md:h-[60px]">
               <div className="relative flex w-full max-w-4xl items-center justify-center px-4">
-                <Link href="/" className="select-none text-center">
+                <Link href="/slides" className="select-none text-center">
                   <h1 className="text-[21px] font-semibold md:text-2xl">!WAP</h1>
                   <p className="hidden text-base font-extralight -translate-y-0.5 md:block">
                     !nteractive Web Art Project
@@ -71,7 +91,11 @@ export default function RootLayout({
 
           <main
             className={
-              showHeader
+              isLanding
+                ? (showHeader
+                    ? "min-h-screen overflow-x-hidden pt-[30px] md:pt-[60px]"
+                    : "min-h-screen overflow-x-hidden")
+                : showHeader
                 ? "fixed inset-0 top-[30px] h-dvh overflow-hidden pt-0 md:top-[60px] md:pt-0"
                 : "h-dvh overflow-hidden"
             }
