@@ -112,7 +112,7 @@ export default function SideImageSection({
             {imageOverlay && (
               <div className={`absolute inset-0 flex ${overlayPosClass}`}>
                 <div
-                  className={`flex items-center gap-3 text-white font-normal text-[14px] sm:text-[18px] md:text-[22px] px-3 sm:px-4 py-2 ${overlayClassName}`}
+                  className={`flex items-center gap-3 text-white font-normal text-[14px] sm:text-[18px] md:text-[24px] px-3 sm:px-4 py-2 ${overlayClassName}`}
                   style={{ letterSpacing: "-1.4px" }}
                 >
                   <span>{imageOverlay}</span>
@@ -138,10 +138,10 @@ export default function SideImageSection({
 
           <motion.div
             variants={textVariants}
-            className={`w-full md:flex-1 md:min-w-[620px] md:max-w-[900px] ${alignClass} text-[#000000] text-[18px] sm:text-[20px] md:text-[22px] leading-relaxed`}
+            className={`w-full md:flex-1 md:min-w-[620px] md:max-w-[900px] ${alignClass} text-[#000000] text-[18px] sm:text-[20px] md:text-[24px] leading-relaxed font-normal`}
           >
             <div className={`${badgeWrapperClass} mb-6`}>
-              <div className="flex gap-2 sm:gap-3 text-[11px] sm:text-[12px] md:text-[14px]">
+              <div className="flex gap-2 sm:gap-3 text-[13px] md:text-[24px]">
                 {badgeOptions.map((label) => {
                   const isActive = label.toLowerCase() === badgeText.toLowerCase();
                   return (
@@ -151,15 +151,15 @@ export default function SideImageSection({
                         isActive ? "border-white" : "border-[#FFFFFF4D]"
                       }`}
                     >
-                      <span className={isActive ? "font-semibold" : "font-semibold !text-[#FFFFFF4D]"}>{label.slice(0, 1)}</span>
-                      <span className={isActive ? "font-light" : "font-light !text-[#FFFFFF4D]"}>{label.slice(1)}</span>
+                      <span className={isActive ? "font-normal" : "font-normal !text-[#FFFFFF4D]"}>{label.slice(0, 1)}</span>
+                      <span className={isActive ? "font-normal" : "font-normal !text-[#FFFFFF4D]"}>{label.slice(1)}</span>
                     </span>
                   );
                 })}
               </div>
             </div>
 
-            <span className="font-semibold text-[22px] sm:text-[24px] md:text-[28px] block mb-2">{heading}</span>
+            <span className="font-semibold text-[22px] sm:text-[24px] md:text-[30px] block mb-2">{heading}</span>
             {children}
           </motion.div>
         </motion.div>
