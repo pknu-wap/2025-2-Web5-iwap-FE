@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 type GraffitiToolbarProps = {
   colorPalette: string[];
@@ -48,6 +48,20 @@ export default function GraffitiToolbar({
     (pattern) => pattern.toLowerCase() === normalizedBrushColor
   );
   const showDeleteAction = !pendingCustomColor && isBrushColorCustom;
+  const [showPalette, setShowPalette] = useState(false);
+  const paletteRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!showPalette) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!paletteRef.current) return;
+      if (!paletteRef.current.contains(event.target as Node)) {
+        setShowPalette(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showPalette]);
   const sliderMin = 2;
   const sliderMax = 40;
   const sliderRange = sliderMax - sliderMin;
@@ -78,7 +92,7 @@ export default function GraffitiToolbar({
         >
           <img
             src="/icons/redo_white.svg"
-            className="w-[28px] h-[28px] -scale-x-100"
+            className="w-[36px] h-[36px] -scale-x-100"
           />
         </button>
         <button
@@ -89,7 +103,7 @@ export default function GraffitiToolbar({
         >
           <img
             src="/icons/redo_white.svg"
-            className="w-[28px] h-[28px]"
+            className="w-[36px] h-[36px] -translate-x-1"
           />
         </button>
       </div>
@@ -98,93 +112,161 @@ export default function GraffitiToolbar({
         {colorPalette.map((color) => {
           const normalizedColor = color.toLowerCase();
           const isSelected = normalizedBrushColor === normalizedColor;
-          const borderColor = isSelected
-            ? normalizedColor === "#ffffff"
-              ? "#000000"
-              : "#ffffff"
-            : "rgba(255,255,255,0.3)";
+          const isWhite = normalizedColor === "#ffffff";
+          const checkColor = isWhite ? "#000000" : "#ffffff";
           return (
             <button
               key={color}
               type="button"
               className="
+                relative
                 h-[30px] w-[30px]
-                rounded-full border-2
+                rounded-full border
                 transition
+                flex items-center justify-center
               "
               style={{
                 backgroundColor: color,
-                borderColor,
+                borderColor: "#ffffff",
               }}
               onClick={() => onBrushColorChange(color)}
-            />
+            >
+              {isSelected && (
+                <span
+                  className="text-[18px] leading-none"
+                  style={{ color: checkColor }}
+                >
+                  ✓
+                </span>
+              )}
+            </button>
           );
         })}
 
-        {customPatterns.map((hex) => {
-          const normalizedColor = hex.toLowerCase();
-          const isSelected = normalizedBrushColor === normalizedColor;
-          const borderColor = isSelected
-            ? normalizedColor === "#ffffff"
-              ? "#000000"
-              : "#ffffff"
-            : "rgba(255,255,255,0.3)";
-          return (
-            <button
-              key={hex}
-              type="button"
-              className="h-[30px] w-[30px] rounded-full border-2 transition"
-              style={{
-                backgroundColor: hex,
-                borderColor,
-              }}
-              onClick={() => onBrushColorChange(hex)}
-            />
-          );
-        })}
+        <div className="relative" ref={paletteRef}>
+          <input
+            type="color"
+            ref={colorPickerRef}
+            className="hidden"
+            onChange={(event) => onCustomColorPick(event.target.value)}
+          />
+          <button
+            type="button"
+            className="
+              h-[30px] w-[30px]
+              rounded-full translate-y-[4px]
+            "
+            style={{
+              backgroundImage: "url('/icons/rainbow.svg')",
+              backgroundSize: "cover",
+              backgroundPosition: "center",
+              backgroundRepeat: "no-repeat",
+            }}
+            onClick={() => setShowPalette((prev) => !prev)}
+            aria-label="Open custom colors"
+          />
 
-        <input
-          type="color"
-          ref={colorPickerRef}
-          className="hidden"
-          onChange={(event) => onCustomColorPick(event.target.value)}
-        />
-        <button
-          type="button"
-          className="
-            h-[30px] w-[30px]
-            rounded-full border-2 transition
-          "
-          style={{
-            borderColor: isBrushColorCustom
-              ? "#ffffff"
-              : "rgba(255,255,255,0.3)",
-            background:
-              "conic-gradient(red, yellow, lime, aqua, blue, magenta, red)",
-          }}
-          onClick={() =>
-            colorPickerRef.current?.showPicker?.() ??
-            colorPickerRef.current?.click()
-          }
-        />
-        <button
-          type="button"
-          onClick={
-            showDeleteAction
-              ? () => onRemoveCustomColor(brushColor)
-              : onConfirmCustomColor
-          }
-          disabled={showDeleteAction ? false : confirmDisabled}
-          className="
-            px-2 py-1
-            rounded-full border border-white/30
-            text-[12px]
-            text-white transition
-            disabled:opacity-40 disabled:cursor-not-allowed
-          "
-        >
-          {showDeleteAction ? "Delete" : "Confirm"}
-        </button>
+          {showPalette && (
+            <div
+              className="
+                absolute translate-y-[40px] translate-x-[20px]
+                w-[330px]
+                min-h-[100px]
+                rounded-2xl rounded-tl-none border border-white
+                bg-[rgba(255,255,255,0.40)]
+                shadow-[0_0_50px_0_rgba(0,0,0,0.25)]
+                backdrop-blur-[4px]
+                px-4 py-3
+                space-y-3
+              z-10
+              "
+            >
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() =>
+                    colorPickerRef.current?.showPicker?.() ??
+                    colorPickerRef.current?.click()
+                  }
+                  className="
+                    h-[26px] px-3
+                    rounded-full border border-white/40
+                    text-[12px] text-white
+                    hover:bg-white/10 transition
+                  "
+                >
+                  Pick
+                </button>
+                <button
+                  type="button"
+                  onClick={
+                    showDeleteAction
+                      ? () => onRemoveCustomColor(brushColor)
+                      : onConfirmCustomColor
+                  }
+                  disabled={showDeleteAction ? false : confirmDisabled}
+                  className="
+                    h-[26px] px-3
+                    rounded-full border border-white/40
+                    text-[12px] text-white transition
+                    disabled:opacity-40 disabled:cursor-not-allowed
+                    hover:bg-white/10
+                  "
+                >
+                  {showDeleteAction ? "Delete" : "Confirm"}
+                {/* </button>
+                <button
+                  type="button"
+                  className="
+                    h-[26px] w-[26px]
+                    rounded-full border border-white/40
+                    flex items-center justify-center
+                    text-[14px] text-white
+                    hover:bg-white/10 transition
+                  "
+                  onClick={() => setShowPalette(false)}
+                  aria-label="Close palette"
+                >
+                  × */}
+                </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {customPatterns.length === 0 && (
+                  <span className="text-white/50 text-[12px]"></span>
+                )}
+                {customPatterns.map((hex) => {
+                  const normalizedColor = hex.toLowerCase();
+                  const isCustomSelected = normalizedBrushColor === normalizedColor;
+                  const isWhite = normalizedColor === "#ffffff";
+                  const checkColor = isWhite ? "#000000" : "#ffffff";
+                  return (
+                    <button
+                      key={hex}
+                      type="button"
+                      className="relative h-[30px] w-[30px] rounded-full border transition flex items-center justify-center"
+                      style={{
+                        backgroundColor: hex,
+                        borderColor: "#ffffff",
+                      }}
+                      onClick={() => onBrushColorChange(hex)}
+                    >
+                      {isCustomSelected && (
+                        <span
+                          className="text-[18px] leading-none"
+                          style={{ color: checkColor }}
+                        >
+                          ✓
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-3">
@@ -239,7 +321,7 @@ export default function GraffitiToolbar({
           type="button"
         >
           <img
-            src="/icons/Download_blue.svg"
+            src="/icons/download_blue.svg"
             alt="download"
             className="w-[18px] h-[18px] block group-hover:hidden"
           />

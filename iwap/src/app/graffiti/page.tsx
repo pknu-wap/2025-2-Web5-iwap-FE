@@ -9,6 +9,7 @@ import {
 } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import GraffitiToolbar from "@/components/graffiti/GraffitiToolbar";
+import GraffitiToolbarMobile from "@/components/graffiti/GraffitiToolbarMobile";
 
 type RunningMode = "IMAGE" | "VIDEO";
 type Landmark = { x: number; y: number; z: number };
@@ -785,7 +786,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                 onClick={handleIntroReady}
                 className="
                   pointer-events-auto
-                  w-[300px] h-[80px]
+                  w-[275px] h-[100px]
                   md:w-[500px] md:h-[100px]
                   rounded-[84px]
                   border border-white
@@ -899,24 +900,45 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
 
           {/* 하단 툴바 */}
           {videoReady && (
-            <div className="pointer-events-auto mt-6 flex justify-center md:scale-100 scale-[0.45] ">
-              <GraffitiToolbar
-                colorPalette={COLOR_PALETTE}
-                brushColor={brushColor}
-                brushSize={brushSize}
-                customPatterns={customPatterns}
-                pendingCustomColor={pendingCustomColor}
-                colorPickerRef={colorPickerRef}
-                onBrushColorChange={setBrushColor}
-                onSizeChange={setBrushSize}
-                onCustomColorPick={handleCustomColorPick}
-                onConfirmCustomColor={handleConfirmPendingCustomColor}
-                onRemoveCustomColor={handleRemoveCustomColor}
-                onUndo={handleUndo}
-                onRedo={handleRedo}
-                onClear={handleClear}
-                onSave={handleSave}
-              />
+            <div className="pointer-events-auto mt-6 flex justify-center">
+              <div className="hidden md:flex">
+                <GraffitiToolbar
+                  colorPalette={COLOR_PALETTE}
+                  brushColor={brushColor}
+                  brushSize={brushSize}
+                  customPatterns={customPatterns}
+                  pendingCustomColor={pendingCustomColor}
+                  colorPickerRef={colorPickerRef}
+                  onBrushColorChange={setBrushColor}
+                  onSizeChange={setBrushSize}
+                  onCustomColorPick={handleCustomColorPick}
+                  onConfirmCustomColor={handleConfirmPendingCustomColor}
+                  onRemoveCustomColor={handleRemoveCustomColor}
+                  onUndo={handleUndo}
+                  onRedo={handleRedo}
+                  onClear={handleClear}
+                  onSave={handleSave}
+                />
+              </div>
+              <div className="flex md:hidden">
+                <GraffitiToolbarMobile
+                  colorPalette={COLOR_PALETTE}
+                  brushColor={brushColor}
+                  brushSize={brushSize}
+                  customPatterns={customPatterns}
+                  pendingCustomColor={pendingCustomColor}
+                  colorPickerRef={colorPickerRef}
+                  onBrushColorChange={setBrushColor}
+                  onSizeChange={setBrushSize}
+                  onCustomColorPick={handleCustomColorPick}
+                  onConfirmCustomColor={handleConfirmPendingCustomColor}
+                  onRemoveCustomColor={handleRemoveCustomColor}
+                  onUndo={handleUndo}
+                  onRedo={handleRedo}
+                  onClear={handleClear}
+                  onSave={handleSave}
+                />
+              </div>
             </div>
           )}
         </div>
