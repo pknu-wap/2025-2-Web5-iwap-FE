@@ -12,20 +12,22 @@ const SECTION_DATA: Record<
     imageAlt: string;
     imageOverlayLeft: string;
     overlayLeftClassName: string;
-    imageOverlayRight: string;
-    side: "left" | "right";
-    badgeText: string;
-    textAlign: "left" | "right";
-    badgeAlign: "left" | "right";
-    heading: string;
-    body: ReactNode;
+  imageOverlayRight: string;
+  side: "left" | "right";
+  badgeText: string;
+  textAlign: "left" | "right";
+  badgeAlign: "left" | "right";
+  heading: string;
+  body: ReactNode;
+  imageClassName?: string;
+  imageWrapperClassName?: string;
   }
 > = {
   inside: {
     imageSrc: "/images/inside_background.jpg",
     imageAlt: "!nside background",
     imageOverlayLeft: "!nside",
-    overlayLeftClassName: "!-translate-x-[62px] -translate-y-[95px]",
+    overlayLeftClassName: "-translate-x-[35px] -translate-y-[35px] md:!-translate-x-[62px] md:-translate-y-[95px]",
     imageOverlayRight: "01",
     side: "left",
     badgeText: "Vision",
@@ -56,7 +58,7 @@ const SECTION_DATA: Record<
     imageSrc: "/images/This-is-for-u_background.jpg",
     imageAlt: "This-is-for-u background",
     imageOverlayLeft: "Th!s !s for u",
-    overlayLeftClassName: "-translate-y-[28px] -translate-x-[147px]",
+    overlayLeftClassName: "md:-translate-y-[28px] md:-translate-x-[147px] -translate-y-[6px] -translate-x-[82px]",
     imageOverlayRight: "02",
     side: "right",
     badgeText: "Vision",
@@ -85,7 +87,7 @@ const SECTION_DATA: Record<
     imageSrc: "/images/Piano_Landing.png",
     imageAlt: "Piano background",
     imageOverlayLeft: "P!ano",
-    overlayLeftClassName: "-translate-x-14 -translate-y-[95px]",
+    overlayLeftClassName: "md:-translate-x-14 md:-translate-y-[95px] -translate-x-[30px] -translate-y-[35px]",
     imageOverlayRight: "03",
     side: "right",
     badgeText: "Hearing",
@@ -117,7 +119,7 @@ const SECTION_DATA: Record<
     imageSrc: "/images/ascii_background.jpg",
     imageAlt: "ascii background",
     imageOverlayLeft: "Asci!",
-    overlayLeftClassName: "-translate-x-[46px] -translate-y-[80px]",
+    overlayLeftClassName: "md:-translate-x-[46px] md:-translate-y-[80px] -translate-x-[26px] -translate-y-[40px]",
     imageOverlayRight: "04",
     side: "left",
     badgeText: "Vision",
@@ -143,13 +145,14 @@ const SECTION_DATA: Record<
     imageSrc: "/images/string_background.jpg",
     imageAlt: "string background",
     imageOverlayLeft: "Str!ng",
-    overlayLeftClassName: "-translate-x-14 -translate-y-[75px]",
+    overlayLeftClassName: "md:-translate-x-14 md:-translate-y-[75px] -translate-x-[32px] -translate-y-[35px]",
     imageOverlayRight: "05",
     side: "left",
     badgeText: "Vision",
     textAlign: "left",
     badgeAlign: "left",
     heading: "05  Str!ng",
+    imageClassName: "object-cover scale-[1.1]",
     body: (
       <>
         <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
@@ -219,13 +222,15 @@ export default function ProjectIntroSections({ projects, className = "" }: Proje
             imageOverlayRight={section.imageOverlayRight}
             side={section.side}
             badgeText={section.badgeText}
-            textAlign={section.textAlign}
-            badgeAlign={section.badgeAlign}
-            heading={section.heading}
-          >
-            {section.body}
-          </SideImageSection>
-        );
+          textAlign={section.textAlign}
+          badgeAlign={section.badgeAlign}
+          imageClassName={section.imageClassName}
+          imageWrapperClassName={section.imageWrapperClassName}
+          heading={section.heading}
+        >
+          {section.body}
+        </SideImageSection>
+      );
       })}
     </div>
   );
