@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { CSSProperties, useEffect, useState } from "react";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 
@@ -8,22 +8,35 @@ import "swiper/css";
 
 const images = [
   { src: "/images/home/slides/slide1.jpg", link: "/inside", text: "!nside", description: "인공지능이 숫자를 인식하는 과정" },
-  { src: "/images/home/slides/slide2.jpg", link: "/this-is-for-u", text: "Th!s !s for u", description: "함수로 하트 그리기" },
+  { src: "/images/home/slides/slide2.jpg", link: "/this-is-for-u", text: "Th!s !s for u", description: "엽서로 마음 표현" },
   { src: "/images/home/slides/slide3.jpg", link: "/piano", text: "P!ano", description: "음성을 피아노로 변환" },
-  { src: "/images/home/slides/slide5.jpg", link: "/ascii", text: "ASCi!", description: "이미지를 텍스트로 표현" },
   { src: "/images/home/slides/slide4.jpg", link: "/string", text: "Str!ng", description: "선들로 이미지를 표현" },
-  { src: "/images/home/slides/slide6.jpg", link: "/instrument", text: "!nstrument", description: "손동작으로 음악을 연주하는 오케스트라." },
+  { src: "/images/home/slides/slide5.jpg", link: "/ascii", text: "ASCi!", description: "이미지를 텍스트로 표현" },
+  { src: "/images/home/slides/slide6.jpg", link: "/graffiti", text: "Graff!ti", description: "움직임으로만 드로잉" },
+  // { src: "/images/home/slides/slide6.jpg", link: "/graffiti", text: "Graff!ti", description: "움직임으로만 드로잉" },
   { src: "/images/home/slides/slide1.jpg", link: "/inside", text: "!nside", description: "인공지능이 숫자를 인식하는 과정" },
-  { src: "/images/home/slides/slide2.jpg", link: "/this-is-for-u", text: "Th!s !s for u", description: "함수로 하트 그리기" },
+  { src: "/images/home/slides/slide2.jpg", link: "/this-is-for-u", text: "Th!s !s for u", description: "엽서로 마음 표현" },
   { src: "/images/home/slides/slide3.jpg", link: "/piano", text: "P!ano", description: "음성을 피아노로 변환" },
-  { src: "/images/home/slides/slide5.jpg", link: "/ascii", text: "ASCi!", description: "이미지를 텍스트로 표현" },
   { src: "/images/home/slides/slide4.jpg", link: "/string", text: "Str!ng", description: "선들로 이미지를 표현" },
-  { src: "/images/home/slides/slide6.jpg", link: "/instrument", text: "!nstrument", description: "손동작으로 음악을 연주하는 오케스트라." },
+  { src: "/images/home/slides/slide5.jpg", link: "/ascii", text: "ASCi!", description: "이미지를 텍스트로 표현" },
+  { src: "/images/home/slides/slide6.jpg", link: "/graffiti", text: "Graff!ti", description: "움직임으로만 드로잉" },
 ];
 
 export default function SlidesPage() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const maskStyle: CSSProperties = {
+    clipPath: "ellipse(var(--mask-rx) var(--mask-ry) at 50% 50%)",
+  };
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(mq.matches);
+    update();
+    mq.addEventListener("change", update);
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   const handleClick = (idx: number, link: string) => {
     if (activeIndex === idx) {
@@ -40,12 +53,12 @@ export default function SlidesPage() {
       <div className="relative w-full flex justify-center">
         <div className="relative w-[90vw] max-w-[1280px] min-w-[320px]">
           <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[46%] w-[120%] h-[55%] bg-white z-20 pointer-events-none"
-            style={{ clipPath: "ellipse(50% 40% at 50% 50%)" }}
+            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[38%] w-[110%] h-[33%] bg-white z-20 pointer-events-none [--mask-rx:50%] [--mask-ry:32%] md:-translate-y-[46%] md:w-[120%] md:h-[55%] md:[--mask-ry:40%]"
+            style={maskStyle}
           />
           <div
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[46%] w-[120%] h-[55%] bg-white z-20 pointer-events-none"
-            style={{ clipPath: "ellipse(50% 40% at 50% 50%)" }}
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[38%] w-[110%] h-[33%] bg-white z-20 pointer-events-none [--mask-rx:50%] [--mask-ry:32%] md:translate-y-[50%] md:w-[120%] md:h-[55%] md:[--mask-ry:40%]"
+            style={maskStyle}
           />
 
           <div className="relative w-full z-10">
@@ -87,8 +100,15 @@ export default function SlidesPage() {
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity duration-500 flex items-center justify-center p-4">
-                      <p className="text-white text-[clamp(32px,6vw,64px)] font-Pretendard text-center">
+                    <div
+                      className={
+                        isMobile
+                          ? "absolute inset-0 transition-opacity duration-500 flex items-center justify-center p-4 opacity-100 " +
+                            (activeIndex === idx ? "bg-black/30" : "bg-transparent")
+                          : "absolute inset-0 bg-black/30 transition-opacity duration-500 flex items-center justify-center p-4 opacity-0 md:opacity-0 md:group-hover:opacity-100"
+                      }
+                    >
+                      <p className="text-[#FFFFFF] text-[clamp(28px,7vw,64px)] font-semilight text-center drop-shadow-sm md:drop-shadow-none">
                         {item.text}
                       </p>
                     </div>
