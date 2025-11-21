@@ -1,7 +1,7 @@
 "use client";
 
 import "./globals.css";
-import "@/components/lightswind.css";
+// import "@/components/lightswind.css";
 import Link from "next/link";
 import localFont from "next/font/local";
 import { usePathname } from "next/navigation";
