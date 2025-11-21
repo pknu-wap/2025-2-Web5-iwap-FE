@@ -76,13 +76,30 @@ function isIndexFingerOnlyExtended(lms: Landmark[]): boolean {
 // 엄지척
 function isThumbsUp(lms: Landmark[]): boolean {
   if (!lms || lms.length < 21) return false;
-  const thumbExtended = isFingerExtendedByDistance(lms, 4, 0, 0.13);
+  const thumb = lms[4];
+  const index = lms[8];
+  const middle = lms[12];
+  const ring = lms[16];
+  const pinky = lms[20];
+
+  // 엄지가 화면 쪽(z가 더 작음)으로 튀어나온 경우도 긍정 신호로 인정.
+  const thumbForward =
+    thumb && index && thumb.z < index.z - 0.02
+      ? true
+      : thumb && middle && thumb.z < middle.z - 0.02
+        ? true
+        : false;
+
+  // 조금만 펴도 엄지로 인정하고, 전방 보너스를 추가.
+  const thumbExtended =
+    isFingerExtendedByDistance(lms, 4, 0, 0.09) || thumbForward;
   if (!thumbExtended) return false;
 
-  const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.14);
-  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.14);
-  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.14);
-  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.14);
+  // Allow slight stretch on other fingers; require a bigger distance to mark as "extended".
+  const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.15);
+  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.15);
+  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.15);
+  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.15);
 
   const othersCount =
     (indexExtended ? 1 : 0) +
@@ -90,7 +107,8 @@ function isThumbsUp(lms: Landmark[]): boolean {
     (ringExtended ? 1 : 0) +
     (pinkyExtended ? 1 : 0);
 
-  return othersCount === 0;
+  // 다른 손가락이 살짝 펴져도(최대 2개) 엄지척으로 인정해 인식률을 높임.
+  return othersCount <= 2;
 }
 
 // 두 손 하트
@@ -110,10 +128,10 @@ function isHeartGesture(hands: Landmark[][]): boolean {
   const wrist2 = h2[0];
 
   // 하트일 때는 엄지/검지가 더 확실히 펴져 있어야 함
-  const thumb1Ext = isFingerExtendedByDistance(h1, 4, 0, 0.20);
-  const thumb2Ext = isFingerExtendedByDistance(h2, 4, 0, 0.20);
-  const index1Ext = isFingerExtendedByDistance(h1, 8, 0, 0.20);
-  const index2Ext = isFingerExtendedByDistance(h2, 8, 0, 0.20);
+  const thumb1Ext = isFingerExtendedByDistance(h1, 4, 0, 0.18);
+  const thumb2Ext = isFingerExtendedByDistance(h2, 4, 0, 0.18);
+  const index1Ext = isFingerExtendedByDistance(h1, 8, 0, 0.18);
+  const index2Ext = isFingerExtendedByDistance(h2, 8, 0, 0.18);
   if (!(thumb1Ext && thumb2Ext && index1Ext && index2Ext)) return false;
 
   const handSpan = dist3(wrist1, wrist2);
@@ -122,7 +140,7 @@ function isHeartGesture(hands: Landmark[][]): boolean {
   const indexDist = dist3(index1, index2);
 
   // 더 가까이 모여야 하트로 인정 (0.7 → 0.45)
-  const closeFactor = 0.15;
+  const closeFactor = 0.18;
   const thumbsClose = thumbDist < handSpan * closeFactor;
   const indexesClose = indexDist < handSpan * closeFactor;
 
@@ -180,30 +198,43 @@ export default function HandLandmarkerPage() {
   // 이모지
   const [activeEmoji, setActiveEmoji] = useState<string | null>(null);
   const [showHeartBurst, setShowHeartBurst] = useState(false);
+  const [showEmojiPop, setShowEmojiPop] = useState(false);
   const emojiTimeoutRef = useRef<number | null>(null);
   const heartBurstTimeoutRef = useRef<number | null>(null);
+  const emojiPopTimeoutRef = useRef<number | null>(null);
   const activeEmojiRef = useRef<string | null>(null);
 
-  const triggerEmoji = useCallback((emoji: string) => {
+  const triggerEmoji = useCallback((emoji: string, effect: "burst" | "pop" = "burst") => {
     if (activeEmojiRef.current === emoji) return;
     activeEmojiRef.current = emoji;
     setActiveEmoji(emoji);
-    setShowHeartBurst(true);
+    setShowHeartBurst(effect === "burst");
+    setShowEmojiPop(effect === "pop");
     if (emojiTimeoutRef.current !== null) {
       window.clearTimeout(emojiTimeoutRef.current);
     }
     if (heartBurstTimeoutRef.current !== null) {
       window.clearTimeout(heartBurstTimeoutRef.current);
     }
+    if (emojiPopTimeoutRef.current !== null) {
+      window.clearTimeout(emojiPopTimeoutRef.current);
+    }
     emojiTimeoutRef.current = window.setTimeout(() => {
       activeEmojiRef.current = null;
       setActiveEmoji(null);
       emojiTimeoutRef.current = null;
     }, 1000);
-    heartBurstTimeoutRef.current = window.setTimeout(() => {
-      setShowHeartBurst(false);
-      heartBurstTimeoutRef.current = null;
-    }, 1600);
+    if (effect === "burst") {
+      heartBurstTimeoutRef.current = window.setTimeout(() => {
+        setShowHeartBurst(false);
+        heartBurstTimeoutRef.current = null;
+      }, 1600);
+    } else {
+      emojiPopTimeoutRef.current = window.setTimeout(() => {
+        setShowEmojiPop(false);
+        emojiPopTimeoutRef.current = null;
+      }, 900);
+    }
   }, []);
 
   /* ---- Graffiti 인트로 상태 ---- */
@@ -424,6 +455,9 @@ export default function HandLandmarkerPage() {
       if (heartBurstTimeoutRef.current !== null) {
         window.clearTimeout(heartBurstTimeoutRef.current);
       }
+      if (emojiPopTimeoutRef.current !== null) {
+        window.clearTimeout(emojiPopTimeoutRef.current);
+      }
     };
   }, []);
 
@@ -629,11 +663,11 @@ if (landmarksList.length > 0) {
       };
     }
 
-    // 2) 부드럽게 필터링 (low-pass)
+    // 2) 부드럽게 보정: low-pass
     let drawPoint: { x: number; y: number } | null = null;
     if (rawPoint) {
       const prevSmooth = prevSmoothPoints[handIndex] ?? null;
-      const alpha = 0.35; // 0~1 : 작을수록 더 부드럽고, 클수록 즉각적
+      const alpha = 0.55; // 0~1 : 값이 작을수록 더 부드럽고, 클수록 즉각적
 
       if (prevSmooth) {
         drawPoint = {
@@ -641,7 +675,7 @@ if (landmarksList.length > 0) {
           y: prevSmooth.y + alpha * (rawPoint.y - prevSmooth.y),
         };
       } else {
-        // 첫 프레임은 그냥 raw 사용
+        // 첫 프레임이면 그냥 raw 사용
         drawPoint = rawPoint;
       }
     }
@@ -669,7 +703,7 @@ if (landmarksList.length > 0) {
   });
 
   const gesture = detectGesture(landmarksList);
-  if (gesture === "HEART") triggerEmoji("💖");
+  if (gesture === "HEART") triggerEmoji("💖", "burst");
 }
 
 overlayCtx.restore();
@@ -885,7 +919,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
               ref={drawCanvasRef}
               className="absolute inset-0 w-full h-full pointer-events-none -scale-x-100"
             />
-            {showHeartBurst && (
+            {showHeartBurst && activeEmoji === "💖" && (
               <div className="heart-burst" aria-hidden="true">
                 {Array.from({ length: 5 }).map((_, idx) => (
                   <span
@@ -895,6 +929,13 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                     {activeEmoji ?? "💖"}
                   </span>
                 ))}
+              </div>
+            )}
+            {showEmojiPop && activeEmoji && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-5xl drop-shadow-[0_0_10px_rgba(0,0,0,0.35)] animate-bounce">
+                  {activeEmoji}
+                </span>
               </div>
             )}
           </div>
