@@ -170,7 +170,7 @@ export default function InsidePage() {
 
   return (
     <div className="flex flex-col">
-      <ProjectIntroModal projects={["inside"]} open={showIntro} onClose={() => setShowIntro(false)} />
+      <ProjectIntroModal projects={["inside"]} open={showIntro} onClose={() => setShowIntro(false)}/>
       <div 
         className="relative w-full h-dvh md:h-[calc(100dvh-60px)]"
         style={pageBackgroundStyle}

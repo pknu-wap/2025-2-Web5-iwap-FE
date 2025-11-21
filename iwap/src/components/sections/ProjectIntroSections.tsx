@@ -25,7 +25,7 @@ const SECTION_DATA: Record<
     imageSrc: "/images/inside_background.jpg",
     imageAlt: "!nside background",
     imageOverlayLeft: "!nside",
-    overlayLeftClassName: "-translate-x-14 -translate-y-[25px]",
+    overlayLeftClassName: "!-translate-x-[62px] -translate-y-[95px]",
     imageOverlayRight: "01",
     side: "left",
     badgeText: "Vision",
@@ -56,7 +56,7 @@ const SECTION_DATA: Record<
     imageSrc: "/images/This-is-for-u_background.jpg",
     imageAlt: "This-is-for-u background",
     imageOverlayLeft: "Th!s !s for u",
-    overlayLeftClassName: "-translate-y-[28px] -translate-x-[37px]",
+    overlayLeftClassName: "-translate-y-[28px] -translate-x-[147px]",
     imageOverlayRight: "02",
     side: "right",
     badgeText: "Vision",
@@ -85,7 +85,7 @@ const SECTION_DATA: Record<
     imageSrc: "/images/Piano_Landing.png",
     imageAlt: "Piano background",
     imageOverlayLeft: "P!ano",
-    overlayLeftClassName: "-translate-x-14 -translate-y-[25px]",
+    overlayLeftClassName: "-translate-x-14 -translate-y-[95px]",
     imageOverlayRight: "03",
     side: "right",
     badgeText: "Hearing",
@@ -117,7 +117,7 @@ const SECTION_DATA: Record<
     imageSrc: "/images/ascii_background.jpg",
     imageAlt: "ascii background",
     imageOverlayLeft: "Asci!",
-    overlayLeftClassName: "-translate-x-10 -translate-y-[30px]",
+    overlayLeftClassName: "-translate-x-[46px] -translate-y-[80px]",
     imageOverlayRight: "04",
     side: "left",
     badgeText: "Vision",
@@ -143,7 +143,7 @@ const SECTION_DATA: Record<
     imageSrc: "/images/string_background.jpg",
     imageAlt: "string background",
     imageOverlayLeft: "Str!ng",
-    overlayLeftClassName: "-translate-x-14 -translate-y-[25px]",
+    overlayLeftClassName: "-translate-x-14 -translate-y-[75px]",
     imageOverlayRight: "05",
     side: "left",
     badgeText: "Vision",
@@ -255,7 +255,7 @@ export function ProjectIntroModal({
       >
         <ProjectIntroSections
           projects={projects}
-          className="overflow-visible bg-transparent [&_*]:text-white [&_*]:drop-shadow [&_img]:opacity-70"
+          className="overflow-visible bg-transparent [&_*]:text-white [&_*]:drop-shadow [&_img]:opacity-70 -translate-x-[30px]"
         />
       </div>
     </div>
