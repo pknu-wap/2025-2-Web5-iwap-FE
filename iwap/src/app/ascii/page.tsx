@@ -8,6 +8,7 @@ import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import AsciiArtDisplay from '@/components/ascii/AsciiArtDisplay';
 import TrashIcon from '@/components/ui/icons/TrashIcon';
 import SubmitIcon from '@/components/ui/icons/SubmitIcon';
+import { ProjectIntroModal } from '@/components/sections/ProjectIntroSections';
 
 import {
   processImageToAsciiWithWorker,
@@ -30,6 +31,7 @@ export default function AsciiPage() {
   const [asciiResult, setAsciiResult] = useState<AsciiResult | null>(null);
   
   const [isReProcessing, setIsReProcessing] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const imageUploaderRef = useRef<ImageUploaderHandles>(null);
 
@@ -182,10 +184,16 @@ export default function AsciiPage() {
   };
 
   return (
-    <div 
-      className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" 
-      style={pageBackgroundStyle}
-    >
+    <div className="flex flex-col">
+      <ProjectIntroModal
+        projects={["ascii"]}
+        open={showIntro}
+        onClose={() => setShowIntro(false)}
+      />
+      <div 
+        className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" 
+        style={pageBackgroundStyle}
+      >
       {error && (
         <p className="absolute top-4 left-1/2 -translate-x-1/2 text-red-500 bg-black/50 p-2 rounded z-30 text-center">
           {error}
@@ -227,6 +235,7 @@ export default function AsciiPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
