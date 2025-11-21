@@ -304,7 +304,7 @@ export default function GraffitiToolbar({
           type="button"
         >
           <img
-            src="/icons/trash 2.svg"
+            src="/icons/trash_white.svg"
             className="w-[24px] h-[24px]"
           />
         </button>
@@ -321,7 +321,7 @@ export default function GraffitiToolbar({
           type="button"
         >
           <img
-            src="/icons/download_blue.svg"
+            src="/icons/download_b.svg"
             alt="download"
             className="w-[18px] h-[18px] block group-hover:hidden"
           />

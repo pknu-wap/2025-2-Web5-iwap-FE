@@ -123,7 +123,7 @@ export default function GraffitiToolbarMobile({
             type="button"
           >
             <img
-              src="/icons/download_blue.svg"
+              src="/icons/download_b.svg"
               className="w-[32px] h-[32px]"
               alt="save"
             />
@@ -135,7 +135,7 @@ export default function GraffitiToolbarMobile({
             type="button"
           >
             <img
-              src="/icons/trash 2.svg"
+              src="/icons/trash_white.svg"
               className="w-[30px] h-[30px]"
               alt="clear"
             />
