@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useResizeDetector } from "react-resize-detector";
 import { type Data, type Layout } from "plotly.js";
 import FullScreenView from "@/components/ui/FullScreenView";
+import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
@@ -13,6 +14,7 @@ export default function FunctionsPage() {
   const [a, setA] = useState(1);
   const { width, height, ref } = useResizeDetector();
   const [debouncedSize, setDebouncedSize] = useState({ width: 0, height: 0 });
+  const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -163,15 +165,14 @@ const singleTrace1 = useMemo((): Data[] => {
     },
   }), [debouncedSize.width, debouncedSize.height, index]);
 
-    const pageBackgroundStyle = {
-    backgroundImage: "url('/images/this-is-for-u_background.jpg')",
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    backgroundAttachment: 'fixed',
-  };
-
   return (
-    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)] overflow-hidden">
+    <div className="flex flex-col">
+      <ProjectIntroModal
+        projects={["this-is-for-u"]}
+        open={showIntro}
+        onClose={() => setShowIntro(false)}
+      />
+      <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)] overflow-hidden">
       <FullScreenView
         title="Th!s !s for u"
         subtitle="함수로 하트 그리기"
@@ -206,6 +207,7 @@ const singleTrace1 = useMemo((): Data[] => {
           )}
         </div>
       </FullScreenView>
+      </div>
     </div>
   );
 }

@@ -26,6 +26,7 @@ interface SideImageSectionProps {
   imageOverlayRight?: React.ReactNode;
   overlayLeftClassName?: string;
   overlayRightClassName?: string;
+  imageWrapperClassName?: string;
   children: React.ReactNode;
 }
 
@@ -56,11 +57,11 @@ export default function SideImageSection({
   imageOverlayRight,
   overlayLeftClassName = "",
   overlayRightClassName = "",
+  imageWrapperClassName = "",
   children,
 }: SideImageSectionProps) {
   const isRight = side === "right";
-  const firstChar = badgeText.slice(0, 1);
-  const restText = badgeText.slice(1);
+  const badgeOptions = ["Vision", "Hearing", "Touch"] as const;
   const effectiveAlign: "left" | "right" = textAlign ?? (isRight ? "right" : "left");
   const alignClass = effectiveAlign === "right" ? "text-right md:text-right" : "text-left md:text-left";
   const effectiveBadgeAlign: "left" | "right" = badgeAlign ?? effectiveAlign;
@@ -78,7 +79,7 @@ export default function SideImageSection({
       <div className="w-full max-w-7xl mx-auto py-2">
         <motion.div variants={container} initial="hidden" whileInView="show" viewport={{ once: false, amount: 0.2 }}>
           <div className={`flex flex-col items-start gap-8 md:gap-10 ${isRight ? "md:flex-row-reverse" : "md:flex-row"}`}>
-          <div className="relative w-full md:w-[520px] md:h-[400px] flex-shrink-0">
+          <div className={`relative w-full md:w-[520px] md:h-[400px] flex-shrink-0 ${imageWrapperClassName}`}>
             <img
               src={imageSrc}
               alt={imageAlt}
@@ -111,10 +112,22 @@ export default function SideImageSection({
             className={`${alignClass} text-[#000000] text-[24px]`}
           >
             <div className={`${badgeWrapperClass} mb-6`}>
-              <span className="inline-flex items-center justify-center w-[93px] h-[37px] rounded-[5px] border border-black">
-                <span className="font-semibold">{firstChar}</span>
-                <span className="font-light">{restText}</span>
-              </span>
+              <div className="flex gap-3">
+                {badgeOptions.map((label) => {
+                  const isActive = label.toLowerCase() === badgeText.toLowerCase();
+                  return (
+                    <span
+                      key={label}
+                      className={`inline-flex items-center justify-center w-[93px] h-[37px] rounded-[5px] border bg-transparent ${
+                        isActive ? "border-white" : "border-[#FFFFFF4D]"
+                      }`}
+                    >
+                      <span className="font-semibold">{label.slice(0, 1)}</span>
+                      <span className="font-light">{label.slice(1)}</span>
+                    </span>
+                  );
+                })}
+              </div>
             </div>
             <span className="font-semibold text-[30px] block mb-2">{heading}</span>
             {children}
