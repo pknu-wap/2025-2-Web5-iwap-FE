@@ -9,7 +9,6 @@ import UndoIcon from "@/components/ui/icons/UndoIcon";
 import SubmitIcon from "@/components/ui/icons/SubmitIcon";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
 
-import { processImageToStringArt, Point } from "@/components/string/StringArtProcessor";
 import { processImageToStringArt } from "@/components/string/StringArtProcessor";
 
 export default function StringArtPage() {
@@ -19,7 +18,6 @@ export default function StringArtPage() {
 
   const [sourceImage, setSourceImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [coordinates, setCoordinates] = useState<Point[] | null>(null);
   const [showIntro, setShowIntro] = useState(true);
   const [coordinates, setCoordinates] = useState<number[] | null>(null);
   const [colorImageUrl, setColorImageUrl] = useState<string | null>(null);
