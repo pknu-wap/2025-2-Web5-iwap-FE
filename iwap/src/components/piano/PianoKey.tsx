@@ -1,7 +1,8 @@
+import { memo } from "react";
 import { WHITE_W, WHITE_H, BLACK_W, BLACK_H } from "./PianoLayout";
 import { shadowOffsets } from "./Shadowoffsets";
 
-export default function PianoKey({
+function PianoKey({
   midi,
   active,
   type,
@@ -206,3 +207,5 @@ export default function PianoKey({
     </div>
   );
 }
+
+export default memo(PianoKey);
