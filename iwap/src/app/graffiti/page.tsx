@@ -740,15 +740,17 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
       <div className="pointer-events-none inset-0 flex items-center justify-center p-6 animate-fadeIn">
         <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
-            <div className="w-full h-full pt-[100px] md:translate-y-0 translate-y-40 relative">
-              {!videoReady && (
-                <PageHeader
-                  title="Graff!ti"
-                  subtitle="움직임으로만 드로잉"
-                  goBack={true}
-                  padding="p-0"
-                />
-              )}
+            <div className="w-full h-full pt-[72px] md:pt-[100px] translate-y-0 relative">
+              <div className="absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0">
+                {!videoReady && (
+                  <PageHeader
+                    title="Graff!ti"
+                    subtitle="움직임으로만 드로잉"
+                    goBack={true}
+                    padding="p-0"
+                  />
+                )}
+              </div>
 
               {!isReady && (
                 <p className="mt-4 text-xs text-amber-200">
@@ -862,7 +864,8 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
             ref={containerRef}
             className={`
               relative w-full aspect-video mx-auto md:translate-y-0 
-              max-w-[200px] md:max-w-[1040px]
+              max-w-[400px] max-h-[300px]
+              md:max-w-[1040px]
               ${videoScaleClass}
               ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
               transition-transform transition-opacity duration-500
