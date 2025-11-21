@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import PageHeader from "@/components/ui/PageHeader";
-import ImageUploader from "@/components/ui/ImageUploader";
+import ImageUploader, { ImageUploaderHandles } from "@/components/ui/ImageUploader";
 import LoadingIndicator from "@/components/ui/LoadingIndicator";
 import StringArtDisplay from "@/components/string/StringArtDisplay";
 import UndoIcon from "@/components/ui/icons/UndoIcon";
@@ -19,6 +19,8 @@ export default function StringArtPage() {
   const [coordinates, setCoordinates] = useState<number[] | null>(null);
   const [colorImageUrl, setColorImageUrl] = useState<string | null>(null);
   const [nailCount, setNailCount] = useState<number>(0);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const imageUploaderRef = useRef<ImageUploaderHandles>(null);
 
   useEffect(() => { setHasMounted(true); }, []);
 
@@ -75,21 +77,47 @@ export default function StringArtPage() {
     // 'upload' view
     return (
       <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <div className="w-full md:6 md:h-9 bg-stone-300 flex justify-between items-center mb-[-1px] flex-shrink-0">
+        <div className="w-full md:6 md:h-9 bg-stone-300 flex justify-between items-center -mb-px shrink-0">
           <div className="flex gap-3 pl-3">
-            <button onClick={() => handleFileSelect(null)} disabled={!previewUrl} className="disabled:opacity-40 scale-[0.7] md:scale-100"><UndoIcon /></button>
+            <button
+              onClick={() => {
+                if (isCameraOpen) {
+                  imageUploaderRef.current?.closeCamera();
+                } else {
+                  handleFileSelect(null);
+                }
+              }}
+              disabled={!previewUrl && !isCameraOpen}
+              className="disabled:opacity-40 scale-[0.7] md:scale-100"
+            >
+              <UndoIcon />
+            </button>
           </div>
           <div className="flex gap-3 pr-3">
-            <button onClick={handleConversion} disabled={!previewUrl} className="scale-[0.7] md:scale-100"><SubmitIcon /></button>
+            <button
+              onClick={() => {
+                if (isCameraOpen) {
+                  imageUploaderRef.current?.handleCapture();
+                } else {
+                  handleConversion();
+                }
+              }}
+              disabled={!previewUrl && !isCameraOpen}
+              className="scale-[0.7] md:scale-100"
+            >
+              <SubmitIcon />
+            </button>
           </div>
         </div>
-        <div className="w-full flex-grow relative">
+        <div className="w-full grow relative">
           <ImageUploader
+            ref={imageUploaderRef}
             id="string-art-uploader"
             onFileSelect={handleFileSelect}
             previewUrl={previewUrl}
             title="이미지 선택"
             subtitle="파일을 드래그하거나 클릭하여 선택"
+            onCameraStateChange={setIsCameraOpen}
           />
         </div>
       </div>
@@ -116,14 +144,14 @@ export default function StringArtPage() {
         />
       ) : (
         <div className="w-full h-full flex translate-x-5 md:translate-x-0 items-center justify-center p-4 sm:p-8">
-          <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
+          <div className="flex flex-col w-full max-w-lg max-h-full aspect-5/6 relative">
             <div className="w-[90%] md:w-full h-[90%] md:h-full pt-[100px]">
               <PageHeader title="Str!ng" subtitle="선들로 이미지를 표현" goBack={true} padding='p-0' closeButtonClassName="-translate-x-6 md:translate-x-0"/>
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
-                <h3 className="-translate-y-3 -translate-x-3 md:translate-y-0 md:-translate-x-0 font-semibold text-white flex-shrink-0" style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}>
+                <h3 className="-translate-y-3 -translate-x-3 md:translate-y-0 md:translate-x-0 font-semibold text-white shrink-0" style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}>
                   이미지를 업로드하세요
                 </h3>
-                <div className="relative min-h-0 min-h-0 scale-[1.1] md:scale-[1]">
+                <div className="relative min-h-0 scale-[1.1] md:scale-[1]">
                   {renderContent()}
                 </div>
               </div>
