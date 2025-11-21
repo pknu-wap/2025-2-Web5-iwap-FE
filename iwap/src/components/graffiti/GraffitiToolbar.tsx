@@ -169,10 +169,10 @@ export default function GraffitiToolbar({
           {showPalette && (
             <div
               className="
-                absolute translate-y-[40px] translate-x-[20px]
+                absolute -translate-y-[180px] translate-x-[20px]
                 w-[330px]
                 min-h-[100px]
-                rounded-2xl rounded-tl-none border border-white
+                rounded-2xl rounded-bl-none border border-white
                 bg-[rgba(255,255,255,0.40)]
                 shadow-[0_0_50px_0_rgba(0,0,0,0.25)]
                 backdrop-blur-[4px]

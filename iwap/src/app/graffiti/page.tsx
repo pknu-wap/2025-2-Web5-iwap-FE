@@ -863,7 +863,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
             ref={containerRef}
             className={`
               relative w-full mx-auto md:translate-y-0 
-              max-w-[400px] max-h-[300px]
+              max-w-[400px]
               md:max-w-[1040px]
               ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
               transition-opacity duration-500
