@@ -7,8 +7,8 @@
   },
   "packageManager": "npm@10",
   "scripts": {
-    "dev": "TAILWIND_DISABLE_OXIDE=1 next dev",
-    "build": "TAILWIND_DISABLE_OXIDE=1 next build --no-lint",
+    "dev": "cross-env TAILWIND_DISABLE_OXIDE=1 next dev",
+    "build": "cross-env TAILWIND_DISABLE_OXIDE=1 next build --no-lint",
     "start": "next start",
     "lint": "eslint"
   },
@@ -43,6 +43,7 @@
     "tone": "^15.1.22"
   },
   "devDependencies": {
+    "cross-env": "^7.0.3",
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
