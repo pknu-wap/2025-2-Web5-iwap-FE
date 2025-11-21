@@ -52,7 +52,7 @@ export default function HomeDesktop({ isDarkTheme }: HomeDesktopProps) {
     }
 
     setTimeout(() => {
-      router.push("/Landing");
+      router.push("/slides");
     }, 700);
   };
 

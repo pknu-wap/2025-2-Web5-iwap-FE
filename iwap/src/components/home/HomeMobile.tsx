@@ -123,7 +123,7 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
       setLeaving(true);
       leaveTimerRef.current = null;
       setTimeout(() => {
-        router.push("/Landing");
+        router.push("/slides");
       }, flyOutDurationMs);
     }, horizontalHoldMs);
 
