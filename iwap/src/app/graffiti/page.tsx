@@ -52,12 +52,12 @@ function isFingerExtendedByDistance(
 function isIndexFingerOnlyExtended(lms: Landmark[]): boolean {
   if (!lms || lms.length < 21) return false;
 
-  const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.25);
+  const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.22);
   if (!indexExtended) return false;
 
-  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.22);
-  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.22);
-  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.22);
+  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.20);
+  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.20);
+  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.20);
 
   const othersCount =
     (middleExtended ? 1 : 0) +
@@ -257,7 +257,6 @@ export default function HandLandmarkerPage() {
   }, [introFinished, fingerAnimationDone]);
 
   const videoReady = !showIntro && overlayExpanded;
-  const videoScaleClass = "scale-110 md:scale-[1.25]";
 
   /* ---- Toolbar / 브러시 상태 ---- */
   const [customPatterns, setCustomPatterns] = useState<string[]>([]);
@@ -863,12 +862,11 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
           <div
             ref={containerRef}
             className={`
-              relative w-full aspect-video mx-auto md:translate-y-0 
+              relative w-full mx-auto md:translate-y-0 
               max-w-[400px] max-h-[300px]
               md:max-w-[1040px]
-              ${videoScaleClass}
               ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
-              transition-transform transition-opacity duration-500
+              transition-opacity duration-500
             `}
             aria-hidden={!videoReady}
           >
