@@ -7,8 +7,8 @@
   },
   "packageManager": "npm@10",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build --no-lint",
+    "dev": "TAILWIND_DISABLE_OXIDE=1 next dev",
+    "build": "TAILWIND_DISABLE_OXIDE=1 next build --no-lint",
     "start": "next start",
     "lint": "eslint"
   },
