@@ -55,7 +55,7 @@ const SECTION_DATA: Record<
     ),
   },
   "this-is-for-u": {
-    imageSrc: "/images/This-is-for-u_background.jpg",
+    imageSrc: "/images/this-is-for-u_background.jpg",
     imageAlt: "This-is-for-u background",
     imageOverlayLeft: "Th!s !s for u",
     overlayLeftClassName: "md:-translate-y-[28px] md:-translate-x-[147px] -translate-y-[6px] -translate-x-[82px]",
