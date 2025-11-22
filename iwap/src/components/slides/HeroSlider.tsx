@@ -75,7 +75,7 @@ export default function HeroSlider() {
             onSwiper={(s) => {
               swiperRef.current = s;
               s.mousewheel.enable();
-            })}
+            }}
             loop={true}
             loopAdditionalSlides={slides.length}
             centeredSlides
