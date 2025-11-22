@@ -83,7 +83,7 @@ export default function GraffitiToolbarMobile({
           shadow-[0_0_50px_0_rgba(0,0,0,0.25)]
           backdrop-blur-[4px]
           px-4
-          flex items-center justify-between
+          flex items-center justify-between -transalte-y-[125px]
         "
       >
         <div className="flex items-center justify-between w-full">
@@ -159,7 +159,7 @@ export default function GraffitiToolbarMobile({
       {showPalette && (
         <div
           className="
-            absolute left-1/2 top-[calc(100%+12px)] -translate-x-1/2 -translate-y-[220px]
+            absolute left-1/2 top-[calc(100%+12px)] -translate-x-1/2 translate-y-[110px]
             w-[330px]
             rounded-2xl border border-white rounded-br-none
             bg-[rgba(255,255,255,0.40)]

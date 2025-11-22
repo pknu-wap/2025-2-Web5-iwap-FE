@@ -53,12 +53,12 @@ function isFingerExtendedByDistance(
 function isIndexFingerOnlyExtended(lms: Landmark[]): boolean {
   if (!lms || lms.length < 21) return false;
 
-  const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.22);
+  const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.20);
   if (!indexExtended) return false;
 
-  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.20);
-  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.20);
-  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.20);
+  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.18);
+  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.18);
+  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.18);
 
   const othersCount =
     (middleExtended ? 1 : 0) +
@@ -178,6 +178,7 @@ const COLOR_PALETTE = ["#FA4051", "#FDD047", "#2FB665", "#FFFFFF", "#000000"];
 export default function HandLandmarkerPage() {
   const [isReady, setIsReady] = useState(false);
   const [isWebcamRunning, setIsWebcamRunning] = useState(false);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
 
   const visionModuleRef = useRef<any>(null);
   const handLandmarkerRef = useRef<any>(null);
@@ -423,9 +424,10 @@ export default function HandLandmarkerPage() {
           },
           runningMode: runningModeRef.current,
           numHands: 2,
-          minHandDetectionConfidence: 0.3,
-          minHandPresenceConfidence: 0.3,
-          minTrackingConfidence: 0.3,
+          // Lowered thresholds to help mobile cameras in lower light/quality
+          minHandDetectionConfidence: 0.2,
+          minHandPresenceConfidence: 0.2,
+          minTrackingConfidence: 0.2,
         }
       );
 
@@ -728,63 +730,84 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
     }
   }, [triggerEmoji]); // ★ brushColor/Size 제거, triggerEmoji만 deps
 
-  const handleToggleWebcam = useCallback(async () => {
-    if (!isReady) return;
+  const startWebcam = useCallback(
+    async (mode: "user" | "environment" = facingMode) => {
+      if (!isReady) return;
 
+      if (!navigator.mediaDevices?.getUserMedia) {
+        console.warn("getUserMedia() not supported.");
+        return;
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: mode,
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+        });
+        const video = videoRef.current;
+        if (!video) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+
+        video.srcObject = stream;
+        video.onloadeddata = () => {
+          video
+            .play()
+            .catch(() => {
+              // autoplay block error ignored
+            });
+          setFacingMode(mode);
+          isWebcamRunningRef.current = true;
+          setIsWebcamRunning(true);
+          void predictWebcam();
+        };
+      } catch (e) {
+        console.error("Webcam access failed:", e);
+      }
+    },
+    [facingMode, isReady, predictWebcam]
+  );
+
+  const handleToggleWebcam = useCallback(async () => {
     if (isWebcamRunning) {
       stopWebcam();
       return;
     }
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      console.warn("getUserMedia() 미지원 브라우저");
-      return;
-    }
+    void startWebcam(facingMode);
+  }, [facingMode, isWebcamRunning, startWebcam, stopWebcam]);
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      const video = videoRef.current;
-      if (!video) return;
-
-      video.srcObject = stream;
-      video.onloadeddata = () => {
-        video
-          .play()
-          .catch(() => {
-            // autoplay 정책 에러 무시
-          });
-        isWebcamRunningRef.current = true;
-        setIsWebcamRunning(true);
-        void predictWebcam();
-      };
-    } catch (e) {
-      console.error("웹캠 접근 실패:", e);
-    }
-  }, [isReady, isWebcamRunning, predictWebcam, stopWebcam]);
+  const handleSwitchCamera = useCallback(async () => {
+    const nextMode = facingMode === "user" ? "environment" : "user";
+    stopWebcam();
+    await startWebcam(nextMode);
+  }, [facingMode, startWebcam, stopWebcam]);
 
   useEffect(() => {
     if (!isReady || isWebcamRunning) return;
-    void handleToggleWebcam();
-  }, [handleToggleWebcam, isReady, isWebcamRunning]);
+    void startWebcam(facingMode);
+  }, [facingMode, isReady, isWebcamRunning, startWebcam]);
 
   /* ---------------- JSX (예전 Graffiti 디자인 + 새 기능) ---------------- */
   return (
     <div className="relative w-full h-dvh text-slate-50" style={pageBackgroundStyle}>
-      <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={() => setShowIntro(false)} />
+      <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleIntroReady} />
       {/* 상단 고정 헤더 영역 (인트로 제거, 헤더만 유지) */}
       <div className="pointer-events-none inset-0 flex items-center justify-center p-6 animate-fadeIn">
         <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
             <div className="w-full h-full pt-[72px] md:pt-[100px] translate-y-0 relative">
               <div className="absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0">
-                {!videoReady && (
-                  <PageHeader
-                    title="Graff!ti"
-                    subtitle="움직임으로만 드로잉"
-                    goBack={true}
-                    padding="p-0"
-                  />
-                )}
+                <PageHeader
+                  title="Graff!ti"
+                  subtitle="움직임으로만 드로잉"
+                  goBack={true}
+                  padding="p-0"
+                />
               </div>
 
               {!isReady && (
@@ -811,6 +834,27 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
           {isWebcamRunning ? "OFF" : "ON"}
         </button>
       </div> */}
+
+
+      {/* 영상+웹캠 토글 & 카메라 전환 (모바일용) */}
+      <div className="absolute top-6 right-6 z-40 flex gap-2 md:hidden">
+        {/* <button
+          type="button"
+          onClick={() => void handleToggleWebcam()}
+          className="inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-light disabled:opacity-50 bg-[rgba(255,255,255,0.40)] min-w-[72px] shadow-[0_0_50px_20px_rgba(0,0,0,0.25)] backdrop-blur-[4px] border border-white"
+          disabled={!isReady}
+        >
+          {isWebcamRunning ? "OFF" : "ON"}
+        </button> */}
+        <button
+          type="button"
+          onClick={() => void handleSwitchCamera()}
+          className="inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-light disabled:opacity-50 bg-[rgba(255,255,255,0.40)] min-w-[72px] shadow-[0_0_50px_20px_rgba(0,0,0,0.25)] backdrop-blur-[4px] border border-white"
+          disabled={!isReady || !isWebcamRunning}
+        >
+          {facingMode === "user" ? "후면" : "전면"}
+        </button>
+      </div>
 
       {/* 비디오 + 인트로 + 툴바: 한 그룹으로 중앙 기준 스케일 */}
       <div className="absolute inset-0 flex items-center justify-center">

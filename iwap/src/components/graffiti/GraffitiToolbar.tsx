@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 type GraffitiToolbarProps = {
   colorPalette: string[];
@@ -50,6 +50,15 @@ export default function GraffitiToolbar({
   const showDeleteAction = !pendingCustomColor && isBrushColorCustom;
   const [showPalette, setShowPalette] = useState(false);
   const paletteRef = useRef<HTMLDivElement | null>(null);
+  const openColorPicker = useCallback(() => {
+    const picker = colorPickerRef.current;
+    if (!picker) return;
+    if (typeof (picker as any).showPicker === "function") {
+      (picker as any).showPicker();
+    } else {
+      picker.click();
+    }
+  }, [colorPickerRef]);
 
   useEffect(() => {
     if (!showPalette) return;
@@ -147,7 +156,7 @@ export default function GraffitiToolbar({
           <input
             type="color"
             ref={colorPickerRef}
-            className="hidden"
+            className="absolute left-1/2 top-1/2 h-[1px] w-[1px] -translate-x-1/2 -translate-y-1/2 opacity-0"
             onChange={(event) => onCustomColorPick(event.target.value)}
           />
           <button
@@ -184,10 +193,7 @@ export default function GraffitiToolbar({
               <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() =>
-                    colorPickerRef.current?.showPicker?.() ??
-                    colorPickerRef.current?.click()
-                  }
+                  onClick={openColorPicker}
                   className="
                     h-[26px] px-3
                     rounded-full border border-white/40
