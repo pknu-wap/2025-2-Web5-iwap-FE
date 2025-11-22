@@ -5,6 +5,7 @@ import opentype from "opentype.js";
 import GraffitiToolbar from "@/components/graffiti/GraffitiToolbar";
 import FullScreenView from "@/components/ui/FullScreenView";
 import { initFourierSketch, type FourierSketchController } from "./fourier-sketch";
+import { ProjectIntroModal } from '@/components/sections/ProjectIntroSections';
 
 type SketchStyles = {
   backgroundColor: string;
@@ -113,6 +114,7 @@ export default function ThisIsForUPage() {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const initializedRef = useRef(false);
   const colorPickerRef = useRef<HTMLInputElement | null>(null);
+  const [showIntro, setShowIntro] = useState(true);
   const [controller, setController] = useState<FourierSketchController | null>(null);
   const [styles, setStyles] = useState<SketchStyles>(DEFAULT_STYLES);
   const [activeSketchCount, setActiveSketchCount] = useState(0);
@@ -127,6 +129,9 @@ export default function ThisIsForUPage() {
   const [brushSize, setBrushSize] = useState(DEFAULT_STYLES.pathWidth);
   const [customColors, setCustomColors] = useState<string[]>([]);
   const [pendingCustomColor, setPendingCustomColor] = useState<string | null>(null);
+  const [tokenContours, setTokenContours] = useState<TextContour[][]>([]);
+  const [tokenWords, setTokenWords] = useState<string[]>([]);
+  const [activeTokenIndex, setActiveTokenIndex] = useState(0);
 
   useEffect(() => {
     if (!containerRef.current || initializedRef.current) return;
@@ -181,6 +186,9 @@ export default function ThisIsForUPage() {
     controller?.clearSketches();
     setActiveSketchCount(0);
     setIsPlaying(false);
+    setTokenContours([]);
+    setTokenWords([]);
+    setActiveTokenIndex(0);
   }, [controller]);
 
   const handleDownloadJson = useCallback(() => {
@@ -260,13 +268,10 @@ export default function ThisIsForUPage() {
     }));
   }, []);
 
-  const handleTextToFourier = useCallback(async () => {
-    if (!controller) return;
-    const text = textCanvasMessage.trim();
-    if (!text) return;
-    setIsTextProcessing(true);
-    try {
-      const contours = await textToContours(text, { boxWidth: 400, boxHeight: 450 });
+  const applyTokenToCanvas = useCallback(
+    (contours: TextContour[]) => {
+      if (!controller) return;
+      controller.clearSketches();
       contours.forEach((points) => {
         controller.addCustomSketch(points, {
           pathColor: styles.pathColor,
@@ -278,12 +283,36 @@ export default function ThisIsForUPage() {
       refreshActiveCount();
       setIsPlaying(false);
       setIsBackside(false);
+    },
+    [controller, styles.pathColor, styles.pathAlpha, styles.pathWidth, refreshActiveCount],
+  );
+
+  const handleTextToFourier = useCallback(async () => {
+    if (!controller) return;
+    const text = textCanvasMessage.trim();
+    if (!text) return;
+    setIsTextProcessing(true);
+    try {
+      const tokens = text.split(/\s+/).filter(Boolean);
+      const contourGroups: TextContour[][] = [];
+
+      for (const word of tokens) {
+        const contours = await textToContours(word, { boxWidth: 400, boxHeight: 450 });
+        contourGroups.push(contours);
+      }
+
+      setTokenContours(contourGroups);
+      setTokenWords(tokens);
+      setActiveTokenIndex(0);
+      if (contourGroups[0]) {
+        applyTokenToCanvas(contourGroups[0]);
+      }
     } catch (error) {
       console.error("Text to Fourier failed", error);
     } finally {
       setIsTextProcessing(false);
     }
-  }, [controller, textCanvasMessage, styles.pathColor, styles.pathAlpha, styles.pathWidth, refreshActiveCount]);
+  }, [controller, textCanvasMessage, applyTokenToCanvas]);
 
   const toolbarProps = useMemo(
     () => ({
@@ -319,6 +348,20 @@ export default function ThisIsForUPage() {
     ],
   );
 
+  const handleTokenNavigate = useCallback(
+    (direction: "prev" | "next") => {
+      if (!tokenContours.length) return;
+      const delta = direction === "next" ? 1 : -1;
+      const nextIndex = (activeTokenIndex + delta + tokenContours.length) % tokenContours.length;
+      setActiveTokenIndex(nextIndex);
+      const nextContours = tokenContours[nextIndex];
+      if (nextContours) {
+        applyTokenToCanvas(nextContours);
+      }
+    },
+    [activeTokenIndex, tokenContours, applyTokenToCanvas],
+  );
+
   return (
     <div className="flex flex-col">
       <ProjectIntroModal
@@ -346,6 +389,32 @@ export default function ThisIsForUPage() {
                 className={isBackside ? "hidden" : "absolute inset-0"}
                 style={{ backgroundColor: styles.backgroundColor }}
               />
+              {!isBackside && tokenWords.length > 1 && (
+                <div className="absolute top-3 left-3 right-3 flex items-center justify-between z-30 text-xs text-white/80">
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleTokenNavigate("prev")}
+                      className="px-2 py-1 rounded-full border border-white/40 bg-black/40 hover:bg-white/10 transition"
+                    >
+                      ←
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleTokenNavigate("next")}
+                      className="px-2 py-1 rounded-full border border-white/40 bg-black/40 hover:bg-white/10 transition"
+                    >
+                      →
+                    </button>
+                    <span className="px-2 py-1 rounded-full bg-black/50 border border-white/20">
+                      {activeTokenIndex + 1} / {tokenWords.length}
+                    </span>
+                  </div>
+                  <span className="px-3 py-1 rounded-full bg-black/60 border border-white/20 text-[11px] uppercase tracking-wide">
+                    {tokenWords[activeTokenIndex] ?? ""}
+                  </span>
+                </div>
+              )}
               {!isBackside && !readyAction && (
                 <div className="absolute inset-0 flex items-center justify-center text-xs uppercase tracking-[0.4em] text-white/60">
                   초기화 중...

@@ -20,7 +20,7 @@ export type FourierSketchController = {
   clearSketches: () => void;
   addCustomSketch: (
     points: { x: number; y: number }[],
-    options?: { pathColor?: string; pathAlpha?: number; pathWidth?: number },
+    options?: { pathColor?: string; pathAlpha?: number; pathWidth?: number; startDelay?: number },
   ) => void;
   getFourierCoefficients: () => FourierCoefficient[][];
   cleanup: () => void;
@@ -100,6 +100,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         pathColor: string;
         pathAlpha: number;
         pathWidth: number;
+        startDelay: number;
       };
 
       let drawing: p5.Vector[] = [];
@@ -108,9 +109,36 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
       let state: "idle" | "drawing" | "pending" | "fourier" = "idle";
       const SHARED_DT = 0.02;
       let sharedTime = 0;
+      let fastForwardTime = 0;
+      let maxStartDelay = 0;
 
       const MAX_TERMS = 2000;
       const RESAMPLE_TARGET = 360;
+      const CLOSE_STEPS = 16;
+      const CLOSE_THRESHOLD = 0.5; // almost closed if under this
+      const FAST_FORWARD_MULT = 4;
+
+      const ensureClosedPath = (points: p5.Vector[], steps = CLOSE_STEPS): p5.Vector[] => {
+        if (points.length <= 1) return points.map((v) => v.copy());
+        const first = points[0];
+        const last = points[points.length - 1];
+        const gap = p.dist(first.x, first.y, last.x, last.y);
+
+        if (gap <= CLOSE_THRESHOLD) {
+          // Already closed enough
+          return points.map((v) => v.copy());
+        }
+
+        // Linearly interpolate from end back to start to avoid hard jump
+        const closed: p5.Vector[] = points.map((v) => v.copy());
+        for (let i = 1; i <= steps; i += 1) {
+          const t = i / steps;
+          const x = p.lerp(last.x, first.x, t);
+          const y = p.lerp(last.y, first.y, t);
+          closed.push(p.createVector(x, y));
+        }
+        return closed;
+      };
 
       /* -------------------- 길이 기준 리샘플링 -------------------- */
       const resamplePath = (points: p5.Vector[], targetCount = RESAMPLE_TARGET): p5.Vector[] => {
@@ -206,6 +234,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         pendingSketches.length = 0;
         activeSketches.length = 0;
         sharedTime = 0;
+        maxStartDelay = 0;
         state = "idle";
       };
 
@@ -217,6 +246,10 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         activeSketches.push(...pendingSketches);
         pendingSketches.length = 0;
         sharedTime = 0;
+        maxStartDelay = activeSketches.reduce(
+          (acc, item) => Math.max(acc, item.startDelay ?? 0),
+          0,
+        );
         isRunning = false;
         state = activeSketches.length > 0 ? "fourier" : "idle";
       };
@@ -237,6 +270,8 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
           confirmSketches();
         }
         if (activeSketches.length) {
+          const closeRatio = CLOSE_STEPS / (RESAMPLE_TARGET + CLOSE_STEPS);
+          fastForwardTime = Math.min(2 * Math.PI, 2 * Math.PI * closeRatio * 1.5);
           state = "fourier";
           isRunning = true;
         }
@@ -257,15 +292,19 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
           pathColor: options?.pathColor ?? styles.pathColor ?? "#ffb6dc",
           pathAlpha: Math.max(0, Math.min(255, options?.pathAlpha ?? styles.pathAlpha ?? 255)),
           pathWidth: Math.max(1, options?.pathWidth ?? styles.pathWidth ?? 2),
+          startDelay: Math.max(0, options?.startDelay ?? 0),
         });
+        maxStartDelay = Math.max(maxStartDelay, Math.max(0, options?.startDelay ?? 0));
         state = "pending";
       };
       getFourierCoefficientsFn = getFourierCoefficients;
 
       /* -------------------- DFT (리샘플 + 스무딩 포함) -------------------- */
       const dft = (rawPoints: p5.Vector[]): FourierTerm[] => {
+        const closed = ensureClosedPath(rawPoints);
+
         // 1) 길이 기준 일정 간격으로 리샘플
-        const resampled = resamplePath(rawPoints, RESAMPLE_TARGET);
+        const resampled = resamplePath(closed, RESAMPLE_TARGET);
 
         // 2) 노이즈 줄이기 위해 스무딩 (딱 2회로 제한해 떨림 완화)
         const points = smoothPath(resampled, 2);
@@ -372,6 +411,18 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         state = pendingSketches.length > 0 ? "pending" : "idle";
       };
 
+      const computePosition = (sketch: FourierSketch, time: number) => {
+        let x = 0;
+        let y = 0;
+        for (let i = 0; i < Math.min(MAX_TERMS, sketch.fourier.length); i += 1) {
+          const term = sketch.fourier[i];
+          const angle = term.freq * time + term.phase;
+          x += term.amp * Math.cos(angle);
+          y += term.amp * Math.sin(angle);
+        }
+        return { x, y };
+      };
+
       p.draw = () => {
         // Ensure the canvas uses fully opaque painting each frame.
         const ctx = p.drawingContext as CanvasRenderingContext2D | null;
@@ -416,19 +467,49 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
           const circleColor = p.color(styles.epicycleColor ?? "#50a0ff");
           circleColor.setAlpha(Math.max(0, Math.min(255, styles.epicycleAlpha ?? 120)));
           const pathStroke = Math.max(1, Math.min(styles.pathWidth ?? 2, 60));
+          const shouldFastForward = isRunning && fastForwardTime > 0;
+          const iterations = shouldFastForward ? FAST_FORWARD_MULT : 1;
+
+          if (isRunning) {
+            for (let step = 0; step < iterations; step += 1) {
+              activeSketches.forEach((sketch) => {
+                if (!sketch.fourier.length) return;
+                const effectiveTime = sharedTime - (sketch.startDelay ?? 0);
+                if (effectiveTime < 0) return;
+                const { x, y } = computePosition(sketch, effectiveTime);
+                sketch.path.unshift(p.createVector(x, y));
+              });
+
+              sharedTime += SHARED_DT;
+              if (sharedTime > 2 * Math.PI + maxStartDelay) {
+                sharedTime = 0;
+                activeSketches.forEach((sketch) => {
+                  sketch.path = [];
+                });
+              }
+
+              if (fastForwardTime > 0) {
+                fastForwardTime = Math.max(0, fastForwardTime - SHARED_DT);
+              }
+            }
+          }
 
           activeSketches.forEach((sketch) => {
             if (!sketch.fourier.length) return;
             const sketchColor = p.color(sketch.pathColor ?? "#ffb6dc");
             sketchColor.setAlpha(Math.max(0, Math.min(255, sketch.pathAlpha ?? styles.pathAlpha ?? 255)));
-          const strokeWidth = Math.max(1, Math.min(sketch.pathWidth ?? styles.pathWidth ?? 2, 60));
+            const strokeWidth = Math.max(1, Math.min(sketch.pathWidth ?? styles.pathWidth ?? 2, 60));
+            const effectiveTime = sharedTime - (sketch.startDelay ?? 0);
+            if (effectiveTime < 0) {
+              return;
+            }
             let x = 0;
             let y = 0;
             for (let i = 0; i < Math.min(MAX_TERMS, sketch.fourier.length); i += 1) {
               const term = sketch.fourier[i];
               const prevX = x;
               const prevY = y;
-              const angle = term.freq * sharedTime + term.phase;
+              const angle = term.freq * effectiveTime + term.phase;
               x += term.amp * Math.cos(angle);
               y += term.amp * Math.sin(angle);
               p.stroke(circleColor);
@@ -439,9 +520,6 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
               p.strokeWeight(1);
               p.line(prevX, prevY, x, y);
             }
-            if (isRunning) {
-              sketch.path.unshift(p.createVector(x, y));
-            }
             p.noFill();
             p.stroke(sketchColor);
             p.strokeWeight(strokeWidth);
@@ -449,15 +527,6 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
             sketch.path.forEach((v) => p.vertex(v.x, v.y));
             p.endShape();
           });
-          if (isRunning) {
-            sharedTime += SHARED_DT;
-            if (sharedTime > 2 * Math.PI) {
-              sharedTime = 0;
-              activeSketches.forEach((sketch) => {
-                sketch.path = [];
-              });
-            }
-          }
         } else if (state === "pending") {
           p.noStroke();
           p.fill(220);
