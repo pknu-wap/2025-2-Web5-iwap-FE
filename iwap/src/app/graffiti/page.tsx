@@ -10,6 +10,7 @@ import {
 import PageHeader from "@/components/ui/PageHeader";
 import GraffitiToolbar from "@/components/graffiti/GraffitiToolbar";
 import GraffitiToolbarMobile from "@/components/graffiti/GraffitiToolbarMobile";
+import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
 
 type RunningMode = "IMAGE" | "VIDEO";
 type Landmark = { x: number; y: number; z: number };
@@ -769,6 +770,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
   /* ---------------- JSX (예전 Graffiti 디자인 + 새 기능) ---------------- */
   return (
     <div className="relative w-full h-dvh text-slate-50" style={pageBackgroundStyle}>
+      <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={() => setShowIntro(false)} />
       {/* 상단 고정 헤더 영역 (인트로 제거, 헤더만 유지) */}
       <div className="pointer-events-none inset-0 flex items-center justify-center p-6 animate-fadeIn">
         <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">

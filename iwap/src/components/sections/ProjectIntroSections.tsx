@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import SideImageSection from "./SideImageSection";
 
-export type ProjectKey = "inside" | "this-is-for-u" | "piano" | "ascii" | "string" | "instrument";
+export type ProjectKey = "inside" | "this-is-for-u" | "piano" | "ascii" | "string" | "graffiti";
 
 const SECTION_DATA: Record<
   ProjectKey,
@@ -170,31 +170,31 @@ const SECTION_DATA: Record<
       </>
     ),
   },
-  instrument: {
+  graffiti: {
     imageSrc: "/images/instrument_background.jpg",
-    imageAlt: "instrument background",
-    imageOverlayLeft: "!nstrument",
-    overlayLeftClassName: "-translate-y-[28px] -translate-x-[32px]",
+    imageAlt: "graffiti background",
+    imageOverlayLeft: "Graff!ti",
+    overlayLeftClassName: "-translate-y-[100px] -translate-x-[77px]",
     imageOverlayRight: "06",
     side: "left",
     badgeText: "Touch",
     textAlign: "left",
     badgeAlign: "left",
-    heading: "06  !nstrument",
+    heading: "06  Graff!ti",
     body: (
       <>
         <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
-          손동작으로 오케스트라를 지휘하는 인터랙티브 사운드 퍼포먼스.
+          카메라로 손동작을 추적해 공중에 그림을 남기는 제스처 드로잉 퍼포먼스.
         </span>
         <br />
         <br />
-        <span>카메라로 인식한 제스처(손바닥, 손가락, 움직임)를</span>
+        <span>검지 제스처로 자유롭게 선을 그리고, 엄지척이나 하트 모양으로</span>
         <br />
-        <span>MIDI 신호로 변환하여 여러 악기의 연주를 제어합니다.</span>
+        <span>이펙트를 활성화해 움직임에 맞춘 그래피티를 완성합니다.</span>
         <br />
-        <span>사용자의 동작이 음악의 속도, 볼륨, 악기를 실시간으로 바꾸며,</span>
+        <span>실시간 필터와 붓 굵기·컬러 선택으로 ‘공기 중 캔버스’에서</span>
         <br />
-        <span>가장 촉각적인 ‘손의 인터페이스’를 통해 청각적 몰입을 만듭니다.</span>
+        <span>움직임으로만 그림을 그리는 촉각적 경험을 제공합니다.</span>
       </>
     ),
   },
