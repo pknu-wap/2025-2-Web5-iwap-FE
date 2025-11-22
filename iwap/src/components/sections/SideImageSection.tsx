@@ -112,7 +112,7 @@ export default function SideImageSection({
             variants={imageVariants}
             className={`relative w-full max-w-[310px] sm:max-w-[420px] md:max-w-none md:w-[520px] h-[200px] sm:h-[240px] md:h-[400px] flex-shrink-0 overflow-hidden rounded-[10px] translate-x-[15px] ${imageWrapperClassName}`}
           >
-            <img src={imageSrc} alt={imageAlt} className={`w-full h-full ${imageClassName}`} />
+            <img src={imageSrc} alt={imageAlt} className={`w-full h-full rounded-[10px] ${imageClassName}`} />
             {imageOverlay && (
               <div className={`absolute inset-0 flex ${overlayPosClass}`}>
                 <div
