@@ -28,6 +28,8 @@ interface SideImageSectionProps {
   overlayRightClassName?: string;
   imageWrapperClassName?: string;
   imageClassName?: string;
+  // 모바일 전용으로 다른 줄바꿈/구성의 텍스트를 넣고 싶을 때 사용
+  mobileBody?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -50,6 +52,7 @@ export default function SideImageSection({
   overlayRightClassName = "",
   imageWrapperClassName = "",
   imageClassName = "object-cover",
+  mobileBody,
   children,
 }: SideImageSectionProps) {
   const [isMobile, setIsMobile] = useState(false);
@@ -94,6 +97,7 @@ export default function SideImageSection({
   };
   const imageVariants = isMobile ? mobileImageVariants : desktopImageVariants;
   const textVariants = isMobile ? mobileTextVariants : desktopTextVariants;
+  const bodyContent = isMobile && mobileBody ? mobileBody : children;
 
   return (
     <section id={id} className={`w-full flex items-center py-20 ${className}`}>
@@ -106,7 +110,7 @@ export default function SideImageSection({
         >
           <motion.div
             variants={imageVariants}
-            className={`relative w-full max-w-[340px] sm:max-w-[420px] md:max-w-none md:w-[520px] h-[200px] sm:h-[240px] md:h-[400px] flex-shrink-0 overflow-hidden rounded-[10px] ${imageWrapperClassName}`}
+            className={`relative w-full max-w-[310px] sm:max-w-[420px] md:max-w-none md:w-[520px] h-[200px] sm:h-[240px] md:h-[400px] flex-shrink-0 overflow-hidden rounded-[10px] translate-x-[15px] ${imageWrapperClassName}`}
           >
             <img src={imageSrc} alt={imageAlt} className={`w-full h-full ${imageClassName}`} />
             {imageOverlay && (
@@ -129,7 +133,7 @@ export default function SideImageSection({
             )}
             {imageOverlayRight && (
               <div className="absolute inset-y-0 right-0 flex items-end justify-end">
-                <div className={`text-white font-semibold text-[72px] sm:text-[84px] md:text-[96px] translate-y-8 md:translate-y-10 tracking-[-2.4px] ${overlayRightClassName}`}>
+                <div className={`text-white font-semibold text-[70px] sm:text-[84px] md:text-[96px] translate-y-8 md:translate-y-10 tracking-[-2.4px] ${overlayRightClassName}`}>
                   {imageOverlayRight}
                 </div>
               </div>
@@ -138,7 +142,7 @@ export default function SideImageSection({
 
           <motion.div
             variants={textVariants}
-            className={`w-full md:flex-1 md:min-w-[620px] md:max-w-[900px] ${alignClass} text-[#000000] text-[18px] sm:text-[20px] md:text-[24px] leading-relaxed font-normal`}
+            className={`w-full md:flex-1 md:min-w-[700px] md:max-w-[1000px] px-[10px] ${alignClass} text-[#000000] text-[14px] sm:text-[20px] md:text-[24px] leading-relaxed font-normal whitespace-normal break-words `}
           >
             <div className={`${badgeWrapperClass} mb-6`}>
               <div className="flex gap-2 sm:gap-3 text-[13px] md:text-[24px]">
@@ -160,7 +164,7 @@ export default function SideImageSection({
             </div>
 
             <span className="font-semibold text-[22px] sm:text-[24px] md:text-[30px] block mb-2">{heading}</span>
-            {children}
+            {bodyContent}
           </motion.div>
         </motion.div>
       </div>
