@@ -156,7 +156,7 @@ export default function GraffitiToolbar({
           <input
             type="color"
             ref={colorPickerRef}
-            className="absolute left-1/2 top-1/2 h-[1px] w-[1px] -translate-x-1/2 -translate-y-1/2 opacity-0"
+            className="absolute left-1/2 top-1/2 h-[1px] w-[1px] -translate-x-1/2 -translate-y-1/2 opacity-0 translate-x-[350px] -translate-y-[62px]"
             onChange={(event) => onCustomColorPick(event.target.value)}
           />
           <button

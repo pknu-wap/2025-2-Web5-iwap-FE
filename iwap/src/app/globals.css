@@ -42,7 +42,7 @@ body {
   display: none;
 }
 
-/* slides 확장용*/
+/* slides 저장용 */
 .slide-card {
   --w-base: 200px;
   width: var(--w-base);
