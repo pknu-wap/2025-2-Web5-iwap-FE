@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import SideImageSection from "./SideImageSection";
 
-export type ProjectKey = "inside" | "this-is-for-u" | "piano" | "ascii" | "string" | "instrument";
+export type ProjectKey = "inside" | "this-is-for-u" | "piano" | "ascii" | "string" | "graffiti";
 
 const SECTION_DATA: Record<
   ProjectKey,
@@ -21,6 +21,7 @@ const SECTION_DATA: Record<
   body: ReactNode;
   imageClassName?: string;
   imageWrapperClassName?: string;
+  mobileBody?: ReactNode;
   }
 > = {
   inside: {
@@ -53,6 +54,25 @@ const SECTION_DATA: Record<
         <span>기계의 시각적 사고 과정을 체험할 수 있습니다.</span>
       </>
     ),
+    mobileBody: (
+      <>
+        <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
+          인공지능의 ‘시각’을 인간의 감각 언어로 번역하는 실험.
+        </span>
+        <br />
+        <br />
+        <span>AI가 숫자(0-9)를 인식하는 과정을 시각화하여,</span>
+        <br />
+        <span>기계가 세상을 ‘본다’는 것이 무엇인지 탐구합니다.</span>
+        <br />
+        <br />
+        <span>사용자는 화면 위에서 숫자를 그리면,</span>
+        <br />
+        <span> 인공지능의 내부 featuremap이 실시간으로 나타나며</span>
+        <br />
+        <span>기계의 시각적 사고 과정을 체험할 수 있습니다.</span>
+      </>
+    ),
   },
   "this-is-for-u": {
     imageSrc: "/images/this-is-for-u_background.jpg",
@@ -72,12 +92,31 @@ const SECTION_DATA: Record<
         </span>
         <br />
         <br />
-        <span>인간의 마음이 색채 반응으로 드러나는 시각적으로 체험합니다.</span>
+        <span>색과 형태로 감정을 번역해 ‘보이는 감정’을 경험합니다.</span>
         <br />
         <br />
-        <span>사용자가 손으로 하트를 그리고, 글로 메시지를 남길 수 있습니다.</span>
+        <span>사용자가 손으로 하트를 그리고 메시지를 남기면,</span>
         <br />
-        <span>그림의 색, 곡선의 흐름에 따라 감정이 시각적으로 표현되며,</span>
+        <span>곡선과 색의 흐름이 감정의 결을 따라 변형됩니다.</span>
+        <br />
+        <span>완성된 엽서는 이미지로 저장하거나 이메일로 보낼 수 있습니다.</span>
+      </>
+    ),
+    mobileBody: (
+      <>
+        <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
+          감정을 색과 형태로 번역하는 ‘디지털 엽서’.
+        </span>
+        <br />
+        <br />
+        <span>색과 형태로 감정을 번역해 ‘보이는 감정’을 경험합니다.</span>
+        <br />
+        <br />
+        <span>사용자가 손으로 하트를 그리고 메시지를 남기면,</span>
+        <br />
+        <span>글로 메시지를 남길 수 있습니다.</span>
+        <br /><br />
+        <span>곡선과 색의 흐름이 감정의 결을 따라 변형됩니다.</span>
         <br />
         <span>완성된 엽서는 이미지로 저장되거나 이메일로 전송됩니다.</span>
       </>
@@ -95,6 +134,26 @@ const SECTION_DATA: Record<
     badgeAlign: "right",
     heading: "03  P!ano",
     body: (
+      <>
+        <span>사용자의 음성이나 주변 소리를 피아노 음으로 변환하는</span>
+        <br />
+        <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
+          사운드–비주얼 인터랙션 실험.
+        </span>
+        <br />
+        <br />
+        <span>음성 입력을 Tone.js 기반의 피아노 사운드로 변환하고,</span>
+        <br />
+        <span>각 음정과 강도를 시각적으로 스펙트럼화하여 보여줍니다.</span>
+        <br />
+        <br />
+        <span>시청각이 결합된 몰입형 음악 인터페이스로,</span>
+        <br />
+        <span>“보이는 소리”라는 개념을 체험할 수 있습니다.</span>
+        <br />
+      </>
+    ),
+    mobileBody: (
       <>
         <span>사용자의 음성이나 주변 소리를 피아노 음으로 변환하는</span>
         <br />
@@ -140,6 +199,24 @@ const SECTION_DATA: Record<
         <span>“텍스트도 시각적 예술이 될 수 있는가?”를 탐구합니다.</span>
       </>
     ),
+    mobileBody: (
+      <>
+        <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
+          이미지를 텍스트로 변환해 ‘보이는 언어’를 만드는 실험.
+        </span>
+        <br />
+        <br />
+        <span>이미지를 픽셀 단위로 분석해,</span>
+        <br />
+        <span>밝기 값을 문자(ASCII 코드)로 대체합니다.</span>
+        <br /><br />
+        <span>그 결과 생성된 텍스트 이미지는</span>
+        <br />
+        <span>언어와 시각 사이의 경계를 흐리며,</span>
+        <br /><br />
+        <span>“텍스트도 시각적 예술이 될 수 있는가?”를 탐구합니다.</span>
+      </>
+    ),
   },
   string: {
     imageSrc: "/images/string_background.jpg",
@@ -169,32 +246,54 @@ const SECTION_DATA: Record<
         <span>데이터 기반 미학을 탐구합니다.</span>
       </>
     ),
+    mobileBody: (
+      <>
+        <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
+          선과 연결로 이미지를 재구성하는 알고리즘 아트.
+        </span>
+        <br />
+        <br />
+        <span>수많은 실선을 일정한 규칙으로 배치해</span>
+        <br />
+        <span>하나의 이미지를 만들어내는 시각적 알고리즘 실험입니다.</span>
+        <br />
+        <span>‘선’이라는 최소 단위를 통해 시각 인식의 구조와</span>
+        <br />
+        <span>데이터 기반 미학을 탐구합니다.</span>
+      </>
+    ),
   },
-  instrument: {
+  graffiti: {
     imageSrc: "/images/instrument_background.jpg",
-    imageAlt: "instrument background",
-    imageOverlayLeft: "!nstrument",
-    overlayLeftClassName: "-translate-y-[28px] -translate-x-[32px]",
+    imageAlt: "graffiti background",
+    imageOverlayLeft: "Graff!ti",
+    overlayLeftClassName: "-translate-y-[40px] -translate-x-[40px]",
     imageOverlayRight: "06",
     side: "left",
     badgeText: "Touch",
     textAlign: "left",
     badgeAlign: "left",
-    heading: "06  !nstrument",
+    heading: "06  Graff!ti",
     body: (
       <>
         <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
-          손동작으로 오케스트라를 지휘하는 인터랙티브 사운드 퍼포먼스.
+          카메라로 손동작을 추적해
+        </span><br />
+        <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
+          공중에 그림을 남기는 제스처 드로잉 퍼포먼스.
         </span>
         <br />
         <br />
-        <span>카메라로 인식한 제스처(손바닥, 손가락, 움직임)를</span>
+        <span>검지 제스처로 자유롭게 선을 그리고, 이펙트를 활성화해</span>
         <br />
-        <span>MIDI 신호로 변환하여 여러 악기의 연주를 제어합니다.</span>
+        <span>엄지척이나 하트 모양으로 움직임에 맞춘</span>
         <br />
-        <span>사용자의 동작이 음악의 속도, 볼륨, 악기를 실시간으로 바꾸며,</span>
+        <span>그래피티를 완성합니다.</span>
         <br />
-        <span>가장 촉각적인 ‘손의 인터페이스’를 통해 청각적 몰입을 만듭니다.</span>
+        <br />
+        <span>실시간 필터와 붓 굵기·컬러 선택으로 ‘공기 중 캔버스’에서</span>
+        <br />
+        <span>움직임으로만 그림을 그리는 촉각적 경험을 제공합니다.</span>
       </>
     ),
   },
@@ -222,14 +321,15 @@ export default function ProjectIntroSections({ projects, className = "" }: Proje
             imageOverlayRight={section.imageOverlayRight}
             side={section.side}
             badgeText={section.badgeText}
-          textAlign={section.textAlign}
-          badgeAlign={section.badgeAlign}
-          imageClassName={section.imageClassName}
-          imageWrapperClassName={section.imageWrapperClassName}
-          heading={section.heading}
-        >
-          {section.body}
-        </SideImageSection>
+            textAlign={section.textAlign}
+            badgeAlign={section.badgeAlign}
+            imageClassName={section.imageClassName}
+            imageWrapperClassName={section.imageWrapperClassName}
+            heading={section.heading}
+            mobileBody={section.mobileBody}
+          >
+            {section.body}
+          </SideImageSection>
       );
       })}
     </div>

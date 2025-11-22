@@ -70,6 +70,7 @@ interface HoverLettersProps {
   baseWeight: number;
   letterClassName: string;
   interactive: boolean;
+  letterGap?: string | number;
 }
 
 function HoverBoldLetters({
@@ -77,6 +78,7 @@ function HoverBoldLetters({
   baseWeight,
   letterClassName,
   interactive,
+  letterGap,
 }: HoverLettersProps) {
   const [mousePosition, setMousePosition] = useState<{
     x: number;
@@ -88,21 +90,30 @@ function HoverBoldLetters({
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
-    letterRefs.current.forEach((node) => {
-      if (!node) return;
-      const prevTransition = node.style.transition;
-      const prevWeight = node.style.fontWeight;
-      node.style.transition = "none";
-      node.style.fontWeight = `${maxLetterWeight}`;
-      const width = node.getBoundingClientRect().width;
-      node.style.width = `${width}px`;
-      node.style.minWidth = `${width}px`;
-      node.style.display = "inline-flex";
-      node.style.justifyContent = "center";
-      node.style.fontWeight = prevWeight;
-      node.style.transition = prevTransition;
-      node.style.textAlign = "center";
-    });
+
+    const measure = () => {
+      letterRefs.current.forEach((node) => {
+        if (!node) return;
+        const prevTransition = node.style.transition;
+        const prevWeight = node.style.fontWeight;
+        node.style.transition = "none";
+        node.style.fontWeight = `${maxLetterWeight}`;
+        node.style.width = "";
+        node.style.minWidth = "";
+        const width = node.getBoundingClientRect().width;
+        node.style.width = `${width}px`;
+        node.style.minWidth = `${width}px`;
+        node.style.display = "inline-flex";
+        node.style.justifyContent = "center";
+        node.style.fontWeight = prevWeight;
+        node.style.transition = prevTransition;
+        node.style.textAlign = "center";
+      });
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
   }, [letters]);
 
   const handleMouseMove = interactive
@@ -152,6 +163,7 @@ function HoverBoldLetters({
               transformOrigin: "center bottom",
               textAlign: "center",
               transition: letterTransition,
+              marginRight: index === letters.length - 1 ? 0 : letterGap,
             }}
           >
             {char}
@@ -168,6 +180,7 @@ interface FadedLettersProps {
   interactive: boolean;
   reverse?: boolean;
   palette: FadePalette;
+  letterGap?: string | number;
 }
 
 function FadedLetters({
@@ -176,6 +189,7 @@ function FadedLetters({
   interactive,
   reverse = false,
   palette,
+  letterGap,
 }: FadedLettersProps) {
   const [mousePosition, setMousePosition] = useState<{
     x: number;
@@ -187,21 +201,30 @@ function FadedLetters({
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
-    letterRefs.current.forEach((node) => {
-      if (!node) return;
-      const prevTransition = node.style.transition;
-      const prevWeight = node.style.fontWeight;
-      node.style.transition = "none";
-      node.style.fontWeight = `${maxLetterWeight}`;
-      const width = node.getBoundingClientRect().width;
-      node.style.width = `${width}px`;
-      node.style.minWidth = `${width}px`;
-      node.style.display = "inline-flex";
-      node.style.justifyContent = "center";
-      node.style.fontWeight = prevWeight;
-      node.style.transition = prevTransition;
-      node.style.textAlign = "center";
-    });
+
+    const measure = () => {
+      letterRefs.current.forEach((node) => {
+        if (!node) return;
+        const prevTransition = node.style.transition;
+        const prevWeight = node.style.fontWeight;
+        node.style.transition = "none";
+        node.style.fontWeight = `${maxLetterWeight}`;
+        node.style.width = "";
+        node.style.minWidth = "";
+        const width = node.getBoundingClientRect().width;
+        node.style.width = `${width}px`;
+        node.style.minWidth = `${width}px`;
+        node.style.display = "inline-flex";
+        node.style.justifyContent = "center";
+        node.style.fontWeight = prevWeight;
+        node.style.transition = prevTransition;
+        node.style.textAlign = "center";
+      });
+    };
+
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
   }, [letters]);
 
   const handleMouseMove = interactive
@@ -256,6 +279,7 @@ function FadedLetters({
               transformOrigin: "center bottom",
               textAlign: "center",
               transition: letterTransition,
+              marginRight: index === letters.length - 1 ? 0 : letterGap,
             }}
           >
             {char}
@@ -291,12 +315,14 @@ export function HomeHeadline({
     ? `${baseClassName} ${className}`
     : baseClassName;
   const palette = fadePalette ?? defaultFadePalette;
+  const letterGap = style?.letterSpacing;
 
   return (
     <h1 className={combinedClassName} style={style}>
       {lines.map(({ leadingFade, strong, fade }, index) => (
         <span
           key={`${leadingFade ?? ""}-${strong}-${fade ?? ""}-${index}`}
+          className="block"
         >
           {leadingFade ? (
             <FadedLetters
@@ -305,23 +331,27 @@ export function HomeHeadline({
               interactive={interactive}
               palette={palette}
               reverse
+              letterGap={letterGap}
             />
           ) : null}
-          <HoverBoldLetters
-            letters={strong}
-            baseWeight={baseWeight}
-            letterClassName={letterClassName}
-            interactive={interactive}
-          />
-          {fade ? (
-            <FadedLetters
-              letters={fade}
+          <span className="inline-flex flex-nowrap items-end">
+            <HoverBoldLetters
+              letters={strong}
+              baseWeight={baseWeight}
               letterClassName={letterClassName}
               interactive={interactive}
-              palette={palette}
+              letterGap={letterGap}
             />
-          ) : null}
-          {index < lines.length - 1 ? "\n" : null}
+            {fade ? (
+              <FadedLetters
+                letters={fade}
+                letterClassName={letterClassName}
+                interactive={interactive}
+                palette={palette}
+                letterGap={letterGap}
+              />
+            ) : null}
+          </span>
         </span>
       ))}
     </h1>

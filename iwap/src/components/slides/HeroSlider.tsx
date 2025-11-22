@@ -3,8 +3,9 @@
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Autoplay, Pagination } from "swiper/modules";
+import { Autoplay, Mousewheel, Pagination } from "swiper/modules";
 import type { Swiper as SwiperType } from "swiper";
+import "swiper/css/mousewheel";
 
 type Slide = {
   href: string;
@@ -32,25 +33,25 @@ export default function HeroSlider() {
   const swiperRef = useRef<SwiperType | null>(null);
 
   // 비활성 슬라이드 클릭 시 활성화만 처리
-useEffect(() => {
-  const onClick = (e: Event) => {
-    const target = e.target as HTMLElement;
-    const slideEl = target.closest(".swiper-slide") as HTMLElement | null;
-    if (!slideEl || !swiperRef.current) return;
+  useEffect(() => {
+    const onClick = (e: Event) => {
+      const target = e.target as HTMLElement;
+      const slideEl = target.closest(".swiper-slide") as HTMLElement | null;
+      if (!slideEl || !swiperRef.current) return;
 
-    const isActive = slideEl.classList.contains("swiper-slide-active");
-    if (isActive) return;
+      const isActive = slideEl.classList.contains("swiper-slide-active");
+      if (isActive) return;
 
-    e.preventDefault();
-    const indexAttr = slideEl.getAttribute("data-swiper-slide-index");
-    const idx = Number(indexAttr ?? 0);
-    swiperRef.current.slideToLoop(idx);
-  };
+      e.preventDefault();
+      const indexAttr = slideEl.getAttribute("data-swiper-slide-index");
+      const idx = Number(indexAttr ?? 0);
+      swiperRef.current.slideToLoop(idx);
+    };
 
-  const root = document.querySelector(".hero-slider-root");
-  root?.addEventListener("click", onClick as EventListener);
-  return () => root?.removeEventListener("click", onClick as EventListener);
-}, []);
+    const root = document.querySelector(".hero-slider-root");
+    root?.addEventListener("click", onClick as EventListener);
+    return () => root?.removeEventListener("click", onClick as EventListener);
+  }, []);
 
 
   return (
@@ -70,8 +71,11 @@ useEffect(() => {
       <div className="relative w-full">
         <div className="hero-slider-root">
           <Swiper
-            modules={[Autoplay, Pagination]}
-            onSwiper={(s) => (swiperRef.current = s)}
+            modules={[Autoplay, Pagination, Mousewheel]}
+            onSwiper={(s) => {
+              swiperRef.current = s;
+              s.mousewheel.enable();
+            }}
             loop={true}
             loopAdditionalSlides={slides.length}
             centeredSlides
@@ -80,6 +84,7 @@ useEffect(() => {
             speed={820}
             autoplay={{ delay: 2500, disableOnInteraction: false }}
             pagination={{ clickable: true }}
+            mousewheel={{ forceToAxis: true, thresholdDelta: 1, releaseOnEdges: true, sensitivity: 0.6 }}
             spaceBetween={30}
             breakpoints={{
               0: { spaceBetween: 12 },
@@ -88,34 +93,33 @@ useEffect(() => {
             }}
             className="overflow-visible"
           >
-{slides.map((s, i) => (
-  <SwiperSlide key={`${s.link}-${i}`} className="slide-h slide-w md:slide-w lg:slide-w">
-
-    <a
-      href={s.link}
-      className="relative block h-full w-full overflow-hidden rounded-card bg-black card-overlay"
-    >
-      <div className="card-hover absolute inset-0">
-        <Image
-          src={s.src}
-          alt={s.text}
-          fill
-          className="card-img object-cover [filter:grayscale(8%)_contrast(110%)]"
-          sizes="(max-width: 1024px) 80vw, 50vw"
-          priority
-        />
-      </div>
-      <div className="absolute inset-0 flex flex-col justify-end p-[clamp(18px,3vw,32px)] text-white">
-        <h3 className="m-0 mb-1 font-playfair text-[clamp(24px,4vw,48px)] tracking-[0.1em] drop-shadow">
-          {s.text}
-        </h3>
-        <p className="m-0 text-[clamp(14px,2.1vw,18px)] leading-relaxed opacity-85">
-          {s.description}
-        </p>
-      </div>
-    </a>
-  </SwiperSlide>
-))}
+            {slides.map((s, i) => (
+              <SwiperSlide key={`${s.link}-${i}`} className="slide-h slide-w md:slide-w lg:slide-w">
+                <a
+                  href={s.link}
+                  className="relative block h-full w-full overflow-hidden rounded-card bg-black card-overlay"
+                >
+                  <div className="card-hover absolute inset-0">
+                    <Image
+                      src={s.src}
+                      alt={s.text}
+                      fill
+                      className="card-img object-cover [filter:grayscale(8%)_contrast(110%)]"
+                      sizes="(max-width: 1024px) 80vw, 50vw"
+                      priority
+                    />
+                  </div>
+                  <div className="absolute inset-0 flex flex-col justify-end p-[clamp(18px,3vw,32px)] text-white">
+                    <h3 className="m-0 mb-1 font-playfair text-[clamp(24px,4vw,48px)] tracking-[0.1em] drop-shadow">
+                      {s.text}
+                    </h3>
+                    <p className="m-0 text-[clamp(14px,2.1vw,18px)] leading-relaxed opacity-85">
+                      {s.description}
+                    </p>
+                  </div>
+                </a>
+              </SwiperSlide>
+            ))}
 
           </Swiper>
         </div>
