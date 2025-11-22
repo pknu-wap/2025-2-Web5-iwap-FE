@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import PageHeader from "@/components/ui/PageHeader";
+        import PageHeader from "@/components/ui/PageHeader";
 import ImageUploader, { ImageUploaderHandles } from "@/components/ui/ImageUploader";
 import LoadingIndicator from "@/components/ui/LoadingIndicator";
 import UndoIcon from "@/components/ui/icons/UndoIcon";
 import SubmitIcon from "@/components/ui/icons/SubmitIcon";
-import VariationEditor from "@/components/variation/VariationEditor";
+import FacialEditor from "@/components/facial/FacialEditor";
 
-export default function VariationPage() {
+export default function FacialPage() {
   const [hasMounted, setHasMounted] = useState(false);
   const [view, setView] = useState<'upload' | 'loading' | 'visualize'>('upload');
   const [error, setError] = useState<string | null>(null);
@@ -97,7 +97,7 @@ export default function VariationPage() {
         <div className="w-full grow relative">
           <ImageUploader
             ref={imageUploaderRef}
-            id="variation-uploader"
+            id="facial-uploader"
             onFileSelect={handleFileSelect}
             previewUrl={previewUrl}
             title="이미지 선택"
@@ -118,13 +118,13 @@ export default function VariationPage() {
       )}
 
       {view === "visualize" && sourceImage ? (
-        <VariationEditor sourceImage={sourceImage} onClose={handleReturnToUpload} />
+        <FacialEditor sourceImage={sourceImage} onClose={handleReturnToUpload} />
       ) : (
         <div className="w-full h-full flex translate-x-5 md:translate-x-0 items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-5/6 relative">
             <div className="w-[90%] md:w-full h-[90%] md:h-full pt-[100px]">
               <PageHeader
-                title="Variat!on"
+                title="Fac!al"
                 subtitle="얼굴의 특징을 변경"
                 goBack={true}
                 padding="p-0"

@@ -1,4 +1,4 @@
-// src/components/variation/VariationEditor.tsx
+// src/components/facial/FacialEditor.tsx
 "use client";
 
 import { useState, useEffect, useCallback, FC } from "react";
@@ -30,12 +30,12 @@ const FeatureSlider: FC<FeatureSliderProps> = ({ label, value, onChange }) => {
   );
 };
 
-interface VariationEditorProps {
+interface FacialEditorProps {
   sourceImage: File;
   onClose: () => void;
 }
 
-export default function VariationEditor({ sourceImage, onClose }: VariationEditorProps) {
+export default function FacialEditor({ sourceImage, onClose }: FacialEditorProps) {
   const [sliderValues, setSliderValues] = useState(Array(7).fill(0.0));
   const [processedImageUrl, setProcessedImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -62,7 +62,7 @@ export default function VariationEditor({ sourceImage, onClose }: VariationEdito
       });
 
       try {
-        const response = await fetch("/api/variation", {
+        const response = await fetch("/api/facial", {
           method: "POST",
           body: formData,
         });
