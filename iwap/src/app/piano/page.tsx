@@ -21,6 +21,7 @@ import PianoBackendManager, {
   getBackendUrl,
 } from "@/app/api/piano/PianoBackendManager";
 import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
+import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
 
 export default function VoiceToPiano() {
   const pageTitle = "P!ano";
@@ -49,6 +50,7 @@ export default function VoiceToPiano() {
     url: string;
     filename: string;
   } | null>(null);
+  const [showIntro, setShowIntro] = useState(true);
   const conversionContextRef = useRef<ConversionContext | null>(null);
   const [isClient, setIsClient] = useState(false);
 
@@ -388,7 +390,13 @@ export default function VoiceToPiano() {
   const hasTransport = Boolean(transport);
 
   return (
-    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]">
+    <div className="flex flex-col">
+      <ProjectIntroModal
+        projects={["piano"]}
+        open={showIntro}
+        onClose={() => setShowIntro(false)}
+      />
+      <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]">
       <FullScreenView
         title="P!ano"
         subtitle="음성을 피아노로 변환하기"
@@ -567,6 +575,7 @@ export default function VoiceToPiano() {
         ) : null}
 
       </FullScreenView>
+      </div>
     </div>
   );
 }

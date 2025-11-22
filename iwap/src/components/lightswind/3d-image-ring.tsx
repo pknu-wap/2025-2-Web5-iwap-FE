@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   motion,
   AnimatePresence,
@@ -26,6 +26,7 @@ export default function ThreeDImageRing({
   mobileBreakpoint = 768,
   mobileScaleFactor = 0.8,
   desktopScale = 1,
+  rotationBounds = null,
 }: {
   images?: any[];
   width?: number;
@@ -41,6 +42,7 @@ export default function ThreeDImageRing({
   mobileBreakpoint?: number;
   mobileScaleFactor?: number;
   desktopScale?: number;
+  rotationBounds?: { min: number; max: number } | null;
 }) {
   const router = useRouter();
   const ringRef = useRef<HTMLDivElement>(null);
@@ -55,6 +57,16 @@ export default function ThreeDImageRing({
   const isDragging = useRef(false);
   const moved = useRef(false);
   const justDragged = useRef(false);
+  const dragCooldown = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clampRotation = useCallback(
+    (value: number) => {
+      if (!rotationBounds) return value;
+      const { min, max } = rotationBounds;
+      if (min >= max) return value;
+      return Math.min(Math.max(value, min), max);
+    },
+    [rotationBounds]
+  );
 
   const lastTappedIndex = useRef<number | null>(null);
   const lastTapTime = useRef<number>(0);
@@ -70,7 +82,7 @@ export default function ThreeDImageRing({
   );
 
   const angle = parsedImages.length ? 360 / parsedImages.length : 0;
-  const FRONT_THRESHOLD = 180;
+  const FRONT_THRESHOLD = 140; // 정면 판정 각도
 
   const getFacingState = (index: number, baseRotation: number) => {
     const rotation = index * -angle;
@@ -87,11 +99,22 @@ export default function ThreeDImageRing({
 
   useEffect(() => {
     const unsub = rotationY.on("change", (v) => {
-      currentRotationY.current = v;
-      setCurrentRotation(v);
+      const clamped = clampRotation(v);
+      currentRotationY.current = clamped;
+      setCurrentRotation(clamped);
+      if (clamped !== v) {
+        rotationY.set(clamped);
+      }
     });
     return () => unsub();
-  }, [rotationY]);
+  }, [rotationY, clampRotation]);
+
+  useEffect(() => {
+    const clamped = clampRotation(initialRotation);
+    rotationY.set(clamped);
+    currentRotationY.current = clamped;
+    setCurrentRotation(clamped);
+  }, [clampRotation, initialRotation, rotationY]);
 
   useEffect(() => {
     const handleResize = () => {
@@ -105,17 +128,32 @@ export default function ThreeDImageRing({
 
   useEffect(() => setShowImages(true), []);
 
-  const rotateToIndex = (index: number) => {
+  useEffect(
+    () => () => {
+      if (dragCooldown.current) clearTimeout(dragCooldown.current);
+    },
+    []
+  );
+
+  const rotateToIndex = (index: number, onComplete?: () => void) => {
     const target = -index * angle;
     const current = ((currentRotationY.current % 360) + 360) % 360;
     let delta = target - current;
     if (delta > 180) delta -= 360;
     if (delta < -180) delta += 360;
 
-    animate(rotationY, currentRotationY.current + delta, {
+    const targetRotation = clampRotation(currentRotationY.current + delta);
+    animate(rotationY, targetRotation, {
       duration: 0.7,
       ease: easeOut,
-      onUpdate: (v) => (currentRotationY.current = v),
+      onUpdate: (v) => {
+        const clamped = clampRotation(v);
+        currentRotationY.current = clamped;
+        if (clamped !== v) rotationY.set(clamped);
+      },
+      onComplete: () => {
+        if (onComplete) onComplete();
+      },
     });
   };
 
@@ -124,31 +162,31 @@ export default function ThreeDImageRing({
     const item = parsedImages[index];
     const now = Date.now();
     const isMobile = window.innerWidth <= mobileBreakpoint;
+    const navigateToLink = () => {
+      if (item?.link) router.push(item.link);
+    };
 
     const { isFacing } = getFacingState(index, currentRotationY.current);
 
     if (!isFacing) {
-      rotateToIndex(index);
+      rotateToIndex(index, !isMobile ? navigateToLink : undefined);
       setHoverIndex(index);
       return;
     }
 
     if (isMobile) {
       if (lastTappedIndex.current === index && now - lastTapTime.current < 1000) {
-        if (item?.link) router.push(item.link);
+        navigateToLink();
         lastTappedIndex.current = null;
       } else {
         setHoverIndex(index);
         lastTappedIndex.current = index;
         lastTapTime.current = now;
       }
-    } else {
-      if (hoverIndex === index) {
-        if (item?.link) router.push(item.link);
-      } else {
-        setHoverIndex(index);
-      }
+      return;
     }
+
+    navigateToLink();
   };
 
   const handleDragStart = (e: React.MouseEvent | React.TouchEvent) => {
@@ -168,11 +206,11 @@ export default function ThreeDImageRing({
   const handleDrag = (e: MouseEvent | TouchEvent) => {
     const p = "touches" in e ? e.touches[0] : (e as MouseEvent);
     const dx = p.clientX - startX.current;
-    if ("touches" in e) e.preventDefault();
+    if ("touches" in e && e.cancelable) e.preventDefault();
     if (!isDragging.current && Math.abs(dx) > 6) isDragging.current = true;
     if (isDragging.current) {
       moved.current = true;
-      rotationY.set(currentRotationY.current - dx * 0.5);
+      rotationY.set(clampRotation(currentRotationY.current - dx * 0.5));
       startX.current = p.clientX;
     }
   };
@@ -182,7 +220,16 @@ export default function ThreeDImageRing({
     document.removeEventListener("mouseup", handleDragEnd);
     document.removeEventListener("touchmove", handleDrag as any);
     document.removeEventListener("touchend", handleDragEnd);
-    if (moved.current) justDragged.current = true;
+    if (moved.current) {
+      justDragged.current = true;
+      if (dragCooldown.current) clearTimeout(dragCooldown.current);
+      dragCooldown.current = setTimeout(() => {
+        justDragged.current = false;
+        dragCooldown.current = null;
+      }, 180);
+    } else {
+      justDragged.current = false;
+    }
     isDragging.current = false;
     moved.current = false;
   };
@@ -244,9 +291,9 @@ export default function ThreeDImageRing({
                       backgroundSize: "cover",
                       backgroundPosition: "center",
                       backfaceVisibility: "hidden",
-                      pointerEvents: isFacing ? "auto" : "none",
+                      pointerEvents: distance <= FRONT_THRESHOLD ? "auto" : "none",
                     }}
-                    aria-hidden={!isFacing}
+                    aria-hidden={distance > FRONT_THRESHOLD}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}

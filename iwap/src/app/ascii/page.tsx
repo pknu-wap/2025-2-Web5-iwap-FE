@@ -1,13 +1,14 @@
 // src/app/ascii/page.tsx
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
-import ImageUploader from '@/components/ui/ImageUploader';
+import ImageUploader, { ImageUploaderHandles } from '@/components/ui/ImageUploader';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import AsciiArtDisplay from '@/components/ascii/AsciiArtDisplay';
 import TrashIcon from '@/components/ui/icons/TrashIcon';
 import SubmitIcon from '@/components/ui/icons/SubmitIcon';
+import { ProjectIntroModal } from '@/components/sections/ProjectIntroSections';
 
 import {
   processImageToAsciiWithWorker,
@@ -30,6 +31,9 @@ export default function AsciiPage() {
   const [asciiResult, setAsciiResult] = useState<AsciiResult | null>(null);
   
   const [isReProcessing, setIsReProcessing] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  const imageUploaderRef = useRef<ImageUploaderHandles>(null);
 
   // --- Callbacks & Event Handlers ---
   // [수정] useEffect보다 먼저 선언하여 '선언 전 사용' 오류를 해결합니다.
@@ -131,18 +135,30 @@ export default function AsciiPage() {
             {/* [수정] Tailwind CSS 클래스를 표준에 맞게 수정합니다. */}
             <div className="w-full h-6 md:h-9 bg-stone-300 flex justify-between items-center -mb-px shrink-0">
               <div className="flex gap-3 pl-3">
-                <button 
-                  onClick={() => handleFileSelect(null)} 
-                  disabled={!previewUrl} 
+                <button
+                  onClick={() => {
+                    if (isCameraOpen) {
+                      imageUploaderRef.current?.closeCamera();
+                    } else {
+                      handleFileSelect(null);
+                    }
+                  }}
+                  disabled={!previewUrl && !isCameraOpen}
                   className="disabled:opacity-40 scale-[0.7] md:scale-100"
                 >
                   <TrashIcon />
                 </button>
               </div>
               <div className="flex gap-3 pr-3">
-                <button 
-                  onClick={handleConversionStart} 
-                  disabled={!previewUrl} 
+                <button
+                  onClick={() => {
+                    if (isCameraOpen) {
+                      imageUploaderRef.current?.handleCapture();
+                    } else {
+                      handleConversionStart();
+                    }
+                  }}
+                  disabled={!previewUrl && !isCameraOpen}
                   className="scale-[0.7] md:scale-100"
                 >
                   <SubmitIcon />
@@ -152,9 +168,11 @@ export default function AsciiPage() {
             {/* [수정] Tailwind CSS 클래스를 표준에 맞게 수정합니다. */}
             <div className="w-full grow relative">
               <ImageUploader
+                ref={imageUploaderRef}
                 id="ascii-image-upload"
                 onFileSelect={handleFileSelect}
                 previewUrl={previewUrl}
+                onCameraStateChange={setIsCameraOpen}
               />
             </div>
           </div>
@@ -166,10 +184,16 @@ export default function AsciiPage() {
   };
 
   return (
-    <div 
-      className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" 
-      style={pageBackgroundStyle}
-    >
+    <div className="flex flex-col">
+      <ProjectIntroModal
+        projects={["ascii"]}
+        open={showIntro}
+        onClose={() => setShowIntro(false)}
+      />
+      <div 
+        className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" 
+        style={pageBackgroundStyle}
+      >
       {error && (
         <p className="absolute top-4 left-1/2 -translate-x-1/2 text-red-500 bg-black/50 p-2 rounded z-30 text-center">
           {error}
@@ -211,6 +235,7 @@ export default function AsciiPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }
