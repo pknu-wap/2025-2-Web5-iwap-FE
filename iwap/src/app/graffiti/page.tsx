@@ -241,6 +241,7 @@ export default function HandLandmarkerPage() {
 
   /* ---- Graffiti 인트로 상태 ---- */
   const [showIntro, setShowIntro] = useState(true);
+  const [showCameraPrompt, setShowCameraPrompt] = useState(false);
   const [introFinished, setIntroFinished] = useState(false);
   const [fingerAnimationDone, setFingerAnimationDone] = useState(false);
   const [overlayExpanding, setOverlayExpanding] = useState(false);
@@ -248,12 +249,17 @@ export default function HandLandmarkerPage() {
   const fingerAnimationDoneRef = useRef(fingerAnimationDone);
 
   const handleIntroReady = useCallback(() => {
-    setShowIntro(false);
+    setShowCameraPrompt(false);
     setIntroFinished(true);
     if (!fingerAnimationDoneRef.current) {
       fingerAnimationDoneRef.current = false;
       setFingerAnimationDone(false);
     }
+  }, []);
+
+  const handleModalClose = useCallback(() => {
+    setShowIntro(false);
+    setShowCameraPrompt(true);
   }, []);
 
   useEffect(() => {
@@ -739,37 +745,66 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
         return;
       }
 
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: mode,
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-        });
-        const video = videoRef.current;
-        if (!video) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
+      const constraintsPrimary: MediaStreamConstraints = {
+        video: {
+          facingMode: mode === "environment" ? { ideal: "environment" } : { ideal: "user" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      };
+      const constraintsFallback: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: "user" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      };
 
-        video.srcObject = stream;
-        video.onloadeddata = () => {
-          video
-            .play()
-            .catch(() => {
-              // autoplay block error ignored
-            });
-          setFacingMode(mode);
-          isWebcamRunningRef.current = true;
-          setIsWebcamRunning(true);
-          void predictWebcam();
-        };
-      } catch (e) {
-        console.error("Webcam access failed:", e);
+      const attemptStream = async (constraints: MediaStreamConstraints) => {
+        try {
+          return await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (err) {
+          return null;
+        }
+      };
+
+      // stop any existing stream before requesting a new one
+      stopWebcam();
+
+      let stream = await attemptStream(constraintsPrimary);
+      if (!stream && mode === "environment") {
+        // fallback to front if back is not available
+        stream = await attemptStream(constraintsFallback);
+        mode = "user";
       }
+
+      if (!stream) {
+        console.error("Webcam access failed: no stream acquired");
+        return;
+      }
+
+      const video = videoRef.current;
+      if (!video) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
+
+      video.srcObject = stream;
+      video.onloadeddata = () => {
+        video
+          .play()
+          .catch(() => {
+            // autoplay block error ignored
+          });
+        setFacingMode(mode);
+        isWebcamRunningRef.current = true;
+        setIsWebcamRunning(true);
+        void predictWebcam();
+      };
     },
-    [facingMode, isReady, predictWebcam]
+    [facingMode, isReady, predictWebcam, stopWebcam]
   );
 
   const handleToggleWebcam = useCallback(async () => {
@@ -795,7 +830,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
   /* ---------------- JSX (예전 Graffiti 디자인 + 새 기능) ---------------- */
   return (
     <div className="relative w-full h-dvh text-slate-50" style={pageBackgroundStyle}>
-      <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleIntroReady} />
+      <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleModalClose} />
       {/* 상단 고정 헤더 영역 (인트로 제거, 헤더만 유지) */}
       <div className="pointer-events-none inset-0 flex items-center justify-center p-6 animate-fadeIn">
         <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
@@ -860,7 +895,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="relative w-full max-w-[1000px] origin-center md:scale-100 scale-[0.9] flex flex-col items-center">
           {/* Intro 1: camera access prompt */}
-          {showIntro && (
+          {showCameraPrompt && (
             <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
               <button
                 type="button"

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 
 type GraffitiToolbarMobileProps = {
   colorPalette: string[];
@@ -51,6 +51,7 @@ export default function GraffitiToolbarMobile({
     );
   const confirmDisabled = !pendingCustomColor || isPendingDuplicate;
   const showDeleteAction = !pendingCustomColor && isBrushColorCustom;
+  const [fallbackHex, setFallbackHex] = useState<string>("#ffffff");
 
   const sliderMin = 2;
   const sliderMax = 40;
@@ -58,6 +59,16 @@ export default function GraffitiToolbarMobile({
   const calculatedPercentage =
     sliderRange === 0 ? 0 : ((brushSize - sliderMin) / sliderRange) * 100;
   const sliderPercentage = Math.min(Math.max(calculatedPercentage, 0), 100);
+  const isValidHex = (value: string) => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
+  const openColorPicker = useCallback(() => {
+    const picker = colorPickerRef.current;
+    if (!picker) return;
+    if (typeof (picker as any).showPicker === "function") {
+      (picker as any).showPicker();
+    } else {
+      picker.click();
+    }
+  }, [colorPickerRef]);
 
   useEffect(() => {
     if (!showPalette) return;
@@ -70,6 +81,12 @@ export default function GraffitiToolbarMobile({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showPalette]);
+
+  useEffect(() => {
+    if (pendingCustomColor && isValidHex(pendingCustomColor)) {
+      setFallbackHex(pendingCustomColor);
+    }
+  }, [pendingCustomColor]);
 
   return (
     <div className="relative" ref={wrapperRef}>
@@ -159,7 +176,7 @@ export default function GraffitiToolbarMobile({
       {showPalette && (
         <div
           className="
-            absolute left-1/2 top-[calc(100%+12px)] -translate-x-1/2 translate-y-[110px]
+            absolute left-1/2 top-[calc(100%+12px)] -translate-x-1/2
             w-[330px]
             rounded-2xl border border-white rounded-br-none
             bg-[rgba(255,255,255,0.40)]
@@ -224,7 +241,7 @@ export default function GraffitiToolbarMobile({
             <input
               type="color"
               ref={colorPickerRef}
-              className="hidden"
+              className="absolute left-1/2 top-1/2 h-[1px] w-[1px] -translate-x-1/2 -translate-y-1/2 opacity-0"
               onChange={(event) => onCustomColorPick(event.target.value)}
             />
             <button
@@ -239,11 +256,33 @@ export default function GraffitiToolbarMobile({
                 backgroundPosition: "center",
                 backgroundRepeat: "no-repeat",
               }}
-              onClick={() =>
-                colorPickerRef.current?.showPicker?.() ??
-                colorPickerRef.current?.click()
-              }
+              onClick={openColorPicker}
             />
+            <div className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded-full border border-white/20">
+              <span className="text-[12px] text-white/80">HEX</span>
+              <input
+                type="text"
+                value={fallbackHex}
+                onChange={(e) => setFallbackHex(e.target.value)}
+                className="w-[78px] rounded px-2 py-1 text-[12px] text-black"
+                placeholder="#FFFFFF"
+                inputMode="text"
+                autoComplete="off"
+              />
+              <button
+                type="button"
+                className="h-[30px] px-2 rounded-full border border-white/40 text-[12px] text-white disabled:opacity-40"
+                onClick={() => {
+                  const trimmed = fallbackHex.trim();
+                  if (!isValidHex(trimmed)) return;
+                  onCustomColorPick(trimmed);
+                  onConfirmCustomColor();
+                }}
+                disabled={!isValidHex(fallbackHex)}
+              >
+                적용
+              </button>
+            </div>
             <button
               type="button"
               onClick={
