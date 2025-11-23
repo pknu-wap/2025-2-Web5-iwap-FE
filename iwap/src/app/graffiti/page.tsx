@@ -611,13 +611,13 @@ export default function HandLandmarkerPage() {
         : 360
       : 720;
     container.style.maxWidth = `${displayMaxWidth}px`;
-    // ???? ?? ?? ??, ????? 360px ??
-    container.style.maxHeight = isMobile ? "" : "360px";
+    // 높이 클램프 제거해 비율 그대로 유지
+    container.style.maxHeight = "";
     container.style.aspectRatio = `${videoWidth} / ${videoHeight}`;
 
+    // 비디오/캔버스 스타일을 컨테이너에 맞춰 100%로 유지
     video.style.width = "100%";
     video.style.height = "100%";
-
     overlayCanvas.style.width = "100%";
     overlayCanvas.style.height = "100%";
     drawCanvas.style.width = "100%";
@@ -773,7 +773,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
 
       const constraintsPrimary: MediaStreamConstraints = {
         video: {
-          facingMode: mode === "environment" ? { ideal: "environment" } : { ideal: "user" },
+          facingMode: mode === "environment" ? { exact: "environment" } : { exact: "user" },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
@@ -781,7 +781,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
       };
       const constraintsFallback: MediaStreamConstraints = {
         video: {
-          facingMode: { ideal: "user" },
+          facingMode: { exact: "user" },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
