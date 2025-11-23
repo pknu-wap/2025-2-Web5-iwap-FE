@@ -176,7 +176,7 @@ export default function GraffitiToolbarMobile({
       {showPalette && (
         <div
           className="
-            absolute left-1/2 top-[calc(100%+12px)] -translate-x-1/2
+            absolute left-1/2 top-[calc(100%+12px)] -translate-x-1/2 -translate-y-[230px]
             w-[330px]
             rounded-2xl border border-white rounded-br-none
             bg-[rgba(255,255,255,0.40)]

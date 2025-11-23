@@ -246,6 +246,7 @@ export default function HandLandmarkerPage() {
   const [fingerAnimationDone, setFingerAnimationDone] = useState(false);
   const [overlayExpanding, setOverlayExpanding] = useState(false);
   const [overlayExpanded, setOverlayExpanded] = useState(false);
+  const [isMobileLandscape, setIsMobileLandscape] = useState(false);
   const fingerAnimationDoneRef = useRef(fingerAnimationDone);
 
   const handleIntroReady = useCallback(() => {
@@ -294,6 +295,22 @@ export default function HandLandmarkerPage() {
     if (!introFinished || fingerAnimationDone) return;
     setFingerAnimationDone(true);
   }, [introFinished, fingerAnimationDone]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateOrientation = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      setIsMobileLandscape(w > h && w < 1024);
+    };
+    updateOrientation();
+    window.addEventListener("resize", updateOrientation);
+    window.addEventListener("orientationchange", updateOrientation);
+    return () => {
+      window.removeEventListener("resize", updateOrientation);
+      window.removeEventListener("orientationchange", updateOrientation);
+    };
+  }, []);
 
   const videoReady = !showIntro && overlayExpanded;
 
@@ -588,10 +605,14 @@ export default function HandLandmarkerPage() {
     container.style.width = "100%";
     // 강제 표시 폭 제한: 모바일/데스크탑 별로 최대치를 고정해 비디오 해상도(1080 등)와 무관하게 작게 유지
     const isMobile = window.innerWidth < 768;
-    const displayMaxWidth = isMobile ? 360 : 720;
+    const displayMaxWidth = isMobile
+      ? isMobileLandscape
+        ? 480
+        : 360
+      : 720;
     container.style.maxWidth = `${displayMaxWidth}px`;
-    // 높이는 최대 360px로 제한
-    container.style.maxHeight = "360px";
+    // ???? ?? ?? ??, ????? 360px ??
+    container.style.maxHeight = isMobile ? "" : "360px";
     container.style.aspectRatio = `${videoWidth} / ${videoHeight}`;
 
     video.style.width = "100%";
@@ -841,14 +862,16 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
         <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
             <div className="w-full h-full pt-[72px] md:pt-[100px] translate-y-0 relative">
-              <div className="z-50 absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0">
-                <PageHeader
-                  title="Graff!ti"
-                  subtitle="움직임으로만 드로잉"
-                  goBack={true}
-                  padding="p-0"
-                />
-              </div>
+              {!showIntro && !isMobileLandscape && (
+                <div className="z-50 absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0">
+                  <PageHeader
+                    title="Graff!ti"
+                    subtitle="움직임으로만 드로잉"
+                    goBack={true}
+                    padding="p-0"
+                  />
+                </div>
+              )}
 
               {!isReady && (
                 <p className="mt-4 text-xs text-amber-200">
@@ -983,7 +1006,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
             ref={containerRef}
             className={`
               relative w-full mx-auto md:translate-y-0 
-              max-w-[350px]
+              max-w-[400px]
               md:max-w-[1080px]
               ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
               transition-opacity duration-500
