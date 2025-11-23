@@ -56,9 +56,10 @@ function isIndexFingerOnlyExtended(lms: Landmark[]): boolean {
   const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.20);
   if (!indexExtended) return false;
 
-  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.18);
-  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.18);
-  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.18);
+  // 손을 카메라에 가까이 댔을 때도 다른 손가락이 '펴졌다'로 오인되지 않도록 임계값을 높임
+  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.24);
+  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.24);
+  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.24);
 
   const othersCount =
     (middleExtended ? 1 : 0) +
@@ -773,7 +774,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
 
       const constraintsPrimary: MediaStreamConstraints = {
         video: {
-          facingMode: mode === "environment" ? { exact: "environment" } : { exact: "user" },
+          facingMode: mode === "environment" ? { ideal: "environment" } : { ideal: "user" },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
@@ -781,7 +782,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
       };
       const constraintsFallback: MediaStreamConstraints = {
         video: {
-          facingMode: { exact: "user" },
+          facingMode: { ideal: "user" },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
@@ -857,6 +858,19 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
   return (
     <div className="relative w-full h-dvh text-slate-50" style={pageBackgroundStyle}>
       <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleModalClose} />
+      {/* 모바일 가로 전용 헤더 */}
+      {!showIntro && isMobileLandscape && (
+        <div className="absolute top-3 left-0 right-0 z-50 flex justify-center px-4 md:hidden">
+          <div className="pointer-events-auto w-full max-w-xl">
+            <PageHeader
+              title="Graff!ti"
+              subtitle="움직임으로만 드로잉"
+              goBack={true}
+              padding="p-0"
+            />
+          </div>
+        </div>
+      )}
       {/* 상단 고정 헤더 영역 (인트로 제거, 헤더만 유지) */}
       <div className="relative inset-0 pointer-events-none flex items-center justify-center p-6 animate-fadeIn z-50">
         <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
@@ -1005,7 +1019,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
           <div
             ref={containerRef}
             className={`
-              relative w-full mx-auto md:translate-y-0 
+              relative z-10 w-full mx-auto md:translate-y-0 
               max-w-[400px]
               md:max-w-[1080px]
               ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
@@ -1051,7 +1065,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
 
           {/* 하단 툴바 */}
           {videoReady && (
-            <div className="pointer-events-auto mt-6 flex justify-center">
+            <div className="pointer-events-auto mt-6 flex justify-center relative">
               <div className="hidden md:flex">
                 <GraffitiToolbar
                   colorPalette={COLOR_PALETTE}
@@ -1071,7 +1085,14 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   onSave={handleSave}
                 />
               </div>
-              <div className="flex md:hidden">
+              <div
+                className="
+                  md:hidden
+                  absolute left-1/2 bottom-4 -translate-x-1/2
+                  z-50 w-full flex justify-center
+                  px-4
+                "
+              >
                 <GraffitiToolbarMobile
                   colorPalette={COLOR_PALETTE}
                   brushColor={brushColor}
