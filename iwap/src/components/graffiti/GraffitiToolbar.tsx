@@ -81,7 +81,7 @@ export default function GraffitiToolbar({
   return (
     <div
       className="
-        w-[820px] h-[90px]
+        w-[820px] h-[80px]
         flex-shrink-0
         rounded-[118px]
         border border-white

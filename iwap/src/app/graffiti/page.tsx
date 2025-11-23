@@ -305,11 +305,11 @@ export default function HandLandmarkerPage() {
   );
 
   const [brushColor, setBrushColor] = useState<string>("#FFFFFF");
-  const [brushSize, setBrushSize] = useState(6);
+  const [brushSize, setBrushSize] = useState(15);
 
   // ★ 최신 값을 루프에서 읽기 위한 ref
   const brushColorRef = useRef<string>("#FFFFFF");
-  const brushSizeRef = useRef<number>(6);
+  const brushSizeRef = useRef<number>(15);
 
   useEffect(() => {
     brushColorRef.current = brushColor;
@@ -586,7 +586,9 @@ export default function HandLandmarkerPage() {
     const videoHeight = video.videoHeight;
 
     container.style.width = "100%";
-    container.style.maxWidth = `${videoWidth}px`;
+    // 강제 표시 폭 제한: tailwind 클래스(max-w-[180px]/[500px])와 동일한 값으로 맞춰서 inline 스타일이 덮어쓰지 않도록 유지
+    const displayMaxWidth = window.innerWidth < 768 ? 180 : 500;
+    container.style.maxWidth = `${displayMaxWidth}px`;
     container.style.aspectRatio = `${videoWidth} / ${videoHeight}`;
 
     video.style.width = "100%";
@@ -832,11 +834,11 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
     <div className="relative w-full h-dvh text-slate-50" style={pageBackgroundStyle}>
       <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleModalClose} />
       {/* 상단 고정 헤더 영역 (인트로 제거, 헤더만 유지) */}
-      <div className="pointer-events-none inset-0 flex items-center justify-center p-6 animate-fadeIn">
+      <div className="pointer-events-none inset-0 flex items-center justify-center p-6 animate-fadeIn z-50">
         <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
             <div className="w-full h-full pt-[72px] md:pt-[100px] translate-y-0 relative">
-              <div className="absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0">
+              <div className="absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0 z-50">
                 <PageHeader
                   title="Graff!ti"
                   subtitle="움직임으로만 드로잉"
@@ -977,9 +979,9 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
           <div
             ref={containerRef}
             className={`
-              relative w-full mx-auto md:translate-y-0 
-              max-w-[400px]
-              md:max-w-[1040px]
+              relative z-0 w-full mx-auto md:translate-y-0 
+              max-w-[180px]
+              md:max-w-[500px]
               ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
               transition-opacity duration-500
             `}
