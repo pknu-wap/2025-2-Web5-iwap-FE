@@ -6,6 +6,7 @@ import ImageGridLayers from '@/components/inside/ImageGridLayers';
 import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import FullScreenView from '@/components/ui/FullScreenView';
 import PageHeader from '@/components/ui/PageHeader';
+import { ProjectIntroModal } from '@/components/sections/ProjectIntroSections';
 
 // 백엔드 데이터 구조에 대한 타입 정의
 interface LayersData {
@@ -27,6 +28,7 @@ export default function InsidePage() {
   const [layersData, setLayersData] = useState<LayersData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [taskId, setTaskId] = useState<string | null>(null);
+  const [showIntro, setShowIntro] = useState(true);
 
   /**
    * 업로드가 시작될 때 호출되어 로딩 UI를 표시합니다.
@@ -167,10 +169,12 @@ export default function InsidePage() {
   };
 
   return (
-    <div 
-      className="relative w-full h-dvh md:h-[calc(100dvh-60px)]"
-      style={pageBackgroundStyle}
-    >
+    <div className="flex flex-col">
+      <ProjectIntroModal projects={["inside"]} open={showIntro} onClose={() => setShowIntro(false)}/>
+      <div 
+        className="relative w-full h-dvh md:h-[calc(100dvh-60px)]"
+        style={pageBackgroundStyle}
+      >
       {error && (
         <p className="absolute top-4 left-1/2 -translate-x-1/2 text-red-500 bg-black/50 p-2 rounded z-30 text-center">
           {error}
@@ -213,6 +217,7 @@ export default function InsidePage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

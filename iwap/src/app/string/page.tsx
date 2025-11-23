@@ -7,6 +7,8 @@ import LoadingIndicator from "@/components/ui/LoadingIndicator";
 import StringArtDisplay from "@/components/string/StringArtDisplay";
 import UndoIcon from "@/components/ui/icons/UndoIcon";
 import SubmitIcon from "@/components/ui/icons/SubmitIcon";
+import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
+
 import { processImageToStringArt } from "@/components/string/StringArtProcessor";
 
 export default function StringArtPage() {
@@ -16,6 +18,7 @@ export default function StringArtPage() {
 
   const [sourceImage, setSourceImage] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showIntro, setShowIntro] = useState(true);
   const [coordinates, setCoordinates] = useState<number[] | null>(null);
   const [colorImageUrl, setColorImageUrl] = useState<string | null>(null);
   const [nailCount, setNailCount] = useState<number>(0);
@@ -125,7 +128,13 @@ export default function StringArtPage() {
   };
 
   return (
-    <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" style={pageBackgroundStyle}>
+    <div className="flex flex-col">
+      <ProjectIntroModal
+        projects={["string"]}
+        open={showIntro}
+        onClose={() => setShowIntro(false)}
+      />
+      <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" style={pageBackgroundStyle}>
       {error && (
         <p className="absolute top-4 left-1/2 -translate-x-1/2 text-red-500 bg-black/50 p-2 rounded z-30 text-center">
           {error}
@@ -159,6 +168,7 @@ export default function StringArtPage() {
           </div>
         </div>
       )}
+      </div>
     </div>
   );
 }

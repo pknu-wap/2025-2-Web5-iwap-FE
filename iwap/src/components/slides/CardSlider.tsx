@@ -14,11 +14,12 @@ type CardSliderProps = {
   showHeader: boolean;
 };
 
-const BASE_CARD_WIDTH = 320;
-const BASE_CARD_HEIGHT = 500;
-const FOCUSED_WIDTH_RATIO = 2;
-const GAP = 40;
-const VISIBLE_STACK_OFFSET = 50;
+// Reduce card size and spacing a bit
+const BASE_CARD_WIDTH = 260;
+const BASE_CARD_HEIGHT = 420;
+const FOCUSED_WIDTH_RATIO = 1.7;
+const GAP = 24;
+const VISIBLE_STACK_OFFSET = 35;
 const HEADER_HEIGHT = 96;
 const DRAG_THRESHOLD = 5;
 
@@ -30,8 +31,10 @@ const RIGHT_PADDING_MOBILE = -320;
 
 export const CardSlider = ({ images, showHeader }: CardSliderProps) => {
   const router = useRouter();
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  // Expanded by default so users see the full slider without clicking
+  const [isExpanded, setIsExpanded] = useState(true);
+  // Focus first card by default for a nicer initial state
+  const [activeIndex, setActiveIndex] = useState<number | null>(0);
   const [isInitialized, setIsInitialized] = useState(false);
 
   const [cardDimensions, setCardDimensions] = useState({
