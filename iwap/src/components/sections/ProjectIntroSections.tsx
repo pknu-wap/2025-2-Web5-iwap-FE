@@ -267,7 +267,7 @@ const SECTION_DATA: Record<
     imageSrc: "/images/instrument_background.jpg",
     imageAlt: "graffiti background",
     imageOverlayLeft: "Graff!ti",
-    overlayLeftClassName: "-translate-y-[40px] -translate-x-[40px]",
+    overlayLeftClassName: "-translate-y-[40px] -translate-x-[40px] md:-translate-y-[100px] md:-translate-x-[75px]",
     imageOverlayRight: "06",
     side: "left",
     badgeText: "Touch",

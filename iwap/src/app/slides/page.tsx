@@ -9,21 +9,67 @@ import type { Swiper as SwiperClass } from "swiper";
 import "swiper/css";
 import "swiper/css/mousewheel";
 
-const images = [
-  { src: "/images/home/slides/slide1.jpg", link: "/inside", text: "!nside", description: "인공지능이 숫자를 인식하는 과정" },
-  { src: "/images/home/slides/slide2.jpg", link: "/this-is-for-u", text: "Th!s !s for u", description: "엽서로 마음 표현" },
-  { src: "/images/home/slides/slide3.jpg", link: "/piano", text: "P!ano", description: "음성을 피아노로 변환" },
-  { src: "/images/home/slides/slide5.jpg", link: "/ascii", text: "ASCi!", description: "이미지를 텍스트로 표현" },
-  { src: "/images/home/slides/slide4.jpg", link: "/string", text: "Str!ng", description: "선들로 이미지를 표현" },
-  { src: "/images/home/slides/slide6.jpg", link: "/graffiti", text: "Graff!ti", description: "움직임으로만 드로잉" },
-  // { src: "/images/home/slides/slide6.jpg", link: "/graffiti", text: "Graff!ti", description: "움직임으로만 드로잉" },
-  { src: "/images/home/slides/slide1.jpg", link: "/inside", text: "!nside", description: "인공지능이 숫자를 인식하는 과정" },
-  { src: "/images/home/slides/slide2.jpg", link: "/this-is-for-u", text: "Th!s !s for u", description: "엽서로 마음 표현" },
-  { src: "/images/home/slides/slide3.jpg", link: "/piano", text: "P!ano", description: "음성을 피아노로 변환" },
-  { src: "/images/home/slides/slide5.jpg", link: "/ascii", text: "ASCi!", description: "이미지를 텍스트로 표현" },
-  { src: "/images/home/slides/slide4.jpg", link: "/string", text: "Str!ng", description: "선들로 이미지를 표현" },
-  { src: "/images/home/slides/slide6.jpg", link: "/graffiti", text: "Graff!ti", description: "움직임으로만 드로잉" },
+type SlideContent = {
+  src: string;
+  link: string;
+  title: string;
+  description: string;
+  leftTexts: [string, string];
+  rightTexts: [string, string];
+};
+
+const baseSlides: SlideContent[] = [
+  {
+    src: "/images/home/slides/slide1.jpg",
+    link: "/inside",
+    title: "!nside",
+    description: "인공지능이 숫자를 인식하는 과정",
+    leftTexts: ["!nside", "인공지능이 숫자를 인식하는 과정"],
+    rightTexts: ["Project", "01"],
+  },
+  {
+    src: "/images/home/slides/slide2.jpg",
+    link: "/this-is-for-u",
+    title: "Th!s !s for u",
+    description: "엽서로 마음 표현",
+    leftTexts: ["Th!s !s for u", "엽서로 마음 표현"],
+    rightTexts: ["Project", "02"],
+  },
+  {
+    src: "/images/home/slides/slide3.jpg",
+    link: "/piano",
+    title: "P!ano",
+    description: "음성을 피아노로 변환",
+    leftTexts: ["P!ano", "음성을 피아노로 변환"],
+    rightTexts: ["Project", "03"],
+  },
+  {
+    src: "/images/home/slides/slide5.jpg",
+    link: "/ascii",
+    title: "ASCi!",
+    description: "이미지를 텍스트로 표현",
+    leftTexts: ["ASCi!", "이미지를 텍스트로 표현"],
+    rightTexts: ["Project", "04"],
+  },
+  {
+    src: "/images/home/slides/slide4.jpg",
+    link: "/string",
+    title: "Str!ng",
+    description: "선들로 이미지를 표현",
+    leftTexts: ["Str!ng", "선들로 이미지를 표현"],
+    rightTexts: ["Project", "05"],
+  },
+  {
+    src: "/images/home/slides/slide6.jpg",
+    link: "/graffiti",
+    title: "Graff!ti",
+    description: "움직임으로만 드로잉",
+    leftTexts: ["Graff!ti", "움직임으로만 드로잉"],
+    rightTexts: ["Project", "06"],
+  },
 ];
+
+const images = [...baseSlides, ...baseSlides];
 
 export default function SlidesPage() {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
@@ -36,14 +82,14 @@ export default function SlidesPage() {
   };
 
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
+    const mq = window.matchMedia("(max-width: 1440px)");
     const update = () => setIsMobile(mq.matches);
     update();
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  // 마우스 휠 수동 처리(페이지 어디서든 슬라이드 이동)
+
   useEffect(() => {
     const el = sliderWrapperRef.current ?? document.body;
 
@@ -97,7 +143,7 @@ export default function SlidesPage() {
               mousewheel={{ forceToAxis: true, thresholdDelta: 1, releaseOnEdges: true, sensitivity: 0.6 }}
               onSwiper={(instance) => {
                 swiperRef.current = instance;
-                // 마우스 휠 강제로 활성화 (간혹 초기화 시 비활성화되는 경우 보완)
+
                 instance.mousewheel.enable();
               }}
               onTouchMove={() => setIsDragging(true)}
@@ -106,8 +152,10 @@ export default function SlidesPage() {
               onSlideChange={() => setIsDragging(false)}
             >
               {images.map((item, idx) => (
+                // 클릭으로 활성화된 상태에서는 타이틀만 보여준다.
                 <SwiperSlide
                   key={idx}
+                  className="flex justify-center items-center"
                   onClick={() => {
                     if (isDragging) {
                       setIsDragging(false);
@@ -123,26 +171,55 @@ export default function SlidesPage() {
                     transition: "width 0.4s ease-in-out",
                     cursor: "pointer",
                   }}
-                  className="flex justify-center items-center"
                 >
                   <div className="relative block w-full h-full rounded-lg overflow-hidden group">
                     <Image
                       src={item.src}
-                      alt={item.text}
+                      alt={item.title}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div
                       className={
                         isMobile
-                          ? "absolute inset-0 transition-opacity duration-500 flex items-center justify-center p-4 opacity-100 " +
-                            (activeIndex === idx ? "bg-black/30" : "bg-transparent")
-                          : "absolute inset-0 bg-black/30 transition-opacity duration-500 flex items-center justify-center p-4 opacity-0 md:opacity-0 md:group-hover:opacity-100"
+                          ? `absolute inset-0 text-white bg-gradient-to-br from-black/30 via-black/25 to-black/20 opacity-100 ${
+                              activeIndex === idx
+                                ? "flex items-center justify-center px-6"
+                                : "flex items-center justify-between gap-4 sm:gap-6 md:gap-8 px-5 sm:px-6 md:px-8 transform translate-y-4 md:translate-y-8"
+                            }`
+                          : `absolute inset-0 text-white bg-gradient-to-br from-black/30 via-black/25 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
+                              activeIndex === idx
+                                ? "flex items-center justify-center px-6"
+                                : "flex items-center justify-between gap-4 sm:gap-6 md:gap-8 px-5 sm:px-6 md:px-8 transform translate-y-[15px] md:translate-y-[95px]"
+                            }`
                       }
                     >
-                      <p className="text-[#FFFFFF] text-[clamp(28px,7vw,64px)] font-semilight text-center drop-shadow-sm md:drop-shadow-none">
-                        {item.text}
-                      </p>
+                      {activeIndex === idx ? (
+                        <div className="w-full flex items-center justify-center text-center">
+                          <span className="text-[clamp(28px,7vw,64px)] font-semibold leading-tight">
+                            {item.title}
+                          </span>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex flex-col gap-[5px] max-w-[60%] text-left ">
+                            <span className="text-[24px] font-medium">
+                              {item.leftTexts[0]}
+                            </span>
+                            <span className="text-[14px] font-normal text-white">
+                              {item.leftTexts[1]}
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-[5px] items-end text-right max-w-[40%]">
+                            <span className="text-[12px] font-light">
+                              {item.rightTexts[0]}
+                            </span>
+                            <span className="text-white font-light text-[36px]">
+                              {item.rightTexts[1]}
+                            </span>
+                          </div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </SwiperSlide>
