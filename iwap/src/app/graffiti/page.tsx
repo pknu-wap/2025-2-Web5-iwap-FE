@@ -586,9 +586,12 @@ export default function HandLandmarkerPage() {
     const videoHeight = video.videoHeight;
 
     container.style.width = "100%";
-    // 강제 표시 폭 제한: tailwind 클래스(max-w-[180px]/[500px])와 동일한 값으로 맞춰서 inline 스타일이 덮어쓰지 않도록 유지
-    const displayMaxWidth = window.innerWidth < 768 ? 180 : 500;
+    // 강제 표시 폭 제한: 모바일/데스크탑 별로 최대치를 고정해 비디오 해상도(1080 등)와 무관하게 작게 유지
+    const isMobile = window.innerWidth < 768;
+    const displayMaxWidth = isMobile ? 360 : 720;
     container.style.maxWidth = `${displayMaxWidth}px`;
+    // 높이는 최대 360px로 제한
+    container.style.maxHeight = "360px";
     container.style.aspectRatio = `${videoWidth} / ${videoHeight}`;
 
     video.style.width = "100%";
@@ -834,11 +837,11 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
     <div className="relative w-full h-dvh text-slate-50" style={pageBackgroundStyle}>
       <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleModalClose} />
       {/* 상단 고정 헤더 영역 (인트로 제거, 헤더만 유지) */}
-      <div className="pointer-events-none inset-0 flex items-center justify-center p-6 animate-fadeIn z-50">
+      <div className="relative inset-0 pointer-events-none flex items-center justify-center p-6 animate-fadeIn z-50">
         <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
             <div className="w-full h-full pt-[72px] md:pt-[100px] translate-y-0 relative">
-              <div className="absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0 z-50">
+              <div className="z-50 absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0">
                 <PageHeader
                   title="Graff!ti"
                   subtitle="움직임으로만 드로잉"
@@ -979,9 +982,9 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
           <div
             ref={containerRef}
             className={`
-              relative z-0 w-full mx-auto md:translate-y-0 
-              max-w-[180px]
-              md:max-w-[500px]
+              relative w-full mx-auto md:translate-y-0 
+              max-w-[350px]
+              md:max-w-[1080px]
               ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
               transition-opacity duration-500
             `}
