@@ -81,6 +81,7 @@ export default function GraffitiToolbar({
   return (
     <div
       className="
+        relative z-[120]
         w-[820px] h-[80px]
         flex-shrink-0
         rounded-[118px]
@@ -183,11 +184,11 @@ export default function GraffitiToolbar({
                 min-h-[100px]
                 rounded-2xl rounded-bl-none border border-white
                 bg-[rgba(255,255,255,0.40)]
-                shadow-[0_0_50px_0_rgba(0,0,0,0.25)]
+                shadow-[0_0_50px_0_rgba(0,0,0,0.35)]
                 backdrop-blur-[4px]
                 px-4 py-3
                 space-y-3
-              z-10
+                z-[80]
               "
             >
               <div className="flex items-center gap-2">

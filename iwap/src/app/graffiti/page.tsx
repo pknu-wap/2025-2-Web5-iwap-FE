@@ -50,29 +50,25 @@ function isFingerExtendedByDistance(
 }
 
 // 검지를 주로 펴고 있는지
+// ??? ?? ????
 function isIndexFingerOnlyExtended(lms: Landmark[]): boolean {
   if (!lms || lms.length < 21) return false;
 
   const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.20);
   if (!indexExtended) return false;
 
-  // 손을 카메라에 가까이 댔을 때도 다른 손가락이 '펴졌다'로 오인되지 않도록 임계값을 높임
-  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.24);
-  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.24);
-  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.24);
+  // ?? ??? ?? ?? ???? ?? '???'? ???? ??? ?? + 1??? ??
+  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.28);
+  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.28);
+  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.28);
 
   const othersCount =
     (middleExtended ? 1 : 0) +
     (ringExtended ? 1 : 0) +
     (pinkyExtended ? 1 : 0);
 
-  if (middleExtended) return false;
-
-  // 나머지 손가락도 되도록 접혀 있는 상태에서만 그리도록 꽤 빡세게 조임
-  if (ringExtended || pinkyExtended) return false;
-
-  // 엄지는 여기서는 신경 안 씀 (펴져 있어도 드로잉 허용)
-  return true;
+  // ?? ??, ???? ?? 1???? ?? ??? ??
+  return othersCount <= 1;
 }
 
 // 엄지척
@@ -248,7 +244,15 @@ export default function HandLandmarkerPage() {
   const [overlayExpanding, setOverlayExpanding] = useState(false);
   const [overlayExpanded, setOverlayExpanded] = useState(false);
   const [isMobileLandscape, setIsMobileLandscape] = useState(false);
+  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
+  const [cameraPos, setCameraPos] = useState<{ x: number; y: number } | null>(null);
   const fingerAnimationDoneRef = useRef(fingerAnimationDone);
+  const toolbarWrapperRef = useRef<HTMLDivElement | null>(null);
+  const cameraWrapperRef = useRef<HTMLDivElement | null>(null);
+  const toolbarDragRef = useRef(false);
+  const cameraDragRef = useRef(false);
+  const toolbarDragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const cameraDragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const handleIntroReady = useCallback(() => {
     setShowCameraPrompt(false);
@@ -303,6 +307,19 @@ export default function HandLandmarkerPage() {
       const w = window.innerWidth;
       const h = window.innerHeight;
       setIsMobileLandscape(w > h && w < 1024);
+      if (w > h && w < 1024) {
+        setToolbarPos({
+          x: w - 72,
+          y: h / 2,
+        });
+        setCameraPos({
+          x: w - 56,
+          y: 56,
+        });
+      } else {
+        setToolbarPos(null);
+        setCameraPos(null);
+      }
     };
     updateOrientation();
     window.addEventListener("resize", updateOrientation);
@@ -312,6 +329,68 @@ export default function HandLandmarkerPage() {
       window.removeEventListener("orientationchange", updateOrientation);
     };
   }, []);
+
+  const handleToolbarPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMobileLandscape) return;
+    const target = event.target as HTMLElement | null;
+    if (target && target.closest("button")) return;
+    const rect = toolbarWrapperRef.current?.getBoundingClientRect();
+    const baseX = rect?.left ?? event.clientX;
+    const baseY = rect?.top ?? event.clientY;
+    toolbarDragOffsetRef.current = {
+      x: event.clientX - baseX,
+      y: event.clientY - baseY,
+    };
+    toolbarDragRef.current = true;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  }, [isMobileLandscape]);
+
+  const handleToolbarPointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!toolbarDragRef.current || !isMobileLandscape) return;
+    if (typeof window === "undefined") return;
+    const min = 40;
+    const maxX = window.innerWidth - 40;
+    const maxY = window.innerHeight - 40;
+    const nextX = Math.min(Math.max(event.clientX - toolbarDragOffsetRef.current.x, min), maxX);
+    const nextY = Math.min(Math.max(event.clientY - toolbarDragOffsetRef.current.y, min), maxY);
+    setToolbarPos({ x: nextX, y: nextY });
+  }, [isMobileLandscape]);
+
+  const handleToolbarPointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMobileLandscape) return;
+    toolbarDragRef.current = false;
+    (event.target as HTMLElement).releasePointerCapture?.(event.pointerId);
+  }, [isMobileLandscape]);
+
+  const handleCameraPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMobileLandscape) return;
+    const rect = cameraWrapperRef.current?.getBoundingClientRect();
+    const baseX = rect?.left ?? event.clientX;
+    const baseY = rect?.top ?? event.clientY;
+    cameraDragOffsetRef.current = {
+      x: event.clientX - baseX,
+      y: event.clientY - baseY,
+    };
+    cameraDragRef.current = true;
+    (event.target as HTMLElement).setPointerCapture(event.pointerId);
+  }, [isMobileLandscape]);
+
+  const handleCameraPointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!cameraDragRef.current || !isMobileLandscape) return;
+    if (typeof window === "undefined") return;
+    const min = 32;
+    const maxX = window.innerWidth - 32;
+    const maxY = window.innerHeight - 32;
+    const nextX = Math.min(Math.max(event.clientX - cameraDragOffsetRef.current.x, min), maxX);
+    const nextY = Math.min(Math.max(event.clientY - cameraDragOffsetRef.current.y, min), maxY);
+    setCameraPos({ x: nextX, y: nextY });
+  }, [isMobileLandscape]);
+
+  const handleCameraPointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMobileLandscape) return;
+    cameraDragRef.current = false;
+    (event.target as HTMLElement).releasePointerCapture?.(event.pointerId);
+  }, [isMobileLandscape]);
 
   const videoReady = !showIntro && overlayExpanded;
 
@@ -608,9 +687,9 @@ export default function HandLandmarkerPage() {
     const isMobile = window.innerWidth < 768;
     const displayMaxWidth = isMobile
       ? isMobileLandscape
-        ? 480
+        ? 720 // mobile landscape 더 크게
         : 360
-      : 720;
+      : 900; // 데스크탑 뷰도 여유 있게
     container.style.maxWidth = `${displayMaxWidth}px`;
     // 높이 클램프 제거해 비율 그대로 유지
     container.style.maxHeight = "";
@@ -772,15 +851,23 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
         return;
       }
 
-      const constraintsPrimary: MediaStreamConstraints = {
+      const constraintsExactEnv: MediaStreamConstraints = {
         video: {
-          facingMode: mode === "environment" ? { ideal: "environment" } : { ideal: "user" },
+          facingMode: { exact: "environment" },
           width: { ideal: 1280 },
           height: { ideal: 720 },
         },
         audio: false,
       };
-      const constraintsFallback: MediaStreamConstraints = {
+      const constraintsIdealEnv: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      };
+      const constraintsIdealUser: MediaStreamConstraints = {
         video: {
           facingMode: { ideal: "user" },
           width: { ideal: 1280 },
@@ -800,11 +887,23 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
       // stop any existing stream before requesting a new one
       stopWebcam();
 
-      let stream = await attemptStream(constraintsPrimary);
-      if (!stream && mode === "environment") {
-        // fallback to front if back is not available
-        stream = await attemptStream(constraintsFallback);
-        mode = "user";
+      let selectedMode: "user" | "environment" = mode;
+      let stream: MediaStream | null = null;
+
+      if (mode === "environment") {
+        stream =
+          (await attemptStream(constraintsExactEnv)) ||
+          (await attemptStream(constraintsIdealEnv)) ||
+          (await attemptStream(constraintsIdealUser));
+        if (stream && stream.getVideoTracks()[0]?.getSettings()?.facingMode !== "environment") {
+          selectedMode = "user";
+        }
+      } else {
+        stream = await attemptStream(constraintsIdealUser);
+        if (!stream) {
+          stream = await attemptStream(constraintsIdealEnv);
+          selectedMode = stream ? "environment" : "user";
+        }
       }
 
       if (!stream) {
@@ -825,7 +924,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
           .catch(() => {
             // autoplay block error ignored
           });
-        setFacingMode(mode);
+        setFacingMode(selectedMode);
         isWebcamRunningRef.current = true;
         setIsWebcamRunning(true);
         void predictWebcam();
@@ -845,9 +944,12 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
 
   const handleSwitchCamera = useCallback(async () => {
     const nextMode = facingMode === "user" ? "environment" : "user";
-    stopWebcam();
+    // 현재 꺼져 있어도 바로 다음 모드로 켜도록 처리
+    if (isWebcamRunning) {
+      stopWebcam();
+    }
     await startWebcam(nextMode);
-  }, [facingMode, startWebcam, stopWebcam]);
+  }, [facingMode, isWebcamRunning, startWebcam, stopWebcam]);
 
   useEffect(() => {
     if (!isReady || isWebcamRunning) return;
@@ -860,13 +962,14 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
       <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleModalClose} />
       {/* 모바일 가로 전용 헤더 */}
       {!showIntro && isMobileLandscape && (
-        <div className="absolute top-3 left-0 right-0 z-50 flex justify-center px-4 md:hidden">
+        <div className="absolute top-3 left-0 right-0 z-[70] flex justify-center px-4 md:hidden">
           <div className="pointer-events-auto w-full max-w-xl">
             <PageHeader
               title="Graff!ti"
               subtitle="움직임으로만 드로잉"
               goBack={true}
               padding="p-0"
+              inlineClose
             />
           </div>
         </div>
@@ -877,7 +980,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
             <div className="w-full h-full pt-[72px] md:pt-[100px] translate-y-0 relative">
               {!showIntro && !isMobileLandscape && (
-                <div className="z-50 absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0">
+                <div className="z-[70] absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0">
                   <PageHeader
                     title="Graff!ti"
                     subtitle="움직임으로만 드로잉"
@@ -914,7 +1017,32 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
 
 
       {/* 영상+웹캠 토글 & 카메라 전환 (모바일용) */}
-      <div className="absolute top-6 right-6 z-40 flex gap-2 md:hidden">
+      <div
+        ref={cameraWrapperRef}
+        className={
+          isMobileLandscape
+            ? "md:hidden fixed z-[65] translate-x-[10px]"
+            : "absolute top-6 right-6 z-40 flex gap-12 md:hidden"
+        }
+        style={
+          isMobileLandscape
+            ? cameraPos
+              ? {
+                  left: cameraPos.x,
+                  top: cameraPos.y,
+                  transform: "translate(-50%, -50%)",
+                }
+              : {
+                  right: "calc(env(safe-area-inset-right, 0px) + 16px)",
+                  top: "24px",
+                }
+            : undefined
+        }
+        onPointerDown={handleCameraPointerDown}
+        onPointerMove={handleCameraPointerMove}
+        onPointerUp={handleCameraPointerUp}
+        onPointerCancel={handleCameraPointerUp}
+      >
         {/* <button
           type="button"
           onClick={() => void handleToggleWebcam()}
@@ -923,14 +1051,14 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
         >
           {isWebcamRunning ? "OFF" : "ON"}
         </button> */}
-        <button
+        {/* <button
           type="button"
           onClick={() => void handleSwitchCamera()}
           className="inline-flex items-center justify-center rounded-full px-4 py-2 text-xs font-light disabled:opacity-50 bg-[rgba(255,255,255,0.40)] min-w-[72px] shadow-[0_0_50px_20px_rgba(0,0,0,0.25)] backdrop-blur-[4px] border border-white"
-          disabled={!isReady || !isWebcamRunning}
+          disabled={!isReady}
         >
           {facingMode === "user" ? "후면" : "전면"}
-        </button>
+        </button> */}
       </div>
 
       {/* 비디오 + 인트로 + 툴바: 한 그룹으로 중앙 기준 스케일 */}
@@ -1020,7 +1148,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
             ref={containerRef}
             className={`
               relative z-10 w-full mx-auto md:translate-y-0 
-              max-w-[400px]
+              max-w-[720px]
               md:max-w-[1080px]
               ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
               transition-opacity duration-500
@@ -1085,13 +1213,24 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   onSave={handleSave}
                 />
               </div>
-              <div
-                className="
-                  md:hidden
-                  absolute left-1/2 bottom-4 -translate-x-1/2
-                  z-50 w-full flex justify-center
-                  px-4
-                "
+        <div
+          ref={toolbarWrapperRef}
+          className={
+            isMobileLandscape
+              ? "md:hidden fixed z-[100] flex flex-col items-center gap-3"
+              : "md:hidden fixed left-1/2 bottom-4 -translate-x-1/2 z-[80] w-full flex justify-center px-4"
+          }
+                style={
+                  isMobileLandscape
+                    ? toolbarPos
+                      ? { left: toolbarPos.x, top: toolbarPos.y, right: "auto", bottom: "auto", transform: "translate(-50%, -50%)" }
+                      : { right: "calc(env(safe-area-inset-right, 0px) + 16px)", top: "50%", transform: "translateY(-50%)" }
+                    : { bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }
+                }
+                onPointerDown={handleToolbarPointerDown}
+                onPointerMove={handleToolbarPointerMove}
+                onPointerUp={handleToolbarPointerUp}
+                onPointerCancel={handleToolbarPointerUp}
               >
                 <GraffitiToolbarMobile
                   colorPalette={COLOR_PALETTE}
@@ -1109,6 +1248,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   onRedo={handleRedo}
                   onClear={handleClear}
                   onSave={handleSave}
+                  rotate={isMobileLandscape}
                 />
               </div>
             </div>

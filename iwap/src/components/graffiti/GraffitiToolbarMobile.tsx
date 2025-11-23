@@ -16,6 +16,7 @@ type GraffitiToolbarMobileProps = {
   onRedo: () => void;
   onClear: () => void;
   onSave: () => void;
+  rotate?: boolean;
 };
 
 export default function GraffitiToolbarMobile({
@@ -34,6 +35,7 @@ export default function GraffitiToolbarMobile({
   onRedo,
   onClear,
   onSave,
+  rotate = false,
 }: GraffitiToolbarMobileProps) {
   const [showPalette, setShowPalette] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -60,6 +62,9 @@ export default function GraffitiToolbarMobile({
     sliderRange === 0 ? 0 : ((brushSize - sliderMin) / sliderRange) * 100;
   const sliderPercentage = Math.min(Math.max(calculatedPercentage, 0), 100);
   const isValidHex = (value: string) => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
+  const stopPointerPropagation = useCallback((event: React.PointerEvent) => {
+    event.stopPropagation();
+  }, []);
   const openColorPicker = useCallback(() => {
     const picker = colorPickerRef.current;
     if (!picker) return;
@@ -88,8 +93,47 @@ export default function GraffitiToolbarMobile({
     }
   }, [pendingCustomColor]);
 
+  const rotateClass = rotate ? "-rotate-90 origin-center -translate-x-[80px] -translate-y-[50px] z-[100]" : "";
+  const iconRotate = rotate ? "rotate-90" : "";
+  const palettePositionClass = rotate
+    ? "absolute left-1/2 -translate-x-1/2 -translate-y-[170px] top-0 z-[999]"
+    : "fixed left-1/2 bottom-[80px] -translate-x-1/2 z-[100]";
+
+  const undoButton = (
+    <button
+      onClick={onUndo}
+      aria-label="Undo"
+      className="p-2"
+      type="button"
+    >
+      <img
+        src="/icons/redo_white.svg"
+        className={`w-[36px] h-[36px]  -scale-x-100 translate-y-0.5 ${iconRotate}`}
+        alt="undo"
+      />
+    </button>
+  );
+
+  const rainbowButton = (
+    <button
+      type="button"
+      onClick={() => setShowPalette((prev) => !prev)}
+      aria-label="Brush options"
+      className="
+        h-[36px] w-[36px]
+        rounded-full
+      "
+      style={{
+        backgroundImage: "url('/icons/rainbow.svg')",
+        backgroundSize: "cover",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+      }}
+    />
+  );
+
   return (
-    <div className="relative" ref={wrapperRef}>
+    <div className={`relative ${rotateClass}`} ref={wrapperRef}>
       <div
         className="
           w-[350px] h-[56px]
@@ -100,22 +144,11 @@ export default function GraffitiToolbarMobile({
           shadow-[0_0_50px_0_rgba(0,0,0,0.25)]
           backdrop-blur-[4px]
           px-4
-          flex items-center justify-between -transalte-y-[125px]
+        flex items-center justify-between -transalte-y-[125px]
         "
       >
         <div className="flex items-center justify-between w-full">
-          <button
-            onClick={onUndo}
-            aria-label="Undo"
-            className="p-2"
-            type="button"
-          >
-            <img
-              src="/icons/redo_white.svg"
-              className="w-[36px] h-[36px]  -scale-x-100 translate-y-0.5"
-              alt="undo"
-            />
-          </button>
+          {undoButton}
           <button
             onClick={onRedo}
             aria-label="Redo"
@@ -124,7 +157,7 @@ export default function GraffitiToolbarMobile({
           >
             <img
               src="/icons/redo_white.svg"
-              className="w-[36px] h-[36px] -translate-x-1 translate-y-0.5"
+              className={`w-[36px] h-[36px] -translate-x-1 translate-y-0.5 ${iconRotate}`}
               alt="redo"
             />
           </button>
@@ -141,7 +174,7 @@ export default function GraffitiToolbarMobile({
           >
             <img
               src="/icons/download_b.svg"
-              className="w-[32px] h-[32px]"
+              className={`w-[32px] h-[32px] ${iconRotate}`}
               alt="save"
             />
           </button>
@@ -153,30 +186,18 @@ export default function GraffitiToolbarMobile({
           >
             <img
               src="/icons/trash_white.svg"
-              className="w-[30px] h-[30px]"
+              className={`w-[30px] h-[30px] ${iconRotate}`}
               alt="clear"
             />
           </button>
-          <button
-            type="button"
-            onClick={() => setShowPalette((prev) => !prev)}
-            aria-label="Brush options"
-            className="
-              h-[36px] w-[36px]
-              rounded-full
-            "
-            style={{ backgroundImage: "url('/icons/rainbow.svg')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat", }}
-          />
+          {rainbowButton}
         </div>
       </div>
 
       {showPalette && (
         <div
-          className="
-            absolute left-1/2 top-[calc(100%+12px)] -translate-x-1/2 -translate-y-[230px]
+          className={`
+            ${palettePositionClass}
             w-[330px]
             rounded-2xl border border-white rounded-br-none
             bg-[rgba(255,255,255,0.40)]
@@ -184,8 +205,10 @@ export default function GraffitiToolbarMobile({
             backdrop-blur-[4px]
             px-4 py-3
             space-y-3
-            z-10
-          "
+            z-[999]
+            `}
+          onPointerDown={stopPointerPropagation}
+          onPointerMove={stopPointerPropagation}
         >
           <div className="flex flex-wrap items-center gap-3">
             {colorPalette.map((color) => {
