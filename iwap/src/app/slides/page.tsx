@@ -149,17 +149,17 @@ export default function SlidesPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden flex items-center justify-center">
+    <main className="relative min-h-screen overflow-hidden flex items-center justify-center bg-white dark:bg-[var(--background)]">
       <div className="absolute top-0 left-0 right-0 flex flex-col items-center pt-10 z-30 pointer-events-none" />
 
       <div className="relative w-full flex justify-center">
         <div className="relative w-[90vw] max-w-[2000px] min-w-[320px]">
           <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[38%] w-[110%] h-[33%] bg-[var(--background)] z-20 pointer-events-none [--mask-rx:50%] [--mask-ry:32%] md:-translate-y-[46%] md:w-[120%] md:h-[55%] md:[--mask-ry:40%]"
+            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[38%] w-[110%] h-[33%] bg-white dark:bg-[var(--background)] z-20 pointer-events-none [--mask-rx:50%] [--mask-ry:32%] md:-translate-y-[46%] md:w-[120%] md:h-[55%] md:[--mask-ry:40%]"
             style={maskStyle}
           />
           <div
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[38%] w-[110%] h-[33%] bg-[var(--background)] z-20 pointer-events-none [--mask-rx:50%] [--mask-ry:32%] md:translate-y-[50%] md:w-[120%] md:h-[55%] md:[--mask-ry:40%]"
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[38%] w-[110%] h-[33%] bg-white dark:bg-[var(--background)] z-20 pointer-events-none [--mask-rx:50%] [--mask-ry:32%] md:translate-y-[50%] md:w-[120%] md:h-[55%] md:[--mask-ry:40%]"
             style={maskStyle}
           />
 
@@ -213,12 +213,12 @@ export default function SlidesPage() {
                     <div
                       className={
                         isMobile
-                          ? `absolute inset-0 text-white bg-gradient-to-br from-black/30 via-black/25 to-black/20 opacity-100 ${
+                          ? `absolute inset-0 text-black dark:text-white bg-gradient-to-br from-black/30 via-black/25 to-black/20 opacity-100 ${
                               activeIndex === idx
                                 ? "flex items-center justify-center px-6"
                                 : "flex items-center justify-between gap-4 sm:gap-6 md:gap-8 px-5 sm:px-6 md:px-8 transform translate-y-4 md:translate-y-8"
                             }`
-                          : `absolute inset-0 text-white bg-gradient-to-br from-black/30 via-black/25 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
+                          : `absolute inset-0 text-black dark:text-white bg-gradient-to-br from-black/30 via-black/25 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
                               activeIndex === idx
                                 ? "flex items-center justify-center px-6"
                                 : "flex items-center justify-between gap-4 sm:gap-6 md:gap-8 px-5 sm:px-6 md:px-8 transform translate-y-[15px] md:translate-y-[95px]"
@@ -237,7 +237,7 @@ export default function SlidesPage() {
                             <span className="text-[24px] font-medium">
                               {item.leftTexts[0]}
                             </span>
-                            <span className="text-[14px] font-normal text-white">
+                            <span className="text-[14px] font-normal text-black dark:text-white">
                               {item.leftTexts[1]}
                             </span>
                           </div>
@@ -245,7 +245,7 @@ export default function SlidesPage() {
                             <span className="text-[12px] font-light">
                               {item.rightTexts[0]}
                             </span>
-                            <span className="text-white font-light text-[36px]">
+                            <span className="text-black dark:text-white font-light text-[36px]">
                               {item.rightTexts[1]}
                             </span>
                           </div>
