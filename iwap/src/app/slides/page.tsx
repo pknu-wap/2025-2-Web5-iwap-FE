@@ -33,8 +33,8 @@ const baseSlides: SlideContent[] = [
   },
   {
     src: {
-      light: "/images/bg-light/this-is-for-u-light.jpg",
-      dark: "/images/bg-dark/this-is-for-u-dark.jpg",
+      light: "/images/bg-light/this-is-for-u_light.jpg",
+      dark: "/images/bg-dark/this-is-for-u_dark.jpg",
     },
     link: "/this-is-for-u",
     title: "Th!s !s for u",
