@@ -213,12 +213,12 @@ export default function SlidesPage() {
                     <div
                       className={
                         isMobile
-                          ? `absolute inset-0 text-black dark:text-white bg-gradient-to-br from-black/30 via-black/25 to-black/20 opacity-100 ${
+                          ? `absolute inset-0 ${theme === 'dark' ? 'text-white bg-gradient-to-br from-black/30 via-black/25 to-black/20' : 'text-black bg-gradient-to-br from-white/30 via-white/25 to-white/20'} opacity-100 ${
                               activeIndex === idx
                                 ? "flex items-center justify-center px-6"
                                 : "flex items-center justify-between gap-4 sm:gap-6 md:gap-8 px-5 sm:px-6 md:px-8 transform translate-y-4 md:translate-y-8"
                             }`
-                          : `absolute inset-0 text-black dark:text-white bg-gradient-to-br from-black/30 via-black/25 to-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
+                          : `absolute inset-0 ${theme === 'dark' ? 'text-white bg-gradient-to-br from-black/30 via-black/25 to-black/20' : 'text-black bg-gradient-to-br from-white/30 via-white/25 to-white/20'} opacity-0 group-hover:opacity-100 transition-opacity duration-500 ${
                               activeIndex === idx
                                 ? "flex items-center justify-center px-6"
                                 : "flex items-center justify-between gap-4 sm:gap-6 md:gap-8 px-5 sm:px-6 md:px-8 transform translate-y-[15px] md:translate-y-[95px]"
@@ -237,7 +237,7 @@ export default function SlidesPage() {
                             <span className="text-[24px] font-medium">
                               {item.leftTexts[0]}
                             </span>
-                            <span className="text-[14px] font-normal text-black dark:text-white">
+                            <span className="text-[14px] font-normal">
                               {item.leftTexts[1]}
                             </span>
                           </div>
@@ -245,7 +245,7 @@ export default function SlidesPage() {
                             <span className="text-[12px] font-light">
                               {item.rightTexts[0]}
                             </span>
-                            <span className="text-black dark:text-white font-light text-[36px]">
+                            <span className="font-light text-[36px]">
                               {item.rightTexts[1]}
                             </span>
                           </div>
