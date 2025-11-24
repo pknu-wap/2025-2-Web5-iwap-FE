@@ -7,7 +7,7 @@ interface CoordinatesResponse {
   nail_count: number;
 }
 
-// Helper function to poll an endpoint until it returns a 200 OK response
+// 엔드포인트가 200 OK 응답을 반환할 때까지 폴링하는 헬퍼 함수
 const pollEndpoint = async (
   url: string,
   interval: number = 2000, // 2-second interval
@@ -17,16 +17,16 @@ const pollEndpoint = async (
     const response = await fetch(url);
 
     if (response.status === 200) {
-      return response; // Success, return the response object
+      return response; // 성공, 응답 객체 반환
     }
 
     if (response.status !== 202) {
-      // If it's not "Pending" or "Success", it's an unrecoverable error
+      // "대기 중" 또는 "성공"이 아니면 복구 불가능한 에러입니다.
       const errorText = await response.text();
       throw new Error(`Failed to fetch data. Status: ${response.status}, Body: ${errorText}`);
     }
 
-    // If status is 202, wait for the interval before the next attempt
+    // 상태가 202이면 다음 시도 전까지 대기합니다.
     await new Promise(resolve => setTimeout(resolve, interval));
   }
 
@@ -96,7 +96,7 @@ export const processImageToStringArt = async (
     ]);
 
     // 3. 좌표값 응답 처리
-    if (!coordRes.ok) { // Should not happen due to pollEndpoint logic, but for safety
+    if (!coordRes.ok) { // pollEndpoint 로직상 발생하지 않아야 하지만 안전을 위해 확인
       throw new Error(`Failed to fetch coordinates. (Status: ${coordRes.status})`);
     }
     const coordData: CoordinatesResponse = await coordRes.json();
@@ -105,7 +105,7 @@ export const processImageToStringArt = async (
     }
 
     // 4. 이미지 응답 처리
-    if (!imageRes.ok) { // Safety check
+    if (!imageRes.ok) { // 안전 확인
       throw new Error(`Failed to fetch color image. (Status: ${imageRes.status})`);
     }
     const imageBlob = await imageRes.blob();

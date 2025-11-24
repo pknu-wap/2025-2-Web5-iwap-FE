@@ -55,7 +55,7 @@ export default function InsidePage() {
   const handleDataReady = useCallback((data: LayersData) => {
     try {
       if (!data || !data.layers || typeof data.layers !== 'object' || Object.keys(data.layers).length === 0) {
-        throw new Error("서버로부터 유효한 레이어 데이터를 받지 못했습니다.");
+        throw new Error("Did not receive valid layer data from server.");
       }
       
       setLayersData(data);
@@ -64,8 +64,8 @@ export default function InsidePage() {
 
     } catch (err) {
       console.error('[InsidePage] Error: An error occurred during data processing:', err);
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-      handleUploadFail(`[데이터 처리 오류]: ${errorMessage}`);
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      handleUploadFail(`[Data Processing Error]: ${errorMessage}`);
     }
   }, [handleUploadFail]);
 
@@ -75,13 +75,13 @@ export default function InsidePage() {
   const handleUploadAccepted = (data: TaskIdResponse) => {
     try {
       if (!data || typeof data.task_id !== 'string') {
-        throw new Error("서버로부터 유효한 task_id를 받지 못했습니다.");
+        throw new Error("Did not receive valid task_id from server.");
       }
       setTaskId(data.task_id);
     } catch (err) {
       console.error('[InsidePage] Error: An error occurred processing task_id:', err);
-      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
-      handleUploadFail(`[작업 ID 처리 오류]: ${errorMessage}`);
+      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      handleUploadFail(`[Task ID Processing Error]: ${errorMessage}`);
     }
   };
 
@@ -118,15 +118,15 @@ export default function InsidePage() {
           console.log(`[InsidePage] Polling... task ${taskId} is still processing.`);
         } else {
           if (intervalId) clearInterval(intervalId);
-          let errorText = '응답 없음';
+          let errorText = 'No response';
           try {
             errorText = await response.text();
           } catch {}
-          throw new Error(`[데이터 조회 오류 ${response.status}]: ${errorText}`);
+          throw new Error(`[Data Fetch Error ${response.status}]: ${errorText}`);
         }
       } catch (error) {
         if (intervalId) clearInterval(intervalId);
-        const errorMessage = error instanceof Error ? error.message : '폴링 중 알 수 없는 오류 발생';
+        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred during polling';
         handleUploadFail(errorMessage);
       } finally {
         isFetching = false;

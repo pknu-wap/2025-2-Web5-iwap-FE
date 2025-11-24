@@ -46,7 +46,7 @@ export default function RecorderButton({
       await startRecording();
     } catch (error) {
       setIsPreppingRecording(false);
-      console.error("녹음 시작 중 오류가 발생했습니다.", error);
+      console.error("Error starting recording:", error);
     }
   };
 
