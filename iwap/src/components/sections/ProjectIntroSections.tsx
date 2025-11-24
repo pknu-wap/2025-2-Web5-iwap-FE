@@ -3,7 +3,7 @@
 import type { ReactNode } from "react";
 import SideImageSection from "./SideImageSection";
 
-export type ProjectKey = "inside" | "this-is-for-u" | "piano" | "ascii" | "string" | "graffiti";
+export type ProjectKey = "inside" | "this-is-for-u" | "piano" | "ascii" | "string" | "graffiti" | "facial";
 
 const SECTION_DATA: Record<
   ProjectKey,
@@ -294,6 +294,52 @@ const SECTION_DATA: Record<
         <span>실시간 필터와 붓 굵기·컬러 선택으로 ‘공기 중 캔버스’에서</span>
         <br />
         <span>움직임으로만 그림을 그리는 촉각적 경험을 제공합니다.</span>
+      </>
+    ),
+  },
+  facial: {
+    imageSrc: "/images/string_background.jpg",
+    imageAlt: "facial background",
+    imageOverlayLeft: "Fac!al",
+    overlayLeftClassName: "md:-translate-x-[46px] md:-translate-y-[80px] -translate-x-[26px] -translate-y-[40px]",
+    imageOverlayRight: "07",
+    side: "right",
+    badgeText: "Vision",
+    textAlign: "right",
+    badgeAlign: "right",
+    heading: "07 Fac!al",
+    body: (
+      <>
+        <span className="inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
+          얼굴의 특징을 변형하는 실험.
+        </span>
+        <br />
+        <br />
+        <span>VAE 모델을 통해 얼굴의 특징을 인식하고,</span>
+        <br />
+        <span>나이, 성별, 피부색 등의 특징을 파라메터로 조절합니다.</span>
+        <br />
+        <br />
+        <span>나만의 독특한 얼굴을 만들어보며</span>
+        <br />
+        <span>디지털 페르소나의 가능성을 탐구합니다.</span>
+      </>
+    ),
+    mobileBody: (
+      <>
+        <span className="inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
+          얼굴의 특징을 변형하는 실험.
+        </span>
+        <br />
+        <br />
+        <span>VAE 모델을 통해 얼굴의 특징을 인식하고,</span>
+        <br />
+        <span>나이, 성별, 피부색 등의 특징을 파라메터로 조절합니다.</span>
+        <br />
+        <br />
+        <span>나만의 독특한 얼굴을 만들어보며</span>
+        <br />
+        <span>디지털 페르소나의 가능성을 탐구합니다.</span>
       </>
     ),
   },
