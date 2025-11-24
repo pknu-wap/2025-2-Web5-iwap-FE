@@ -18,6 +18,7 @@ type GraffitiToolbarMobileProps = {
   onSave: () => void;
   rotate?: boolean;
   desktopDevMobile?: boolean;
+  onSaveWithVideo: () => void;
 };
 
 export default function GraffitiToolbarMobile({
@@ -38,9 +39,12 @@ export default function GraffitiToolbarMobile({
   onSave,
   rotate = false,
   desktopDevMobile = false,
+  onSaveWithVideo,
 }: GraffitiToolbarMobileProps) {
   const [showPalette, setShowPalette] = useState(false);
+  const [showSaveMenu, setShowSaveMenu] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const saveMenuRef = useRef<HTMLDivElement | null>(null);
 
   const normalizedBrushColor = brushColor.toLowerCase();
   const isBrushColorCustom = customPatterns.some(
@@ -103,6 +107,22 @@ export default function GraffitiToolbarMobile({
       setFallbackHex(pendingCustomColor);
     }
   }, [pendingCustomColor]);
+
+  useEffect(() => {
+    if (!showSaveMenu) return;
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (!saveMenuRef.current) return;
+      if (!saveMenuRef.current.contains(event.target as Node)) {
+        setShowSaveMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [showSaveMenu]);
 
   const rotateClass = rotate
     ? "-rotate-90 origin-center translate-x-[30px] -translate-y-[48px] z-[100] scale-[0.8]"
@@ -176,23 +196,57 @@ export default function GraffitiToolbarMobile({
               alt="redo"
             />
           </button>
-          <button
-            onClick={onSave}
-            aria-label="Save"
+          <div className="relative" ref={saveMenuRef}>
+            <button
+              onClick={() => setShowSaveMenu((prev) => !prev)}
+              aria-label="Save options"
             className="
               hover:opacity-80 transition
               h-[50px] w-[50px]
-              rounded-full border border-white/60 bg-white
-              flex items-center justify-center
+              rounded-full border border-white/60 bg-white/90
+              flex items-center justify-center -translate-x-[8px]
             "
             type="button"
           >
             <img
               src="/icons/download_b.svg"
               className={`w-[32px] h-[32px] ${iconRotate}`}
-              alt="save"
+              alt="save options"
             />
           </button>
+            {showSaveMenu && (
+              <div
+                className={`
+                  absolute right-0 bottom-[70px]
+                  flex items-center gap-2
+                  overflow-hidden z-[150]
+                  translate-x-[50px]
+                  ${rotate ? "-translate-y-[5px] origin-top" : ""}
+                `}
+              >
+                <button
+                  type="button"
+                  className="w-[80px] h-[40px] flex-shrink-0 rounded-[25px] rounded-br-none border border-white bg-white/40 text-[#ffffff] text-[20px] font-normal flex items-center justify-center hover:bg-[#294393] hover:text-white"
+                  onClick={() => {
+                    onSave();
+                    setShowSaveMenu(false);
+                  }}
+                >
+                  <span>Sketch</span>
+                </button>
+                <button
+                  type="button"
+                  className="w-[80px] h-[40px] flex-shrink-0 rounded-[25px] rounded-bl-none border border-white bg-white/40 text-[#ffffff] text-[20px] font-normal flex items-center justify-center hover:bg-[#294393] hover:text-white"
+                  onClick={() => {
+                    onSaveWithVideo();
+                    setShowSaveMenu(false);
+                  }}
+                >
+                  <span>Scene</span>
+                </button>
+              </div>
+            )}
+          </div>
           <button
             onClick={onClear}
             aria-label="Clear"

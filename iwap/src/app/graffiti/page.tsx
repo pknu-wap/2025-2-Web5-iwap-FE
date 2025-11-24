@@ -483,6 +483,39 @@ export default function HandLandmarkerPage() {
     a.click();
   }, []);
 
+  const handleSaveWithVideo = useCallback(() => {
+    const canvas = drawCanvasRef.current;
+    const video = videoRef.current;
+    const overlay = overlayCanvasRef.current;
+    if (!canvas || !video) return;
+    const width = video.videoWidth || canvas.width;
+    const height = video.videoHeight || canvas.height;
+    if (!width || !height) return;
+
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = width;
+    exportCanvas.height = height;
+    const ctx = exportCanvas.getContext("2d");
+    if (!ctx) return;
+
+    // mirror to match on-screen view (-scale-x CSS)
+    ctx.save();
+    ctx.translate(width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, width, height);
+    ctx.drawImage(canvas, 0, 0, width, height);
+    if (overlay) {
+      ctx.drawImage(overlay, 0, 0, width, height);
+    }
+    ctx.restore();
+
+    const url = exportCanvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `graffiti-full-${Date.now()}.png`;
+    a.click();
+  }, []);
+
   /* ---------- HandLandmarker 초기화 ---------- */
   useEffect(() => {
     let cancelled = false;
@@ -1123,6 +1156,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   onRedo={handleRedo}
                   onClear={handleClear}
                   onSave={handleSave}
+                  onSaveWithVideo={handleSaveWithVideo}
                 />
               </div>
         <div
@@ -1160,6 +1194,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   onRedo={handleRedo}
                   onClear={handleClear}
                   onSave={handleSave}
+                  onSaveWithVideo={handleSaveWithVideo}
                   desktopDevMobile={isDesktopDevMobile}
                   rotate={isMobileLandscape}
                 />
