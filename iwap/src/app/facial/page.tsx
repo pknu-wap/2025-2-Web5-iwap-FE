@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import FacialEditor from "@/components/facial/FacialEditor";
+import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
 
 export default function FacialPage() {
   const [hasMounted, setHasMounted] = useState(false);
+  const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => { setHasMounted(true); }, []);
 
@@ -20,6 +22,11 @@ export default function FacialPage() {
 
   return (
     <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" style={pageBackgroundStyle}>
+      <ProjectIntroModal
+        projects={["facial"]}
+        open={showIntro}
+        onClose={() => setShowIntro(false)}
+      />
       <div className="w-full h-full flex translate-x-5 md:translate-x-0 items-center justify-center p-4 sm:p-8 overflow-y-auto">
         <div className="flex flex-col w-full max-w-lg relative min-h-0">
           <div className="w-[90%] md:w-full pt-0 flex flex-col gap-4">

@@ -311,13 +311,13 @@ const SECTION_DATA: Record<
     body: (
       <>
         <span className="inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
-          얼굴의 특징을 실시간으로 감지하고 변형하는 실험.
+          얼굴의 특징을 변형하는 실험.
         </span>
         <br />
         <br />
-        <span>MediaPipe Face Mesh를 활용하여 얼굴의 랜드마크를 인식하고,</span>
+        <span>VAE 모델을 통해 얼굴의 특징을 인식하고,</span>
         <br />
-        <span>눈, 코, 입 등 주요 부위의 크기와 위치를 조절합니다.</span>
+        <span>나이, 성별, 피부색 등의 특징을 파라메터로 조절합니다.</span>
         <br />
         <br />
         <span>나만의 독특한 얼굴을 만들어보며</span>
@@ -328,15 +328,13 @@ const SECTION_DATA: Record<
     mobileBody: (
       <>
         <span className="inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
-          얼굴의 특징을 실시간으로 감지하고 변형하는 실험.
+          얼굴의 특징을 변형하는 실험.
         </span>
         <br />
         <br />
-        <span>MediaPipe Face Mesh를 활용하여</span>
+        <span>VAE 모델을 통해 얼굴의 특징을 인식하고,</span>
         <br />
-        <span>얼굴의 랜드마크를 인식하고,</span>
-        <br />
-        <span>눈, 코, 입 등 주요 부위의 크기와 위치를 조절합니다.</span>
+        <span>나이, 성별, 피부색 등의 특징을 파라메터로 조절합니다.</span>
         <br />
         <br />
         <span>나만의 독특한 얼굴을 만들어보며</span>
