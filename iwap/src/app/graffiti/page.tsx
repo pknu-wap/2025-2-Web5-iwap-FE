@@ -907,14 +907,23 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
       <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleModalClose} />
       {/* 모바일 가로 전용 헤더 */}
       {!showIntro && isMobileLandscape && (
-        <div className="absolute top-3 left-0 right-0 z-[70] flex justify-center px-4 md:hidden pointer-events-none">
-          <div className="pointer-events-auto w-full max-w-xl">
+        <div
+          className="fixed z-[80] md:hidden pointer-events-none flex justify-start"
+          style={{
+            top: "calc(env(safe-area-inset-top, 0px) + 12px)",
+            left: "calc(env(safe-area-inset-left, 0px) + 12px)",
+          }}
+        >
+          <div className="pointer-events-auto px-3 py-2">
             <PageHeader
               title="Graff!ti"
               subtitle="움직임으로만 드로잉"
               goBack={true}
               padding="p-0"
               inlineClose
+              isAbsolute={false}
+              titleClassName="text-[22px] font-semibold"
+              subtitleClassName="text-[11px]"
             />
           </div>
         </div>
@@ -931,6 +940,8 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                       subtitle="움직임으로만 드로잉"
                       goBack={true}
                       padding="p-0"
+                      titleClassName="-translate-x-[10px]"
+                      subtitleClassName="-translate-x-[10px]"
                     />
                   </div>
                 </div>
