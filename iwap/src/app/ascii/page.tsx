@@ -9,6 +9,7 @@ import AsciiArtDisplay from '@/components/ascii/AsciiArtDisplay';
 import TrashIcon from '@/components/ui/icons/TrashIcon';
 import SubmitIcon from '@/components/ui/icons/SubmitIcon';
 import { ProjectIntroModal } from '@/components/sections/ProjectIntroSections';
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 import {
   processImageToAsciiWithWorker,
@@ -20,6 +21,7 @@ const DEFAULT_RESOLUTION = 100;
 
 // --- Page Controller Component ---
 export default function AsciiPage() {
+  const { theme } = useTheme();
   // --- State Declarations ---
   const [hasMounted, setHasMounted] = useState(false);
   const [view, setView] = useState<'upload' | 'loading' | 'visualize'>('upload');
@@ -113,7 +115,9 @@ export default function AsciiPage() {
 
   // --- Styles ---
   const pageBackgroundStyle = {
-    backgroundImage: `linear-gradient(to bottom, rgba(214, 211, 209, 0), #d6d3d1), url('/images/ascii_background.jpg')`,
+    backgroundImage: theme === 'dark'
+      ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #1a1a1a), url('/images/bg-dark/ascii_dark.jpg')`
+      : `linear-gradient(to bottom, rgba(214, 211, 209, 0), #d6d3d1), url('/images/bg-light/ascii_light.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',

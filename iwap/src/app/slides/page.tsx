@@ -5,12 +5,13 @@ import Image from "next/image";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Mousewheel } from "swiper/modules";
 import type { Swiper as SwiperClass } from "swiper";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 import "swiper/css";
 import "swiper/css/mousewheel";
 
 type SlideContent = {
-  src: string;
+  src: { light: string; dark: string };
   link: string;
   title: string;
   description: string;
@@ -20,7 +21,10 @@ type SlideContent = {
 
 const baseSlides: SlideContent[] = [
   {
-    src: "/images/home/slides/slide1.jpg",
+    src: {
+      light: "/images/bg-light/inside_light.jpg",
+      dark: "/images/bg-dark/inside_dark.jpg",
+    },
     link: "/inside",
     title: "!nside",
     description: "인공지능이 숫자를 인식하는 과정",
@@ -28,7 +32,10 @@ const baseSlides: SlideContent[] = [
     rightTexts: ["Project", "01"],
   },
   {
-    src: "/images/home/slides/slide2.jpg",
+    src: {
+      light: "/images/bg-light/this-is-for-u-light.jpg",
+      dark: "/images/bg-dark/this-is-for-u-dark.jpg",
+    },
     link: "/this-is-for-u",
     title: "Th!s !s for u",
     description: "엽서로 마음 표현",
@@ -36,7 +43,10 @@ const baseSlides: SlideContent[] = [
     rightTexts: ["Project", "02"],
   },
   {
-    src: "/images/home/slides/slide3.jpg",
+    src: {
+      light: "/images/bg-light/piano_light.jpg",
+      dark: "/images/bg-dark/piano_dark.jpg",
+    },
     link: "/piano",
     title: "P!ano",
     description: "음성을 피아노로 변환",
@@ -44,7 +54,10 @@ const baseSlides: SlideContent[] = [
     rightTexts: ["Project", "03"],
   },
   {
-    src: "/images/home/slides/slide5.jpg",
+    src: {
+      light: "/images/bg-light/ascii_light.jpg",
+      dark: "/images/bg-dark/ascii_dark.jpg",
+    },
     link: "/ascii",
     title: "ASCi!",
     description: "이미지를 텍스트로 표현",
@@ -52,7 +65,10 @@ const baseSlides: SlideContent[] = [
     rightTexts: ["Project", "04"],
   },
   {
-    src: "/images/home/slides/slide4.jpg",
+    src: {
+      light: "/images/bg-light/string_light.jpg",
+      dark: "/images/bg-dark/string_dark.jpg",
+    },
     link: "/string",
     title: "Str!ng",
     description: "선들로 이미지를 표현",
@@ -60,7 +76,10 @@ const baseSlides: SlideContent[] = [
     rightTexts: ["Project", "05"],
   },
   {
-    src: "/images/home/slides/slide6.jpg",
+    src: {
+      light: "/images/bg-light/graffiti_light.jpg",
+      dark: "/images/bg-dark/graffiti_dark.jpg",
+    },
     link: "/graffiti",
     title: "Graff!ti",
     description: "움직임으로만 드로잉",
@@ -68,7 +87,10 @@ const baseSlides: SlideContent[] = [
     rightTexts: ["Project", "06"],
   },
   {
-    src: "/images/string_background.jpg",
+    src: {
+      light: "/images/bg-light/facial_light.jpg",
+      dark: "/images/bg-dark/facial_dark.jpg",
+    },
     link: "/facial",
     title: "Fac!al",
     description: "얼굴의 특징을 변경",
@@ -80,6 +102,7 @@ const baseSlides: SlideContent[] = [
 const images = [...baseSlides, ...baseSlides];
 
 export default function SlidesPage() {
+  const { theme } = useTheme();
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
@@ -182,7 +205,7 @@ export default function SlidesPage() {
                 >
                   <div className="relative block w-full h-full rounded-lg overflow-hidden group">
                     <Image
-                      src={item.src}
+                      src={item.src[theme]}
                       alt={item.title}
                       fill
                       className="object-cover transition-transform duration-500 group-hover:scale-105"

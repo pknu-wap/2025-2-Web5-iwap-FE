@@ -7,6 +7,7 @@ import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import FullScreenView from '@/components/ui/FullScreenView';
 import PageHeader from '@/components/ui/PageHeader';
 import { ProjectIntroModal } from '@/components/sections/ProjectIntroSections';
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 // 백엔드 데이터 구조에 대한 타입 정의
 interface LayersData {
@@ -24,6 +25,7 @@ interface TaskIdResponse {
  * AI 모델의 숫자 인식 과정을 시각화하는 '!nside' 페이지 컴포넌트.
  */
 export default function InsidePage() {
+  const { theme } = useTheme();
   const [view, setView] = useState('draw'); 
   const [layersData, setLayersData] = useState<LayersData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -159,10 +161,9 @@ export default function InsidePage() {
   };
 
   const pageBackgroundStyle = {
-    backgroundImage: `
-      linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113),
-      url('/images/inside_background.jpg')
-    `,
+    backgroundImage: theme === 'dark'
+      ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #0d1113), url('/images/bg-dark/inside_dark.jpg')`
+      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113), url('/images/bg-light/inside_light.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -186,7 +187,7 @@ export default function InsidePage() {
           title="!nside."
           subtitle="인공지능이 숫자를 인식하는 과정"
           onClose={handleReturnToDraw} // 이제 이 함수를 찾을 수 있습니다.
-          backgroundUrl="/images/inside_background.jpg"
+          backgroundUrl={theme === 'dark' ? "/images/bg-dark/inside_dark.jpg" : "/images/bg-light/inside_light.jpg"}
         >
           <ImageGridLayers layersData={layersData} />
         </FullScreenView>

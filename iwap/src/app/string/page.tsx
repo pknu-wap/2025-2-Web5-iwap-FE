@@ -8,10 +8,12 @@ import StringArtDisplay from "@/components/string/StringArtDisplay";
 import UndoIcon from "@/components/ui/icons/UndoIcon";
 import SubmitIcon from "@/components/ui/icons/SubmitIcon";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 import { processImageToStringArt } from "@/components/string/StringArtProcessor";
 
 export default function StringArtPage() {
+  const { theme } = useTheme();
   const [hasMounted, setHasMounted] = useState(false);
   const [view, setView] = useState<'upload' | 'loading' | 'visualize'>('upload');
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +67,9 @@ export default function StringArtPage() {
   }, [previewUrl, colorImageUrl]);
 
   const pageBackgroundStyle = {
-    backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #98B9C2), url('/images/string_background.jpg')`,
+    backgroundImage: theme === 'dark'
+      ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000), url('/images/bg-dark/string_dark.jpg')`
+      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), #98B9C2), url('/images/bg-light/string_light.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',

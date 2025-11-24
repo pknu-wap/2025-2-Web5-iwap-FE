@@ -6,10 +6,12 @@ import { useResizeDetector } from "react-resize-detector";
 import { type Data, type Layout } from "plotly.js";
 import FullScreenView from "@/components/ui/FullScreenView";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 const Plot = dynamic(() => import("react-plotly.js"), { ssr: false });
 
 export default function FunctionsPage() {
+  const { theme } = useTheme();
   const [index, setIndex] = useState(1);
   const [a, setA] = useState(1);
   const { width, height, ref } = useResizeDetector();
@@ -179,7 +181,7 @@ const singleTrace1 = useMemo((): Data[] => {
         goBack={true}
         onPrev={handlePrev}
         onNext={handleNext}
-        backgroundUrl="/images/this-is-for-u_background.jpg"
+        backgroundUrl={theme === 'dark' ? "/images/bg-dark/this-is-for-u-dark.jpg" : "/images/bg-light/this-is-for-u-light.jpg"}
         titleClassName="translate-y-[60px] translate-x-[9px] md:translate-x-0 md:translate-y-0 font-semibold"
         subtitleClassName="translate-y-[60px] translate-x-[10px] md:translate-x-0 md:translate-y-0 font-semilight"
         closeButtonClassName="translate-y-[60px] md:translate-y-0"

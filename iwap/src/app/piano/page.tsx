@@ -22,8 +22,10 @@ import PianoBackendManager, {
 } from "@/app/api/piano/PianoBackendManager";
 import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 export default function VoiceToPiano() {
+  const { theme } = useTheme();
   const pageTitle = "P!ano";
   const pageSubtitle = "음성을 피아노로 변환하기";
   const {
@@ -397,7 +399,7 @@ export default function VoiceToPiano() {
         subtitle="음성을 피아노로 변환하기"
         goBack={true} // 이 goBack은 FullScreenView의 기본 버튼에만 적용됩니다.
         className="text-black font-[Pretendard]"
-        backgroundUrl="/images/piano_background.png"
+        backgroundUrl={theme === 'dark' ? "/images/bg-dark/piano_dark.jpg" : "/images/bg-light/piano_light.jpg"}
         
         // 모바일 재생 뷰에서 '기본' 헤더 숨김
         titleClassName={`${audioUrl ? "hidden" : ""} 

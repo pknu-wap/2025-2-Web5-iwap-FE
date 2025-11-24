@@ -73,14 +73,14 @@ export default function HomeDesktop({ isDarkTheme }: HomeDesktopProps) {
   return (
     <main className="relative w-full h-dvh overflow-hidden select-none">
       <Image
-        src="/images/home_background.jpg"
+        src="/images/home/home_light.jpg"
         alt="Background Light"
         fill
         priority
         className={`object-cover ${isDarkTheme ? "hidden" : "block"}`}
       />
       <Image
-        src="/images/home-black_background.jpg"
+        src="/images/home/home_dark.jpg"
         alt="Background Dark"
         fill
         priority

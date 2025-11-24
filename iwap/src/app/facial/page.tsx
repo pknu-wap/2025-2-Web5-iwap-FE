@@ -4,15 +4,19 @@ import React, { useState, useEffect } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import FacialEditor from "@/components/facial/FacialEditor";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 export default function FacialPage() {
+  const { theme } = useTheme();
   const [hasMounted, setHasMounted] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => { setHasMounted(true); }, []);
 
   const pageBackgroundStyle = {
-    backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #98B9C2), url('/images/string_background.jpg')`,
+    backgroundImage: theme === 'dark'
+      ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000), url('/images/bg-dark/facial_dark.jpg')`
+      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), #98B9C2), url('/images/bg-light/facial_light.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
