@@ -23,7 +23,8 @@ export default function RootLayout({
   const [forceHideHeader, setForceHideHeader] = useState(false);
   const isLanding = (pathname || "").toLowerCase() === "/landing";
   const [isMobile, setIsMobile] = useState(false);
-  const showHeader = pathname !== "/" && !forceHideHeader;
+  const [isMobileLandscape, setIsMobileLandscape] = useState(false);
+  const showHeader = pathname !== "/" && !forceHideHeader && !isMobileLandscape;
 
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 767px)");
@@ -66,6 +67,22 @@ export default function RootLayout({
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateOrientation = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      setIsMobileLandscape(w > h && w < 1024);
+    };
+    updateOrientation();
+    window.addEventListener("resize", updateOrientation);
+    window.addEventListener("orientationchange", updateOrientation);
+    return () => {
+      window.removeEventListener("resize", updateOrientation);
+      window.removeEventListener("orientationchange", updateOrientation);
+    };
+  }, []);
+
   return (
     <html lang="ko">
       <body
@@ -85,9 +102,11 @@ export default function RootLayout({
             </header>
           )}
 
-          <div className="fixed bottom-4 right-4 z-50 md:bottom-6 md:right-6">
-            <ThemeToggle className="scale-90 md:scale-100 shadow-lg shadow-black/10 dark:shadow-none" />
-          </div>
+          {!isMobileLandscape && (
+            <div className="fixed bottom-4 right-4 z-50 md:bottom-6 md:right-6">
+              <ThemeToggle className="scale-90 md:scale-100 shadow-lg shadow-black/10 dark:shadow-none" />
+            </div>
+          )}
 
           <main
             className={

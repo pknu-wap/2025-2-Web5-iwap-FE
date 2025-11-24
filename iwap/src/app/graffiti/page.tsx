@@ -50,28 +50,25 @@ function isFingerExtendedByDistance(
 }
 
 // 검지를 주로 펴고 있는지
+// ??? ?? ????
 function isIndexFingerOnlyExtended(lms: Landmark[]): boolean {
   if (!lms || lms.length < 21) return false;
 
-  const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.22);
+  const indexExtended = isFingerExtendedByDistance(lms, 8, 0, 0.20);
   if (!indexExtended) return false;
 
-  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.20);
-  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.20);
-  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.20);
+  // ?? ??? ?? ?? ???? ?? '???'? ???? ??? ?? + 1??? ??
+  const middleExtended = isFingerExtendedByDistance(lms, 12, 0, 0.28);
+  const ringExtended = isFingerExtendedByDistance(lms, 16, 0, 0.28);
+  const pinkyExtended = isFingerExtendedByDistance(lms, 20, 0, 0.28);
 
   const othersCount =
     (middleExtended ? 1 : 0) +
     (ringExtended ? 1 : 0) +
     (pinkyExtended ? 1 : 0);
 
-  if (middleExtended) return false;
-
-  // 나머지 손가락도 되도록 접혀 있는 상태에서만 그리도록 꽤 빡세게 조임
-  if (ringExtended || pinkyExtended) return false;
-
-  // 엄지는 여기서는 신경 안 씀 (펴져 있어도 드로잉 허용)
-  return true;
+  // ?? ??, ???? ?? 1???? ?? ??? ??
+  return othersCount <= 1;
 }
 
 // 엄지척
@@ -178,6 +175,7 @@ const COLOR_PALETTE = ["#FA4051", "#FDD047", "#2FB665", "#FFFFFF", "#000000"];
 export default function HandLandmarkerPage() {
   const [isReady, setIsReady] = useState(false);
   const [isWebcamRunning, setIsWebcamRunning] = useState(false);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
 
   const visionModuleRef = useRef<any>(null);
   const handLandmarkerRef = useRef<any>(null);
@@ -240,19 +238,30 @@ export default function HandLandmarkerPage() {
 
   /* ---- Graffiti 인트로 상태 ---- */
   const [showIntro, setShowIntro] = useState(true);
+  const [showCameraPrompt, setShowCameraPrompt] = useState(false);
   const [introFinished, setIntroFinished] = useState(false);
   const [fingerAnimationDone, setFingerAnimationDone] = useState(false);
   const [overlayExpanding, setOverlayExpanding] = useState(false);
   const [overlayExpanded, setOverlayExpanded] = useState(false);
+  const [isMobileLandscape, setIsMobileLandscape] = useState(false);
+  const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
   const fingerAnimationDoneRef = useRef(fingerAnimationDone);
+  const toolbarWrapperRef = useRef<HTMLDivElement | null>(null);
+  const toolbarDragRef = useRef(false);
+  const toolbarDragOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 
   const handleIntroReady = useCallback(() => {
-    setShowIntro(false);
+    setShowCameraPrompt(false);
     setIntroFinished(true);
     if (!fingerAnimationDoneRef.current) {
       fingerAnimationDoneRef.current = false;
       setFingerAnimationDone(false);
     }
+  }, []);
+
+  const handleModalClose = useCallback(() => {
+    setShowIntro(false);
+    setShowCameraPrompt(true);
   }, []);
 
   useEffect(() => {
@@ -288,6 +297,62 @@ export default function HandLandmarkerPage() {
     setFingerAnimationDone(true);
   }, [introFinished, fingerAnimationDone]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const updateOrientation = () => {
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      setIsMobileLandscape(w > h && w < 1024);
+      if (w > h && w < 1024) {
+        setToolbarPos({
+          x: w - 72,
+          y: h / 2,
+        });
+      } else {
+        setToolbarPos(null);
+      }
+    };
+    updateOrientation();
+    window.addEventListener("resize", updateOrientation);
+    window.addEventListener("orientationchange", updateOrientation);
+    return () => {
+      window.removeEventListener("resize", updateOrientation);
+      window.removeEventListener("orientationchange", updateOrientation);
+    };
+  }, []);
+
+  const handleToolbarPointerDown = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMobileLandscape) return;
+    const target = event.target as HTMLElement | null;
+    if (target && (target.closest("button") || target.closest("[data-palette]"))) return;
+    const rect = toolbarWrapperRef.current?.getBoundingClientRect();
+    const baseX = rect?.left ?? event.clientX;
+    const baseY = rect?.top ?? event.clientY;
+    toolbarDragOffsetRef.current = {
+      x: event.clientX - baseX,
+      y: event.clientY - baseY,
+    };
+    toolbarDragRef.current = true;
+    (event.currentTarget as HTMLElement).setPointerCapture(event.pointerId);
+  }, [isMobileLandscape]);
+
+  const handleToolbarPointerMove = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!toolbarDragRef.current || !isMobileLandscape) return;
+    if (typeof window === "undefined") return;
+    const min = 40;
+    const maxX = window.innerWidth - 40;
+    const maxY = window.innerHeight - 40;
+    const nextX = Math.min(Math.max(event.clientX - toolbarDragOffsetRef.current.x, min), maxX);
+    const nextY = Math.min(Math.max(event.clientY - toolbarDragOffsetRef.current.y, min), maxY);
+    setToolbarPos({ x: nextX, y: nextY });
+  }, [isMobileLandscape]);
+
+  const handleToolbarPointerUp = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (!isMobileLandscape) return;
+    toolbarDragRef.current = false;
+    (event.target as HTMLElement).releasePointerCapture?.(event.pointerId);
+  }, [isMobileLandscape]);
+
   const videoReady = !showIntro && overlayExpanded;
 
   /* ---- Toolbar / 브러시 상태 ---- */
@@ -298,11 +363,11 @@ export default function HandLandmarkerPage() {
   );
 
   const [brushColor, setBrushColor] = useState<string>("#FFFFFF");
-  const [brushSize, setBrushSize] = useState(6);
+  const [brushSize, setBrushSize] = useState(15);
 
   // ★ 최신 값을 루프에서 읽기 위한 ref
   const brushColorRef = useRef<string>("#FFFFFF");
-  const brushSizeRef = useRef<number>(6);
+  const brushSizeRef = useRef<number>(15);
 
   useEffect(() => {
     brushColorRef.current = brushColor;
@@ -356,8 +421,9 @@ export default function HandLandmarkerPage() {
     if (!canvas) return;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
+    const snapshot = canvas.toDataURL();
+    setUndoStack((prev) => [...prev, snapshot]);
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setUndoStack([]);
     setRedoStack([]);
   }, []);
 
@@ -423,9 +489,10 @@ export default function HandLandmarkerPage() {
           },
           runningMode: runningModeRef.current,
           numHands: 2,
-          minHandDetectionConfidence: 0.3,
-          minHandPresenceConfidence: 0.3,
-          minTrackingConfidence: 0.3,
+          // Lowered thresholds to help mobile cameras in lower light/quality
+          minHandDetectionConfidence: 0.2,
+          minHandPresenceConfidence: 0.2,
+          minTrackingConfidence: 0.2,
         }
       );
 
@@ -578,12 +645,21 @@ export default function HandLandmarkerPage() {
     const videoHeight = video.videoHeight;
 
     container.style.width = "100%";
-    container.style.maxWidth = `${videoWidth}px`;
+    // 강제 표시 폭 제한: 모바일/데스크탑 별로 최대치를 고정해 비디오 해상도(1080 등)와 무관하게 작게 유지
+    const isMobile = window.innerWidth < 768;
+    const displayMaxWidth = isMobile
+      ? isMobileLandscape
+        ? 720 // mobile landscape 더 크게
+        : 360
+      : 900; // 데스크탑 뷰도 여유 있게
+    container.style.maxWidth = `${displayMaxWidth}px`;
+    // 높이 클램프 제거해 비율 그대로 유지
+    container.style.maxHeight = "";
     container.style.aspectRatio = `${videoWidth} / ${videoHeight}`;
 
+    // 비디오/캔버스 스타일을 컨테이너에 맞춰 100%로 유지
     video.style.width = "100%";
     video.style.height = "100%";
-
     overlayCanvas.style.width = "100%";
     overlayCanvas.style.height = "100%";
     drawCanvas.style.width = "100%";
@@ -728,64 +804,136 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
     }
   }, [triggerEmoji]); // ★ brushColor/Size 제거, triggerEmoji만 deps
 
-  const handleToggleWebcam = useCallback(async () => {
-    if (!isReady) return;
+  const startWebcam = useCallback(
+    async (mode: "user" | "environment" = facingMode) => {
+      if (!isReady) return;
 
-    if (isWebcamRunning) {
+      if (!navigator.mediaDevices?.getUserMedia) {
+        console.warn("getUserMedia() not supported.");
+        return;
+      }
+
+      const constraintsExactEnv: MediaStreamConstraints = {
+        video: {
+          facingMode: { exact: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      };
+      const constraintsIdealEnv: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: "environment" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      };
+      const constraintsIdealUser: MediaStreamConstraints = {
+        video: {
+          facingMode: { ideal: "user" },
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+        },
+        audio: false,
+      };
+
+      const attemptStream = async (constraints: MediaStreamConstraints) => {
+        try {
+          return await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (err) {
+          return null;
+        }
+      };
+
+      // stop any existing stream before requesting a new one
       stopWebcam();
-      return;
-    }
 
-    if (!navigator.mediaDevices?.getUserMedia) {
-      console.warn("getUserMedia() 미지원 브라우저");
-      return;
-    }
+      let selectedMode: "user" | "environment" = mode;
+      let stream: MediaStream | null = null;
 
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      if (mode === "environment") {
+        stream =
+          (await attemptStream(constraintsExactEnv)) ||
+          (await attemptStream(constraintsIdealEnv)) ||
+          (await attemptStream(constraintsIdealUser));
+        if (stream && stream.getVideoTracks()[0]?.getSettings()?.facingMode !== "environment") {
+          selectedMode = "user";
+        }
+      } else {
+        stream = await attemptStream(constraintsIdealUser);
+        if (!stream) {
+          stream = await attemptStream(constraintsIdealEnv);
+          selectedMode = stream ? "environment" : "user";
+        }
+      }
+
+      if (!stream) {
+        console.error("Webcam access failed: no stream acquired");
+        return;
+      }
+
       const video = videoRef.current;
-      if (!video) return;
+      if (!video) {
+        stream.getTracks().forEach((t) => t.stop());
+        return;
+      }
 
       video.srcObject = stream;
       video.onloadeddata = () => {
         video
           .play()
           .catch(() => {
-            // autoplay 정책 에러 무시
+            // autoplay block error ignored
           });
+        setFacingMode(selectedMode);
         isWebcamRunningRef.current = true;
         setIsWebcamRunning(true);
         void predictWebcam();
       };
-    } catch (e) {
-      console.error("웹캠 접근 실패:", e);
-    }
-  }, [isReady, isWebcamRunning, predictWebcam, stopWebcam]);
+    },
+    [facingMode, isReady, predictWebcam, stopWebcam]
+  );
 
   useEffect(() => {
     if (!isReady || isWebcamRunning) return;
-    void handleToggleWebcam();
-  }, [handleToggleWebcam, isReady, isWebcamRunning]);
+    void startWebcam(facingMode);
+  }, [facingMode, isReady, isWebcamRunning, startWebcam]);
 
   /* ---------------- JSX (예전 Graffiti 디자인 + 새 기능) ---------------- */
   return (
     <div className="relative w-full h-dvh text-slate-50" style={pageBackgroundStyle}>
-      <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={() => setShowIntro(false)} />
+      <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleModalClose} />
+      {/* 모바일 가로 전용 헤더 */}
+      {!showIntro && isMobileLandscape && (
+        <div className="absolute top-3 left-0 right-0 z-[70] flex justify-center px-4 md:hidden pointer-events-none">
+          <div className="pointer-events-auto w-full max-w-xl">
+            <PageHeader
+              title="Graff!ti"
+              subtitle="움직임으로만 드로잉"
+              goBack={true}
+              padding="p-0"
+              inlineClose
+            />
+          </div>
+        </div>
+      )}
       {/* 상단 고정 헤더 영역 (인트로 제거, 헤더만 유지) */}
-      <div className="pointer-events-none inset-0 flex items-center justify-center p-6 animate-fadeIn">
-        <div className="absolute pointer-events-auto w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
-          <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
-            <div className="w-full h-full pt-[72px] md:pt-[100px] translate-y-0 relative">
-              <div className="absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0">
-                {!videoReady && (
-                  <PageHeader
-                    title="Graff!ti"
-                    subtitle="움직임으로만 드로잉"
-                    goBack={true}
-                    padding="p-0"
-                  />
-                )}
-              </div>
+      <div className="relative inset-0 pointer-events-none flex items-center justify-center p-6 animate-fadeIn z-50">
+        <div className="absolute pointer-events-none w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
+          <div className="pointer-events-auto flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
+              {!showIntro && !isMobileLandscape && (
+                <div className="z-[70] absolute top-[40px] md:top-6 left-0 right-0 px-4 md:px-0 pointer-events-none">
+                  <div className="pointer-events-auto">
+                    <PageHeader
+                      title="Graff!ti"
+                      subtitle="움직임으로만 드로잉"
+                      goBack={true}
+                      padding="p-0"
+                    />
+                  </div>
+                </div>
+              )}
 
               {!isReady && (
                 <p className="mt-4 text-xs text-amber-200">
@@ -795,28 +943,13 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
             </div>
           </div>
         </div>
-      </div>
 
-      {/* 우상단 웹캠 토글 버튼 */}
-      {/* <div className="absolute top-6 right-6 z-40">
-        <button
-          type="button"
-          onClick={() => void handleToggleWebcam()}
-          className="inline-flex items-center justify-center rounded-full px-4 py-2 text-xs md:text-sm font-light disabled:opacity-50 bg-[rgba(255,255,255,0.40)] min-w-[72px]
-        shadow-[0_0_50px_20px_rgba(0,0,0,0.25)]
-        backdrop-blur-[4px]
-        border border-white"
-          disabled={!isReady}
-        >
-          {isWebcamRunning ? "OFF" : "ON"}
-        </button>
-      </div> */}
 
       {/* 비디오 + 인트로 + 툴바: 한 그룹으로 중앙 기준 스케일 */}
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="relative w-full max-w-[1000px] origin-center md:scale-100 scale-[0.9] flex flex-col items-center">
           {/* Intro 1: camera access prompt */}
-          {showIntro && (
+          {showCameraPrompt && (
             <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
               <button
                 type="button"
@@ -898,9 +1031,10 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
           <div
             ref={containerRef}
             className={`
-              relative w-full mx-auto md:translate-y-0 
-              max-w-[400px]
-              md:max-w-[1040px]
+              relative z-10 w-full mx-auto md:-translate-y-[10px]
+              max-w-[720px]
+              md:max-w-[1080px]
+              ${isMobileLandscape ? "scale-[1.8]" : ""}
               ${videoReady ? "opacity-100 visible" : "opacity-0 invisible"}
               transition-opacity duration-500
             `}
@@ -908,7 +1042,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
           >
             <video
               ref={videoRef}
-              className="absolute inset-0 w-full h-full object-contain -scale-x-100"
+              className="absolute inset-0 w-full h-full object-contain -scale-x-100 pointer-events-none"
               autoPlay
               playsInline
               muted
@@ -944,7 +1078,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
 
           {/* 하단 툴바 */}
           {videoReady && (
-            <div className="pointer-events-auto mt-6 flex justify-center">
+            <div className="pointer-events-auto mt-6 flex justify-center relative">
               <div className="hidden md:flex">
                 <GraffitiToolbar
                   colorPalette={COLOR_PALETTE}
@@ -964,7 +1098,25 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   onSave={handleSave}
                 />
               </div>
-              <div className="flex md:hidden">
+        <div
+          ref={toolbarWrapperRef}
+          className={
+            isMobileLandscape
+              ? "md:hidden fixed z-[100] flex flex-col items-center gap-3"
+              : "md:hidden fixed left-1/2 bottom-4 -translate-x-1/2 z-[80] w-full flex justify-center px-4"
+          }
+                style={
+                  isMobileLandscape
+                    ? toolbarPos
+                      ? { left: toolbarPos.x, top: toolbarPos.y, right: "auto", bottom: "auto", transform: "translate(-50%, -50%)" }
+                      : { right: "calc(env(safe-area-inset-right, 0px) + 16px)", top: "50%", transform: "translateY(-50%)" }
+                    : { bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)" }
+                }
+                onPointerDown={handleToolbarPointerDown}
+                onPointerMove={handleToolbarPointerMove}
+                onPointerUp={handleToolbarPointerUp}
+                onPointerCancel={handleToolbarPointerUp}
+              >
                 <GraffitiToolbarMobile
                   colorPalette={COLOR_PALETTE}
                   brushColor={brushColor}
@@ -981,6 +1133,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   onRedo={handleRedo}
                   onClear={handleClear}
                   onSave={handleSave}
+                  rotate={isMobileLandscape}
                 />
               </div>
             </div>
