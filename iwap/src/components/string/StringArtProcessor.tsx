@@ -30,7 +30,7 @@ const pollEndpoint = async (
     await new Promise(resolve => setTimeout(resolve, interval));
   }
 
-  throw new Error("Processing timed out. The task took too long.");
+  throw new Error("처리 시간이 초과되었습니다. 작업이 너무 오래 걸립니다.");
 };
 
 export const processImageToStringArt = async (
@@ -72,10 +72,10 @@ export const processImageToStringArt = async (
         } else if (errorJson.message) {
           detailedMessage = `Error: ${errorJson.message}`;
         } else {
-          detailedMessage = `Unknown JSON Error: ${errorText}`;
+          detailedMessage = `알 수 없는 JSON 오류: ${errorText}`;
         }
       } catch (e) {
-        detailedMessage = `Non-JSON Error (Status: ${postRes.status}): ${errorText.substring(0, 200)}...`;
+        detailedMessage = `JSON이 아닌 오류 (상태: ${postRes.status}): ${errorText.substring(0, 200)}...`;
       }
       
       console.error("[StringArtProcessor] Detailed Backend Error:", detailedMessage, {rawResponse: errorText});
@@ -86,7 +86,7 @@ export const processImageToStringArt = async (
     const { task_id } = postData;
 
     if (!task_id) {
-      throw new Error("API did not return a task_id.");
+      throw new Error("API에서 task_id를 반환하지 않았습니다.");
     }
 
     // 2. task_id로 좌표와 이미지를 병렬로 폴링
@@ -101,7 +101,7 @@ export const processImageToStringArt = async (
     }
     const coordData: CoordinatesResponse = await coordRes.json();
     if (!coordData.pull_orders || coordData.pull_orders.length === 0 || coordData.pull_orders[0].length === 0) {
-      throw new Error("Server did not return valid coordinate data (pull_orders is missing or empty).");
+      throw new Error("서버에서 유효한 좌표 데이터를 반환하지 않았습니다 (pull_orders 누락 또는 비어 있음).");
     }
 
     // 4. 이미지 응답 처리
@@ -122,7 +122,7 @@ export const processImageToStringArt = async (
     if (err instanceof Error) {
       throw err;
     } else {
-      throw new Error("An unknown error occurred during the API request.");
+      throw new Error("API 요청 중 알 수 없는 오류가 발생했습니다.");
     }
   }
 };

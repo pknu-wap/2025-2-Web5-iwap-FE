@@ -54,12 +54,12 @@ export const getBackendUrl = (path: string) => {
 
 const describeFetchError = (err: unknown) => {
   if (err instanceof TypeError) {
-    return "Please check your network connection or backend address.";
+    return "네트워크 연결 또는 백엔드 주소를 확인해주세요.";
   }
   if (err instanceof Error && err.message) {
     return err.message;
   }
-  return "An unknown error occurred.";
+  return "알 수 없는 오류가 발생했습니다.";
 };
 
 const parseConversionResponse = async (
@@ -69,18 +69,18 @@ const parseConversionResponse = async (
   try {
     data = await res.json();
   } catch {
-    throw new Error("Cannot read server response.");
+    throw new Error("서버 응답을 읽을 수 없습니다.");
   }
 
   if (!data || typeof data !== "object") {
-    throw new Error("Invalid response.");
+    throw new Error("유효하지 않은 응답입니다.");
   }
 
   const payload = data as Record<string, unknown>;
   const requestId = payload.requestId;
 
   if (typeof requestId !== "string" || requestId.length === 0) {
-    throw new Error("Did not receive request ID.");
+    throw new Error("요청 ID를 받지 못했습니다.");
   }
 
   return {
@@ -135,13 +135,13 @@ export default function PianoBackendManager({
 
     const fetchAndPlayMidi = async (conversion: ConversionContext) => {
       try {
-        onStatusChange?.("Converting MIDI...");
+        onStatusChange?.("MIDI 변환 중...");
         const requestToken = encodeURIComponent(conversion.requestId);
         const midiRes = await fetch(
           getBackendUrl(`/api/piano/midi?request_id=${requestToken}`)
         );
         if (!midiRes.ok) {
-          throw new Error("Failed to download MIDI file.");
+          throw new Error("MIDI 파일 다운로드에 실패했습니다.");
         }
 
         const midiArray = await midiRes.arrayBuffer();
@@ -156,7 +156,7 @@ export default function PianoBackendManager({
             getBackendUrl(`/api/piano/mp3?request_id=${requestToken}`)
           );
           if (!mp3Res.ok) {
-            throw new Error("Failed to download MP3 file.");
+            throw new Error("MP3 파일 다운로드에 실패했습니다.");
           }
           const mp3Array = await mp3Res.arrayBuffer();
           downloadBlob = new Blob([mp3Array], { type: "audio/mpeg" });
@@ -258,7 +258,7 @@ export default function PianoBackendManager({
 
     const sendAudioToBackend = async () => {
       try {
-        onStatusChange?.("Converting MIDI...");
+        onStatusChange?.("MIDI 변환 중...");
 
         const res = await fetch(audioUrl);
         const blob = await res.blob();
@@ -273,7 +273,7 @@ export default function PianoBackendManager({
 
         if (!uploadRes.ok) {
           throw new Error(
-            "Audio upload failed. Please try again later."
+            "오디오 업로드에 실패했습니다. 나중에 다시 시도해주세요."
           );
         }
 

@@ -176,7 +176,7 @@ const DrawingCanvas = ({ onUploadSuccess, onUploadStart, onUploadFail }) => {
     // 4. 색상이 반전된 이미지를 Blob으로 변환하여 서버에 전송합니다.
     tempCanvas.toBlob(async (blob) => {
       if (!blob) {
-        onUploadFail?.('[Image Processing Error]: Cannot convert canvas image to file.');
+        onUploadFail?.('[이미지 처리 오류]: 캔버스 이미지를 파일로 변환할 수 없습니다.');
         return;
       }
       const formData = new FormData();
@@ -198,14 +198,14 @@ const DrawingCanvas = ({ onUploadSuccess, onUploadStart, onUploadFail }) => {
             const errorJson = JSON.parse(errorText);
             errorMessage = errorJson.message || errorText;
           } catch {
-            errorMessage = errorText || 'No response';
+            errorMessage = errorText || '응답 없음';
           }
-          throw new Error(`[Server Error ${response.status}]: ${errorMessage}`);
+          throw new Error(`[서버 오류 ${response.status}]: ${errorMessage}`);
         }
       } catch (error) {
         console.error('[DrawingCanvas] Error: Image upload failed:', error);
         // 2. 부모 컴포넌트에 업로드 실패를 알림
-        onUploadFail?.(error.message || '[Upload Error]: Image upload failed.');
+        onUploadFail?.(error.message || '[업로드 오류]: 이미지 업로드에 실패했습니다.');
       }
     }, 'image/jpeg');
   };

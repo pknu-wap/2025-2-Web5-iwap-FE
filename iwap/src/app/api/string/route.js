@@ -59,7 +59,7 @@ export async function POST(request) {
     const duration = Date.now() - startTime;
     console.error(`[API/string] Proxy error: ${error.message} (Total duration: ${duration}ms)`);
     
-    return new NextResponse(JSON.stringify({ message: 'Internal error in API proxy server.' }), {
+    return new NextResponse(JSON.stringify({ message: 'API 프록시 서버 내부 오류입니다.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

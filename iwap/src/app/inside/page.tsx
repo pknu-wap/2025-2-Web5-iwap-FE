@@ -65,7 +65,7 @@ export default function InsidePage() {
     } catch (err) {
       console.error('[InsidePage] Error: An error occurred during data processing:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      handleUploadFail(`[Data Processing Error]: ${errorMessage}`);
+      handleUploadFail(`[데이터 처리 오류]: ${errorMessage}`);
     }
   }, [handleUploadFail]);
 
@@ -81,7 +81,7 @@ export default function InsidePage() {
     } catch (err) {
       console.error('[InsidePage] Error: An error occurred processing task_id:', err);
       const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      handleUploadFail(`[Task ID Processing Error]: ${errorMessage}`);
+      handleUploadFail(`[Task ID 처리 오류]: ${errorMessage}`);
     }
   };
 
@@ -126,7 +126,7 @@ export default function InsidePage() {
         }
       } catch (error) {
         if (intervalId) clearInterval(intervalId);
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred during polling';
+        const errorMessage = error instanceof Error ? error.message : '폴링 중 알 수 없는 오류가 발생했습니다.';
         handleUploadFail(errorMessage);
       } finally {
         isFetching = false;

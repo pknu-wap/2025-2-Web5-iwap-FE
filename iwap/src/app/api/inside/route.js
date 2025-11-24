@@ -11,7 +11,7 @@ export async function POST(request) {
   // 1. 환경 변수 확인
   if (!BACKEND_URL) {
     console.error('[API/inside] Error: BACKEND_API_URL environment variable is not set.');
-    return new NextResponse(JSON.stringify({ message: 'Server environment variable is not set.' }), {
+    return new NextResponse(JSON.stringify({ message: '서버 환경 변수가 설정되지 않았습니다.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -42,7 +42,7 @@ export async function POST(request) {
   } catch (error) {
     // 5. 프록시 과정에서 에러 발생 시
     console.error(`[API/inside] Proxy error: ${error.message}`);
-    return new NextResponse(JSON.stringify({ message: 'Internal error in API proxy server.' }), {
+    return new NextResponse(JSON.stringify({ message: 'API 프록시 서버 내부 오류입니다.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
