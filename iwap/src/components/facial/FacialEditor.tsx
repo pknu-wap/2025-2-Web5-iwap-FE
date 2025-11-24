@@ -95,8 +95,8 @@ export default function FacialEditor() {
             <div className="flex-1 py-1 w-full flex justify-center">
               <FacialSlider
                 value={featureValues[feature.key]}
-                min={-5}
-                max={5}
+                min={-1}
+                max={1}
                 vertical={true}
                 onChange={(value) => handleSliderChange(feature.key, value)}
                 onChangeEnd={(value) => handleSliderChangeEnd(feature.key, value)}
