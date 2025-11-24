@@ -100,7 +100,7 @@ export default function GraffitiToolbarMobile({
     }
   }, [pendingCustomColor]);
 
-  const rotateClass = rotate ? "-rotate-90 origin-center translate-x-[30px] -translate-y-[65px] z-[100]" : "";
+  const rotateClass = rotate ? "-rotate-90 origin-center translate-x-[30px] -translate-y-[48px] z-[100] scale-[0.8]" : "-translate-y-[50px]";
   const iconRotate = rotate ? "rotate-90" : "";
   const palettePositionClass = rotate
     ? "fixed -translate-y-[310px] translate-x-[100px] z-[120]"
