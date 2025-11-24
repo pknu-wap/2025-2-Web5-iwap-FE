@@ -65,6 +65,9 @@ export default function GraffitiToolbarMobile({
   const stopPointerPropagation = useCallback((event: React.PointerEvent) => {
     event.stopPropagation();
   }, []);
+  const stopAll = useCallback((event: React.SyntheticEvent) => {
+    event.stopPropagation();
+  }, []);
   const openColorPicker = useCallback(() => {
     const picker = colorPickerRef.current;
     if (!picker) return;
@@ -77,15 +80,19 @@ export default function GraffitiToolbarMobile({
 
   useEffect(() => {
     if (!showPalette) return;
+    // 모바일 가로(rotate)에서는 밖 터치 시 자동 닫힘을 막는다.
+    if (rotate) return;
     const handleClickOutside = (event: MouseEvent) => {
       if (!wrapperRef.current) return;
+      const target = event.target as Node;
+      if ((target as HTMLElement)?.closest("[data-palette]")) return;
       if (!wrapperRef.current.contains(event.target as Node)) {
         setShowPalette(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [showPalette]);
+  }, [rotate, showPalette]);
 
   useEffect(() => {
     if (pendingCustomColor && isValidHex(pendingCustomColor)) {
@@ -93,10 +100,10 @@ export default function GraffitiToolbarMobile({
     }
   }, [pendingCustomColor]);
 
-  const rotateClass = rotate ? "-rotate-90 origin-center -translate-x-[80px] -translate-y-[50px] z-[100]" : "";
+  const rotateClass = rotate ? "-rotate-90 origin-center translate-x-[30px] -translate-y-[65px] z-[100]" : "";
   const iconRotate = rotate ? "rotate-90" : "";
   const palettePositionClass = rotate
-    ? "absolute left-1/2 -translate-x-1/2 -translate-y-[170px] top-0 z-[999]"
+    ? "fixed -translate-y-[310px] translate-x-[100px] z-[120]"
     : "fixed left-1/2 bottom-[80px] -translate-x-1/2 z-[100]";
 
   const undoButton = (
@@ -196,10 +203,13 @@ export default function GraffitiToolbarMobile({
 
       {showPalette && (
         <div
+          data-palette="true"
           className={`
             ${palettePositionClass}
+            ${rotate ? "rotate-90 origin-center" : ""}
+            pointer-events-auto
             w-[330px]
-            rounded-2xl border border-white rounded-br-none
+            rounded-2xl border border-white ${rotate ? "rounded-tr-none" : "rounded-br-none"}
             bg-[rgba(255,255,255,0.40)]
             shadow-[0_0_50px_0_rgba(0,0,0,0.25)]
             backdrop-blur-[4px]
@@ -209,154 +219,165 @@ export default function GraffitiToolbarMobile({
             `}
           onPointerDown={stopPointerPropagation}
           onPointerMove={stopPointerPropagation}
+          onPointerUp={stopPointerPropagation}
+          onMouseDown={stopAll}
+          onMouseUp={stopAll}
+          onClick={stopAll}
+          onTouchStart={stopAll}
+          onTouchEnd={stopAll}
         >
-          <div className="flex flex-wrap items-center gap-3">
-            {colorPalette.map((color) => {
-              const normalizedColor = color.toLowerCase();
-              const isSelected = normalizedBrushColor === normalizedColor;
-              const isWhite = normalizedColor === "#ffffff";
-              const checkColor = isWhite ? "#000000" : "#ffffff";
-              return (
-                <button
-                  key={color}
-                  type="button"
-                  className="relative h-[32px] w-[32px] rounded-full border transition flex items-center justify-center"
-                  style={{ backgroundColor: color, borderColor: "#ffffff" }}
-                  onClick={() => onBrushColorChange(color)}
-                >
-                  {isSelected && (
-                    <span
-                      className="text-[18px] leading-none"
-                      style={{ color: checkColor, textShadow: "0 0 4px rgba(0,0,0,0.6)" }}
-                    >
-                      ✓
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+          <div className="flex flex-col items-center justify-center gap-4 w-full pointer-events-auto">
+            <div className="flex flex-wrap items-center justify-center gap-3 w-full pointer-events-auto">
+              {colorPalette.map((color) => {
+                const normalizedColor = color.toLowerCase();
+                const isSelected = normalizedBrushColor === normalizedColor;
+                const isWhite = normalizedColor === "#ffffff";
+                const checkColor = isWhite ? "#000000" : "#ffffff";
+                return (
+                  <button
+                    key={color}
+                    type="button"
+                    className="relative h-[32px] w-[32px] rounded-full border transition flex items-center justify-center"
+                    style={{ backgroundColor: color, borderColor: "#ffffff" }}
+                    onClick={(e) => {
+                      stopAll(e);
+                      onBrushColorChange(color);
+                    }}
+                  >
+                    {isSelected && (
+                      <span
+                        className="text-[18px] leading-none"
+                        style={{ color: checkColor, textShadow: "0 0 4px rgba(0,0,0,0.6)" }}
+                      >
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
 
-            {customPatterns.map((hex) => {
-              const normalizedColor = hex.toLowerCase();
-              const isSelected = normalizedBrushColor === normalizedColor;
-              const isWhite = normalizedColor === "#ffffff";
-              const checkColor = isWhite ? "#000000" : "#ffffff";
-              return (
-                <button
-                  key={hex}
-                  type="button"
-                  className="relative h-[32px] w-[32px] rounded-full border transition flex items-center justify-center"
-                  style={{ backgroundColor: hex, borderColor: "#ffffff" }}
-                  onClick={() => onBrushColorChange(hex)}
-                >
-                  {isSelected && (
-                    <span
-                      className="text-[18px] leading-none"
-                      style={{ color: checkColor, textShadow: "0 0 4px rgba(0,0,0,0.6)" }}
-                    >
-                      ✓
-                    </span>
-                  )}
-                </button>
-              );
-            })}
+              {customPatterns.map((hex) => {
+                const normalizedColor = hex.toLowerCase();
+                const isSelected = normalizedBrushColor === normalizedColor;
+                const isWhite = normalizedColor === "#ffffff";
+                const checkColor = isWhite ? "#000000" : "#ffffff";
+                return (
+                  <button
+                    key={hex}
+                    type="button"
+                    className="relative h-[32px] w-[32px] rounded-full border transition flex items-center justify-center"
+                    style={{ backgroundColor: hex, borderColor: "#ffffff" }}
+                    onClick={() => onBrushColorChange(hex)}
+                  >
+                    {isSelected && (
+                      <span
+                        className="text-[18px] leading-none"
+                        style={{ color: checkColor, textShadow: "0 0 4px rgba(0,0,0,0.6)" }}
+                      >
+                        ✓
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
 
-            <input
-              type="color"
-              ref={colorPickerRef}
-              className="absolute left-1/2 top-1/2 h-[1px] w-[1px] -translate-x-1/2 -translate-y-1/2 opacity-0"
-              onChange={(event) => onCustomColorPick(event.target.value)}
-            />
-            <button
-              type="button"
-              className="
-                h-[32px] w-[32px]
-                rounded-full
-              "
-              style={{
-                backgroundImage: "url('/icons/rainbow.svg')",
-                backgroundSize: "cover",
-                backgroundPosition: "center",
-                backgroundRepeat: "no-repeat",
-              }}
-              onClick={openColorPicker}
-            />
-            <div className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded-full border border-white/20">
-              <span className="text-[12px] text-white/80">HEX</span>
               <input
-                type="text"
-                value={fallbackHex}
-                onChange={(e) => setFallbackHex(e.target.value)}
-                className="w-[78px] rounded px-2 py-1 text-[12px] text-black"
-                placeholder="#FFFFFF"
-                inputMode="text"
-                autoComplete="off"
+                type="color"
+                ref={colorPickerRef}
+                className="absolute left-1/2 top-1/2 h-[1px] w-[1px] -translate-x-1/2 -translate-y-1/2 opacity-0"
+                onChange={(event) => onCustomColorPick(event.target.value)}
               />
               <button
                 type="button"
-                className="h-[30px] px-2 rounded-full border border-white/40 text-[12px] text-white disabled:opacity-40"
-                onClick={() => {
-                  const trimmed = fallbackHex.trim();
-                  if (!isValidHex(trimmed)) return;
-                  onCustomColorPick(trimmed);
-                  onConfirmCustomColor();
+                className="
+                h-[32px] w-[32px]
+                rounded-full
+              "
+                style={{
+                  backgroundImage: "url('/icons/rainbow.svg')",
+                  backgroundSize: "cover",
+                  backgroundPosition: "center",
+                  backgroundRepeat: "no-repeat",
                 }}
-                disabled={!isValidHex(fallbackHex)}
+                onClick={openColorPicker}
+              />
+              <div className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded-full border border-white">
+                <span className="text-[12px] text-white">HEX</span>
+                <input
+                  type="text"
+                  value={fallbackHex}
+                  onChange={(e) => setFallbackHex(e.target.value)}
+                  className="w-[78px] rounded px-2 py-1 text-[12px] text-black"
+                  placeholder="#FFFFFF"
+                  inputMode="text"
+                  autoComplete="off"
+                />
+                <button
+                  type="button"
+                  className="h-[30px] px-2 rounded-full border border-white text-[12px] text-white disabled:opacity-40"
+                  onClick={() => {
+                    const trimmed = fallbackHex.trim();
+                    if (!isValidHex(trimmed)) return;
+                    onCustomColorPick(trimmed);
+                    onConfirmCustomColor();
+                  }}
+                  disabled={!isValidHex(fallbackHex)}
+                >
+                  적용
+                </button>
+              </div>
+              <button
+                type="button"
+                onClick={
+                  showDeleteAction
+                    ? () => onRemoveCustomColor(brushColor)
+                    : onConfirmCustomColor
+                }
+                disabled={showDeleteAction ? false : confirmDisabled}
+                className="
+                h-[32px] px-3
+                rounded-full border border-white
+                text-[12px] text-white transition
+                disabled:opacity disabled:cursor-not-allowed
+              "
               >
-                적용
+                {showDeleteAction ? "Delete" : "Confirm"}
               </button>
             </div>
-            <button
-              type="button"
-              onClick={
-                showDeleteAction
-                  ? () => onRemoveCustomColor(brushColor)
-                  : onConfirmCustomColor
-              }
-              disabled={showDeleteAction ? false : confirmDisabled}
-              className="
-                h-[32px] px-3
-                rounded-full border border-white/30
-                text-[12px] text-white transition
-                disabled:opacity-40 disabled:cursor-not-allowed
-              "
-            >
-              {showDeleteAction ? "Delete" : "Confirm"}
-            </button>
-          </div>
 
-          <div className="flex items-center gap-3">
-            <p className="text-[16px] text-white/90 font-light">size</p>
-            <div className="relative h-[26px] flex-1">
-              <div className="absolute inset-0 flex items-center">
-                <div className="h-[4px] w-full rounded-full bg-white/20" />
+            <div className="flex items-center justify-center gap-3 w-full pointer-events-auto">
+              <p className="text-[16px] text-white font-light">size</p>
+              <div className="relative h-[26px] flex-1">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="h-[4px] w-full rounded-full bg-white/20" />
+                </div>
+                <div
+                  className="absolute left-0 top-1/2 h-[4px] rounded-full bg-white"
+                  style={{
+                    width: `${sliderPercentage}%`,
+                    transform: "translateY(-50%)",
+                  }}
+                />
+                <div
+                  className="pointer-events-none absolute top-1/2 flex h-[14px] w-[4px] rounded-[2px] bg-white"
+                  style={{
+                    left: `${sliderPercentage}%`,
+                    transform: "translate(-50%, -50%)",
+                  }}
+                />
+                <input
+                  type="range"
+                  min={sliderMin}
+                  max={sliderMax}
+                  value={brushSize}
+                  onChange={(event) => onSizeChange(Number(event.target.value))}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                />
               </div>
-              <div
-                className="absolute left-0 top-1/2 h-[4px] rounded-full bg-white"
-                style={{
-                  width: `${sliderPercentage}%`,
-                  transform: "translateY(-50%)",
-                }}
-              />
-              <div
-                className="pointer-events-none absolute top-1/2 flex h-[14px] w-[4px] rounded-[2px] bg-white"
-                style={{
-                  left: `${sliderPercentage}%`,
-                  transform: "translate(-50%, -50%)",
-                }}
-              />
-              <input
-                type="range"
-                min={sliderMin}
-                max={sliderMax}
-                value={brushSize}
-                onChange={(event) => onSizeChange(Number(event.target.value))}
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-              />
+              <span className="text-[12px] text-white/70 w-10 text-right">
+                {brushSize}
+              </span>
             </div>
-            <span className="text-[12px] text-white/70 w-10 text-right">
-              {brushSize}
-            </span>
           </div>
         </div>
       )}

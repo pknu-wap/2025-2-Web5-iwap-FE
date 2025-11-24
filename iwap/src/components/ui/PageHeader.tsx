@@ -34,7 +34,7 @@ export default function PageHeader({
 
   return (
     <header
-      className={`${positionClasses} w-full flex ${
+      className={`${positionClasses} w-full flex pointer-events-none ${
         inlineClose ? "flex-col items-start gap-1" : "justify-between items-end"
       } text-white ${padding}`}
     >
@@ -42,8 +42,8 @@ export default function PageHeader({
         <div
           className={
             inlineClose
-              ? "flex flex-col items-start gap-1"
-              : "flex flex-col sm:flex-row sm:items-baseline sm:gap-x-3"
+              ? "pointer-events-auto flex flex-col items-start gap-1"
+              : "pointer-events-auto flex flex-col sm:flex-row sm:items-baseline sm:gap-x-3"
           }
         >
           {title && (
@@ -52,7 +52,7 @@ export default function PageHeader({
                 {title}
               </h1>
               {inlineClose && (goBack || onClose) && (
-                <div className={`flex-shrink-0 pb-0 ${closeButtonClassName}`}>
+                <div className={`pointer-events-auto flex-shrink-0 pb-0 ${closeButtonClassName}`}>
                   <CloseButton onClick={onClose} goBack={goBack} />
                 </div>
               )}
@@ -67,7 +67,7 @@ export default function PageHeader({
       )}
 
       {!inlineClose && (goBack || onClose) && (
-        <div className={`flex-shrink-0 pb-0 ${closeButtonClassName}`}>
+        <div className={`pointer-events-auto flex-shrink-0 pb-0 ${closeButtonClassName}`}>
           <CloseButton onClick={onClose} goBack={goBack} />
         </div>
       )}
