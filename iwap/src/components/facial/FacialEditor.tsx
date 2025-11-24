@@ -10,7 +10,7 @@ const FEATURE_CONFIG = [
   { key: "young", label: "나이" },
   { key: "male", label: "성별" },
   { key: "smiling", label: "미소" },
-  { key: "pale_skin", label: "피부톤" },
+  { key: "pale_skin", label: "피부" },
   { key: "eyeglasses", label: "안경" },
   { key: "mustache", label: "수염" },
   { key: "wearing_lipstick", label: "화장" },
@@ -71,14 +71,12 @@ export default function FacialEditor() {
     fetchImage(newValues);
   };
 
-  if (isInitialLoading && !processedImageUrl) {
-    return <LoadingIndicator text="이미지 준비 중..." />;
-  }
-
   return (
     <div className="w-full flex flex-col items-center justify-center relative gap-6">
-      <div className="relative w-full aspect-square">
-        {processedImageUrl && (
+      <div className="relative w-full aspect-square flex items-center justify-center">
+        {isInitialLoading && !processedImageUrl ? (
+          <LoadingIndicator text="이미지 준비 중..." />
+        ) : processedImageUrl ? (
           <Image 
             src={processedImageUrl} 
             alt="Processed image" 
@@ -86,19 +84,19 @@ export default function FacialEditor() {
             className="object-contain" 
             unoptimized 
           />
-        )}
+        ) : null}
       </div>
       
       {/* 슬라이더 컨테이너: 가로 배치, 수직 슬라이더 */}
-      <div className="w-full p-2 bg-white/40 border border-white backdrop-blur-sm shrink-0 flex justify-between items-end gap-1 overflow-x-auto">
+      <div className="w-full p-2 bg-white/40 border border-white backdrop-blur-sm shrink-0 flex justify-between items-end gap-1">
         {FEATURE_CONFIG.map((feature) => (
-          <div key={feature.key} className="flex flex-col items-center gap-2 text-white h-32 min-w-12 flex-1">
-            <span className="text-xs font-semibold">{feature.label}</span>
+          <div key={feature.key} className="flex flex-col items-center gap-2 text-white h-32 flex-1 min-w-0">
+            <span className="text-xs font-semibold truncate w-full text-center">{feature.label}</span>
             <div className="flex-1 py-1 w-full flex justify-center">
               <FacialSlider
                 value={featureValues[feature.key]}
-                min={-1}
-                max={1}
+                min={-5}
+                max={5}
                 vertical={true}
                 onChange={(value) => handleSliderChange(feature.key, value)}
                 onChangeEnd={(value) => handleSliderChangeEnd(feature.key, value)}

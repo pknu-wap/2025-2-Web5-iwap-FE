@@ -22,12 +22,13 @@ export default function FacialPage() {
     <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" style={pageBackgroundStyle}>
       <div className="w-full h-full flex translate-x-5 md:translate-x-0 items-center justify-center p-4 sm:p-8 overflow-y-auto">
         <div className="flex flex-col w-full max-w-lg relative min-h-0">
-          <div className="w-[90%] md:w-full pt-[100px] flex flex-col gap-4">
+          <div className="w-[90%] md:w-full pt-0 flex flex-col gap-4">
             <PageHeader
               title="Fac!al"
               subtitle="얼굴의 특징을 변경"
               goBack={true}
               padding="p-0"
+              isAbsolute={false}
               closeButtonClassName="-translate-x-6 md:translate-x-0"
             />
             <div className="w-full flex flex-col">
