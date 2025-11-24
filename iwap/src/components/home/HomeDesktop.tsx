@@ -41,11 +41,19 @@ export default function HomeDesktop({ isDarkTheme }: HomeDesktopProps) {
 
     updateRect();
     window.addEventListener("resize", updateRect);
+    
+    // Check if user has visited before
+    const hasVisited = sessionStorage.getItem("visited");
+    if (hasVisited) {
+      router.replace("/slides");
+    }
+
     return () => window.removeEventListener("resize", updateRect);
-  }, []);
+  }, [router]);
 
   const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
+    sessionStorage.setItem("visited", "true");
     setIsOpen(true);
     if (typeof window !== "undefined" && window.innerWidth >= 768) {
       setIsHovered(true);
