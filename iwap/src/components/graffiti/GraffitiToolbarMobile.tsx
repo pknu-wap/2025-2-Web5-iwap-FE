@@ -17,6 +17,7 @@ type GraffitiToolbarMobileProps = {
   onClear: () => void;
   onSave: () => void;
   rotate?: boolean;
+  desktopDevMobile?: boolean;
 };
 
 export default function GraffitiToolbarMobile({
@@ -36,6 +37,7 @@ export default function GraffitiToolbarMobile({
   onClear,
   onSave,
   rotate = false,
+  desktopDevMobile = false,
 }: GraffitiToolbarMobileProps) {
   const [showPalette, setShowPalette] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
@@ -80,19 +82,21 @@ export default function GraffitiToolbarMobile({
 
   useEffect(() => {
     if (!showPalette) return;
-    // 모바일 가로(rotate)에서는 밖 터치 시 자동 닫힘을 막는다.
-    if (rotate) return;
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (!wrapperRef.current) return;
       const target = event.target as Node;
       if ((target as HTMLElement)?.closest("[data-palette]")) return;
-      if (!wrapperRef.current.contains(event.target as Node)) {
+      if (!wrapperRef.current.contains(target)) {
         setShowPalette(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [rotate, showPalette]);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [showPalette]);
 
   useEffect(() => {
     if (pendingCustomColor && isValidHex(pendingCustomColor)) {
@@ -100,7 +104,11 @@ export default function GraffitiToolbarMobile({
     }
   }, [pendingCustomColor]);
 
-  const rotateClass = rotate ? "-rotate-90 origin-center translate-x-[30px] -translate-y-[48px] z-[100] scale-[0.8]" : "-translate-y-[50px]";
+  const rotateClass = rotate
+    ? "-rotate-90 origin-center translate-x-[30px] -translate-y-[48px] z-[100] scale-[0.8]"
+    : desktopDevMobile
+      ? "translate-y-[110px]"
+      : "-translate-y-[50px]";
   const iconRotate = rotate ? "rotate-90" : "";
   const palettePositionClass = rotate
     ? "fixed -translate-y-[310px] translate-x-[100px] z-[120]"
@@ -151,7 +159,7 @@ export default function GraffitiToolbarMobile({
           shadow-[0_0_50px_0_rgba(0,0,0,0.25)]
           backdrop-blur-[4px]
           px-4
-        flex items-center justify-between -transalte-y-[125px]
+          flex items-center justify-between
         "
       >
         <div className="flex items-center justify-between w-full">

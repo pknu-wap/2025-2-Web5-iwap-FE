@@ -245,6 +245,7 @@ export default function HandLandmarkerPage() {
   const [overlayExpanded, setOverlayExpanded] = useState(false);
   const [isMobileLandscape, setIsMobileLandscape] = useState(false);
   const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
+  const [isDesktopDevMobile, setIsDesktopDevMobile] = useState(false);
   const fingerAnimationDoneRef = useRef(fingerAnimationDone);
   const toolbarWrapperRef = useRef<HTMLDivElement | null>(null);
   const toolbarDragRef = useRef(false);
@@ -302,8 +303,12 @@ export default function HandLandmarkerPage() {
     const updateOrientation = () => {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      setIsMobileLandscape(w > h && w < 1024);
-      if (w > h && w < 1024) {
+      const isLandscape =
+        window.matchMedia?.("(orientation: landscape)")?.matches || w > h;
+      const landscapeMobile = isLandscape && w < 1024;
+
+      setIsMobileLandscape(landscapeMobile);
+      if (landscapeMobile) {
         setToolbarPos({
           x: w - 72,
           y: h / 2,
@@ -311,6 +316,17 @@ export default function HandLandmarkerPage() {
       } else {
         setToolbarPos(null);
       }
+
+      const ua = navigator.userAgent || "";
+      const isMobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+      const hasTouch = navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
+      const isPortraitViewport = h > w;
+      const viewportLooksMobile = Math.min(w, h) < 850 && Math.max(w, h) < 1500;
+      // DevTools 모바일 에뮬이면 UA는 모바일처럼 바뀌지만 터치포인트가 0이고 뷰포트가 작음
+      const isDevToolsMobile =
+        !hasTouch && viewportLooksMobile && isPortraitViewport;
+      const isDesktopButSmall = !isMobileUA && isDevToolsMobile;
+      setIsDesktopDevMobile(isDesktopButSmall);
     };
     updateOrientation();
     window.addEventListener("resize", updateOrientation);
@@ -1144,6 +1160,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   onRedo={handleRedo}
                   onClear={handleClear}
                   onSave={handleSave}
+                  desktopDevMobile={isDesktopDevMobile}
                   rotate={isMobileLandscape}
                 />
               </div>
