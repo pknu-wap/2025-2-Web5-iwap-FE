@@ -104,7 +104,6 @@ export default function FacialEditor() {
                 onChangeEnd={(value) => handleSliderChangeEnd(feature.key, value)}
               />
             </div>
-            <span className="text-xs font-mono w-full text-center">{featureValues[feature.key].toFixed(1)}</span>
           </div>
         ))}
       </div>
