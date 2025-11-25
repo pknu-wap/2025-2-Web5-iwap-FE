@@ -245,6 +245,7 @@ export default function HandLandmarkerPage() {
   const [overlayExpanded, setOverlayExpanded] = useState(false);
   const [isMobileLandscape, setIsMobileLandscape] = useState(false);
   const [toolbarPos, setToolbarPos] = useState<{ x: number; y: number } | null>(null);
+  const [isDesktopDevMobile, setIsDesktopDevMobile] = useState(false);
   const fingerAnimationDoneRef = useRef(fingerAnimationDone);
   const toolbarWrapperRef = useRef<HTMLDivElement | null>(null);
   const toolbarDragRef = useRef(false);
@@ -302,8 +303,12 @@ export default function HandLandmarkerPage() {
     const updateOrientation = () => {
       const w = window.innerWidth;
       const h = window.innerHeight;
-      setIsMobileLandscape(w > h && w < 1024);
-      if (w > h && w < 1024) {
+      const isLandscape =
+        window.matchMedia?.("(orientation: landscape)")?.matches || w > h;
+      const landscapeMobile = isLandscape && w < 1024;
+
+      setIsMobileLandscape(landscapeMobile);
+      if (landscapeMobile) {
         setToolbarPos({
           x: w - 72,
           y: h / 2,
@@ -311,6 +316,17 @@ export default function HandLandmarkerPage() {
       } else {
         setToolbarPos(null);
       }
+
+      const ua = navigator.userAgent || "";
+      const isMobileUA = /Mobi|Android|iPhone|iPad|iPod/i.test(ua);
+      const hasTouch = navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
+      const isPortraitViewport = h > w;
+      const viewportLooksMobile = Math.min(w, h) < 850 && Math.max(w, h) < 1500;
+      // DevTools 모바일 에뮬이면 UA는 모바일처럼 바뀌지만 터치포인트가 0이고 뷰포트가 작음
+      const isDevToolsMobile =
+        !hasTouch && viewportLooksMobile && isPortraitViewport;
+      const isDesktopButSmall = !isMobileUA && isDevToolsMobile;
+      setIsDesktopDevMobile(isDesktopButSmall);
     };
     updateOrientation();
     window.addEventListener("resize", updateOrientation);
@@ -464,6 +480,39 @@ export default function HandLandmarkerPage() {
     const a = document.createElement("a");
     a.href = url;
     a.download = `graffiti-${Date.now()}.png`;
+    a.click();
+  }, []);
+
+  const handleSaveWithVideo = useCallback(() => {
+    const canvas = drawCanvasRef.current;
+    const video = videoRef.current;
+    const overlay = overlayCanvasRef.current;
+    if (!canvas || !video) return;
+    const width = video.videoWidth || canvas.width;
+    const height = video.videoHeight || canvas.height;
+    if (!width || !height) return;
+
+    const exportCanvas = document.createElement("canvas");
+    exportCanvas.width = width;
+    exportCanvas.height = height;
+    const ctx = exportCanvas.getContext("2d");
+    if (!ctx) return;
+
+    // mirror to match on-screen view (-scale-x CSS)
+    ctx.save();
+    ctx.translate(width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(video, 0, 0, width, height);
+    ctx.drawImage(canvas, 0, 0, width, height);
+    if (overlay) {
+      ctx.drawImage(overlay, 0, 0, width, height);
+    }
+    ctx.restore();
+
+    const url = exportCanvas.toDataURL("image/png");
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `graffiti-full-${Date.now()}.png`;
     a.click();
   }, []);
 
@@ -906,14 +955,23 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
       <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleModalClose} />
       {/* 모바일 가로 전용 헤더 */}
       {!showIntro && isMobileLandscape && (
-        <div className="absolute top-3 left-0 right-0 z-[70] flex justify-center px-4 md:hidden pointer-events-none">
-          <div className="pointer-events-auto w-full max-w-xl">
+        <div
+          className="fixed z-[80] md:hidden pointer-events-none flex justify-start"
+          style={{
+            top: "calc(env(safe-area-inset-top, 0px) + 12px)",
+            left: "calc(env(safe-area-inset-left, 0px) + 12px)",
+          }}
+        >
+          <div className="pointer-events-auto px-3 py-2">
             <PageHeader
               title="Graff!ti"
               subtitle="움직임으로만 드로잉"
               goBack={true}
               padding="p-0"
               inlineClose
+              isAbsolute={false}
+              titleClassName="text-[22px] font-semibold"
+              subtitleClassName="text-[11px]"
             />
           </div>
         </div>
@@ -930,6 +988,8 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                       subtitle="움직임으로만 드로잉"
                       goBack={true}
                       padding="p-0"
+                      titleClassName="-translate-x-[10px]"
+                      subtitleClassName="-translate-x-[10px]"
                     />
                   </div>
                 </div>
@@ -1096,6 +1156,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   onRedo={handleRedo}
                   onClear={handleClear}
                   onSave={handleSave}
+                  onSaveWithVideo={handleSaveWithVideo}
                 />
               </div>
         <div
@@ -1133,6 +1194,8 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   onRedo={handleRedo}
                   onClear={handleClear}
                   onSave={handleSave}
+                  onSaveWithVideo={handleSaveWithVideo}
+                  desktopDevMobile={isDesktopDevMobile}
                   rotate={isMobileLandscape}
                 />
               </div>

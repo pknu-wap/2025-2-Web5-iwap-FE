@@ -16,6 +16,7 @@ type GraffitiToolbarProps = {
   onRedo: () => void;
   onClear: () => void;
   onSave: () => void;
+  onSaveWithVideo: () => void;
 };
 
 export default function GraffitiToolbar({
@@ -34,6 +35,7 @@ export default function GraffitiToolbar({
   onRedo,
   onClear,
   onSave,
+  onSaveWithVideo,
 }: GraffitiToolbarProps) {
   const normalizedPendingColor = pendingCustomColor?.toLowerCase();
   const isPendingDuplicate =
@@ -50,6 +52,8 @@ export default function GraffitiToolbar({
   const showDeleteAction = !pendingCustomColor && isBrushColorCustom;
   const [showPalette, setShowPalette] = useState(false);
   const paletteRef = useRef<HTMLDivElement | null>(null);
+  const [showSaveMenu, setShowSaveMenu] = useState(false);
+  const saveMenuRef = useRef<HTMLDivElement | null>(null);
   const openColorPicker = useCallback(() => {
     const picker = colorPickerRef.current;
     if (!picker) return;
@@ -71,6 +75,17 @@ export default function GraffitiToolbar({
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showPalette]);
+  useEffect(() => {
+    if (!showSaveMenu) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!saveMenuRef.current) return;
+      if (!saveMenuRef.current.contains(event.target as Node)) {
+        setShowSaveMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [showSaveMenu]);
   const sliderMin = 2;
   const sliderMax = 40;
   const sliderRange = sliderMax - sliderMin;
@@ -315,30 +330,64 @@ export default function GraffitiToolbar({
             className="w-[24px] h-[24px]"
           />
         </button>
-        <button
-          onClick={onSave}
-          className="
-            w-[90px] h-[35px]
-            rounded-[3px] text-[#294393] text-[20px] font-semibold
-            bg-white hover:bg-[#294393]
-            flex items-center justify-center gap-1
-            transition-all
-            group
-          "
-          type="button"
-        >
-          <img
-            src="/icons/download_b.svg"
-            alt="download"
-            className="w-[18px] h-[18px] block group-hover:hidden"
-          />
-          <img
-            src="/icons/download.svg"
-            alt="download hover"
-            className="w-[18px] h-[18px] hidden group-hover:block"
-          />
-          <span className="group-hover:text-white">PNG</span>
-        </button>
+        <div className="relative" ref={saveMenuRef}>
+          <button
+            onClick={() => setShowSaveMenu((prev) => !prev)}
+            className="
+              w-[90px] h-[35px]
+              rounded-[3px] text-[#294393] text-[18px] font-semibold
+              bg-white hover:bg-[#294393]
+              flex items-center justify-center gap-2
+              transition-all
+              group
+            "
+            type="button"
+            aria-expanded={showSaveMenu}
+          >
+            <img
+              src="/icons/download_b.svg"
+              alt="download"
+              className="w-[18px] h-[18px] block group-hover:hidden"
+            />
+            <img
+              src="/icons/download.svg"
+              alt="download hover"
+              className="w-[18px] h-[18px] hidden group-hover:block"
+            />
+            <span className="group-hover:text-white">save</span>
+          </button>
+          {showSaveMenu && (
+            <div
+              className="
+                absolute right-0 bottom-[70px]
+                flex items-center gap-2
+                text-[#0f172a] text-[14px] z-[150]
+                translate-x-[45px]
+              "
+            >
+              <button
+                type="button"
+                className="w-[90px] h-[35px] flex-shrink-0 rounded-[25px] rounded-br-none border border-white bg-white/40 text-[#ffffff] text-[18px] font-normal flex items-center justify-center"
+                onClick={() => {
+                  onSave();
+                  setShowSaveMenu(false);
+                }}
+              >
+                <span>sketch</span>
+              </button>
+              <button
+                type="button"
+                className="w-[90px] h-[35px] flex-shrink-0 rounded-[25px] rounded-bl-none border border-white bg-white/40 text-[#ffffff] text-[18px] font-normal flex items-center justify-center"
+                onClick={() => {
+                  onSaveWithVideo();
+                  setShowSaveMenu(false);
+                }}
+              >
+                <span>scene</span>
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

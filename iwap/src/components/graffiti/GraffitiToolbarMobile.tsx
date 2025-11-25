@@ -17,6 +17,8 @@ type GraffitiToolbarMobileProps = {
   onClear: () => void;
   onSave: () => void;
   rotate?: boolean;
+  desktopDevMobile?: boolean;
+  onSaveWithVideo: () => void;
 };
 
 export default function GraffitiToolbarMobile({
@@ -36,9 +38,13 @@ export default function GraffitiToolbarMobile({
   onClear,
   onSave,
   rotate = false,
+  desktopDevMobile = false,
+  onSaveWithVideo,
 }: GraffitiToolbarMobileProps) {
   const [showPalette, setShowPalette] = useState(false);
+  const [showSaveMenu, setShowSaveMenu] = useState(false);
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const saveMenuRef = useRef<HTMLDivElement | null>(null);
 
   const normalizedBrushColor = brushColor.toLowerCase();
   const isBrushColorCustom = customPatterns.some(
@@ -80,19 +86,21 @@ export default function GraffitiToolbarMobile({
 
   useEffect(() => {
     if (!showPalette) return;
-    // 모바일 가로(rotate)에서는 밖 터치 시 자동 닫힘을 막는다.
-    if (rotate) return;
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
       if (!wrapperRef.current) return;
       const target = event.target as Node;
       if ((target as HTMLElement)?.closest("[data-palette]")) return;
-      if (!wrapperRef.current.contains(event.target as Node)) {
+      if (!wrapperRef.current.contains(target)) {
         setShowPalette(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [rotate, showPalette]);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [showPalette]);
 
   useEffect(() => {
     if (pendingCustomColor && isValidHex(pendingCustomColor)) {
@@ -100,7 +108,27 @@ export default function GraffitiToolbarMobile({
     }
   }, [pendingCustomColor]);
 
-  const rotateClass = rotate ? "-rotate-90 origin-center translate-x-[30px] -translate-y-[65px] z-[100]" : "";
+  useEffect(() => {
+    if (!showSaveMenu) return;
+    const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+      if (!saveMenuRef.current) return;
+      if (!saveMenuRef.current.contains(event.target as Node)) {
+        setShowSaveMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
+  }, [showSaveMenu]);
+
+  const rotateClass = rotate
+    ? "-rotate-90 origin-center translate-x-[30px] -translate-y-[48px] z-[100] scale-[0.8]"
+    : desktopDevMobile
+      ? "translate-y-[110px]"
+      : "-translate-y-[50px]";
   const iconRotate = rotate ? "rotate-90" : "";
   const palettePositionClass = rotate
     ? "fixed -translate-y-[310px] translate-x-[100px] z-[120]"
@@ -151,7 +179,7 @@ export default function GraffitiToolbarMobile({
           shadow-[0_0_50px_0_rgba(0,0,0,0.25)]
           backdrop-blur-[4px]
           px-4
-        flex items-center justify-between -transalte-y-[125px]
+          flex items-center justify-between
         "
       >
         <div className="flex items-center justify-between w-full">
@@ -168,23 +196,57 @@ export default function GraffitiToolbarMobile({
               alt="redo"
             />
           </button>
-          <button
-            onClick={onSave}
-            aria-label="Save"
+          <div className="relative" ref={saveMenuRef}>
+            <button
+              onClick={() => setShowSaveMenu((prev) => !prev)}
+              aria-label="Save options"
             className="
               hover:opacity-80 transition
               h-[50px] w-[50px]
-              rounded-full border border-white/60 bg-white
-              flex items-center justify-center
+              rounded-full border border-white/60 bg-white/90
+              flex items-center justify-center -translate-x-[8px]
             "
             type="button"
           >
             <img
               src="/icons/download_b.svg"
               className={`w-[32px] h-[32px] ${iconRotate}`}
-              alt="save"
+              alt="save options"
             />
           </button>
+            {showSaveMenu && (
+              <div
+                className={`
+                  absolute right-0 bottom-[70px]
+                  flex items-center gap-2
+                  overflow-hidden z-[150]
+                  translate-x-[50px]
+                  ${rotate ? "-translate-y-[5px] origin-top" : ""}
+                `}
+              >
+                <button
+                  type="button"
+                  className="w-[80px] h-[40px] flex-shrink-0 rounded-[25px] rounded-br-none border border-white bg-white/40 text-[#ffffff] text-[20px] font-normal flex items-center justify-center hover:bg-[#294393] hover:text-white"
+                  onClick={() => {
+                    onSave();
+                    setShowSaveMenu(false);
+                  }}
+                >
+                  <span>Sketch</span>
+                </button>
+                <button
+                  type="button"
+                  className="w-[80px] h-[40px] flex-shrink-0 rounded-[25px] rounded-bl-none border border-white bg-white/40 text-[#ffffff] text-[20px] font-normal flex items-center justify-center hover:bg-[#294393] hover:text-white"
+                  onClick={() => {
+                    onSaveWithVideo();
+                    setShowSaveMenu(false);
+                  }}
+                >
+                  <span>Scene</span>
+                </button>
+              </div>
+            )}
+          </div>
           <button
             onClick={onClear}
             aria-label="Clear"
