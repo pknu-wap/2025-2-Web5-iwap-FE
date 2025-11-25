@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import LoadingIndicator from "@/components/ui/LoadingIndicator";
 import FacialSlider from "./FacialSlider";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 // API 명세에 따른 키와 라벨 매핑
 const FEATURE_CONFIG = [
@@ -17,6 +18,7 @@ const FEATURE_CONFIG = [
 ];
 
 export default function FacialEditor() {
+  const { theme } = useTheme();
   // API 키를 기반으로 초기 상태 생성 (모두 0.0)
   const [featureValues, setFeatureValues] = useState<Record<string, number>>(
     FEATURE_CONFIG.reduce((acc, cur) => ({ ...acc, [cur.key]: 0.0 }), {})
@@ -75,7 +77,7 @@ export default function FacialEditor() {
     <div className="w-full flex flex-col items-center justify-center relative gap-6">
       <div className="relative w-full aspect-square flex items-center justify-center">
         {isInitialLoading && !processedImageUrl ? (
-          <LoadingIndicator text="이미지 준비 중..." />
+          <LoadingIndicator text="이미지 준비 중..." className={theme === 'dark' ? 'text-white' : 'text-zinc-900'} />
         ) : processedImageUrl ? (
           <Image 
             src={processedImageUrl} 

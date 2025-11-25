@@ -15,8 +15,8 @@ export default function FacialPage() {
 
   const pageBackgroundStyle = {
     backgroundImage: theme === 'dark'
-      ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000), url('/images/bg-dark/facial_dark.jpg')`
-      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), #98B9C2), url('/images/bg-light/facial_light.jpg')`,
+      ? `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-dark/facial_dark.jpg')`
+      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-light/facial_light.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -41,6 +41,7 @@ export default function FacialPage() {
               padding="p-0"
               isAbsolute={false}
               closeButtonClassName="-translate-x-6 md:translate-x-0"
+              darkBackground={theme === 'dark'}
             />
             <div className="w-full flex flex-col">
               <FacialEditor />
