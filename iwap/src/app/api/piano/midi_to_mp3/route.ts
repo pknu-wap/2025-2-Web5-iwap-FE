@@ -5,7 +5,7 @@ export const runtime = "nodejs";
 
 function getBackendBase() {
   const base = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL;
-  if (!base) throw new Error("Missing BACKEND_API_URL environment variable.");
+  if (!base) throw new Error("Missing BACKEND_API_URL");
   return base.endsWith("/") ? base.slice(0, -1) : base;
 }
 
@@ -28,9 +28,6 @@ export async function GET(req: NextRequest) {
   try {
     const base = getBackendBase();
     const targetUrl = `${base}/api/piano/midi_to_mp3`;
-    
-    console.log(`[API/piano/miditomp3] GET request: ${targetUrl}`);
-
     const res = await fetch(targetUrl, {
       cache: "no-store",
       headers: {
@@ -40,11 +37,6 @@ export async function GET(req: NextRequest) {
           : {}),
       },
     });
-
-    if (!res.ok) {
-        console.error(`[API/piano/miditomp3] Backend response status: ${res.status}`);
-    }
-
     return new Response(res.body, {
       status: res.status,
       statusText: res.statusText,
@@ -52,7 +44,6 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Proxy error";
-    console.error(`[API/piano/miditomp3] Error: ${message}`);
     return new Response(JSON.stringify({ error: message }), {
       status: 502,
       headers: { "content-type": "application/json" },

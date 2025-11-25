@@ -69,7 +69,7 @@ export default function PngDownloader({
       onClick={downloadAsPng}
       disabled={disabled}
       // [수정 3] cursor-pointer 추가
-      className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-white rounded-[3px] text-black/50 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+      className="w-full flex items-center justify-center gap-1 px-2 py-1 bg-white rounded-[3px] text-stone-300 text-sm font-semibold transition-opacity hover:opacity-80 disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
       title="선택한 배율로 PNG 파일을 다운로드합니다."
     >
       <Image 
@@ -78,7 +78,6 @@ export default function PngDownloader({
         width={16}
         height={16} 
         className="w-4 h-4"
-        style={{ filter: 'brightness(0) opacity(0.5)' }}
       />
       PNG
     </button>

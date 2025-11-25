@@ -4,19 +4,15 @@ import React, { useState, useEffect } from "react";
 import PageHeader from "@/components/ui/PageHeader";
 import FacialEditor from "@/components/facial/FacialEditor";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
-import { useTheme } from "@/components/theme/ThemeProvider";
 
 export default function FacialPage() {
-  const { theme } = useTheme();
   const [hasMounted, setHasMounted] = useState(false);
   const [showIntro, setShowIntro] = useState(true);
 
   useEffect(() => { setHasMounted(true); }, []);
 
   const pageBackgroundStyle = {
-    backgroundImage: theme === 'dark'
-      ? `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-dark/facial_dark.webp')`
-      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-light/facial_light.webp')`,
+    backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #98B9C2), url('/images/string_background.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -41,7 +37,6 @@ export default function FacialPage() {
               padding="p-0"
               isAbsolute={false}
               closeButtonClassName="-translate-x-6 md:translate-x-0"
-              darkBackground={theme === 'dark'}
             />
             <div className="w-full flex flex-col">
               <FacialEditor />

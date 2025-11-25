@@ -9,7 +9,6 @@ import AsciiArtDisplay from '@/components/ascii/AsciiArtDisplay';
 import TrashIcon from '@/components/ui/icons/TrashIcon';
 import SubmitIcon from '@/components/ui/icons/SubmitIcon';
 import { ProjectIntroModal } from '@/components/sections/ProjectIntroSections';
-import { useTheme } from "@/components/theme/ThemeProvider";
 
 import {
   processImageToAsciiWithWorker,
@@ -21,7 +20,6 @@ const DEFAULT_RESOLUTION = 100;
 
 // --- Page Controller Component ---
 export default function AsciiPage() {
-  const { theme } = useTheme();
   // --- State Declarations ---
   const [hasMounted, setHasMounted] = useState(false);
   const [view, setView] = useState<'upload' | 'loading' | 'visualize'>('upload');
@@ -115,9 +113,7 @@ export default function AsciiPage() {
 
   // --- Styles ---
   const pageBackgroundStyle = {
-    backgroundImage: theme === 'dark'
-      ? `url('/images/bg-dark/ascii_dark.webp')`
-      : `url('/images/bg-light/ascii_light.webp')`,
+    backgroundImage: `linear-gradient(to bottom, rgba(214, 211, 209, 0), #d6d3d1), url('/images/ascii_background.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -222,12 +218,11 @@ export default function AsciiPage() {
                 subtitle="이미지를 텍스트로 표현" 
                 goBack={true} 
                 padding='p-0' 
-                darkBackground={theme === 'dark'}
               />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 
                   // [수정] Tailwind CSS 클래스를 표준에 맞게 수정합니다.
-                  className={`font-semibold shrink-0 -translate-y-3 -translate-x-3 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                  className="font-semibold text-white shrink-0 -translate-y-3 -translate-x-3" 
                   style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}
                 >
                   이미지를 업로드하세요

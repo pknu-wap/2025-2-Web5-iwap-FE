@@ -1,3 +1,5 @@
+// import { NextResponse } from "next/server"; // [삭제] 사용하지 않음
+
 // Next.js 설정: 동적 렌더링 및 Node.js 런타임 사용
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -8,7 +10,7 @@ export const runtime = "nodejs";
  */
 function getBackendBase() {
   const base = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL;
-  if (!base) throw new Error("Missing BACKEND_API_URL environment variable.");
+  if (!base) throw new Error("Missing BACKEND_API_URL environment variable");
   return base.endsWith("/") ? base.slice(0, -1) : base;
 }
 
@@ -48,7 +50,7 @@ const ALLOWED_PARAMS = [
 /**
  * GET 핸들러
  * 클라이언트의 요청 파라미터를 받아 백엔드로 프록시합니다.
- * @param {Request} req 
+ * * @param {Request} req 
  */
 export async function GET(req) {
   try {
@@ -56,8 +58,8 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const backendParams = new URLSearchParams();
 
-    // --- [디버그] 요청 파라미터 로깅 ---
-    console.log(`[API/facial] Received params: ${searchParams.toString()}`);
+    // --- [DEBUG] 요청 파라미터 로깅 ---
+    console.log(`[API/Facial] Received params: ${searchParams.toString()}`);
 
     // 허용된 파라미터만 필터링하고, 값이 없으면 기본값 0.0 설정
     for (const param of ALLOWED_PARAMS) {
@@ -76,8 +78,8 @@ export async function GET(req) {
     // 최종 타겟 URL 생성
     const targetUrl = `${base}/api/facial?${backendParams.toString()}`;
     
-    // --- [디버그] 타겟 URL 로깅 ---
-    console.log(`[API/facial] Proxy target URL: ${targetUrl}`);
+    // --- [DEBUG] 타겟 URL 로깅 ---
+    console.log(`[API/Facial] Proxying to: ${targetUrl}`);
 
     // 백엔드 호출
     const res = await fetch(targetUrl, {
@@ -91,7 +93,7 @@ export async function GET(req) {
     });
 
     if (!res.ok) {
-      console.error(`[API/facial] Backend response status: ${res.status}`);
+      console.error(`[API/Facial] Backend responded with status: ${res.status}`);
       throw new Error(`Backend error: ${res.statusText}`);
     }
 
@@ -104,7 +106,7 @@ export async function GET(req) {
 
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown proxy error";
-    console.error("[API/facial] Error:", message);
+    console.error("[API/Facial] Error:", message);
     
     return new Response(JSON.stringify({ error: message }), {
       status: 502, // Bad Gateway

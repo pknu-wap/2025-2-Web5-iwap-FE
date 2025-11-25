@@ -92,13 +92,6 @@ export function useRecorder() {
     assignAudioFile(file);
   };
 
-  const reset = () => {
-    revokeObjectUrl();
-    setAudioFile(null);
-    setAudioUrl(null);
-    setIsRecording(false);
-  };
-
   useEffect(() => {
     return () => {
       revokeObjectUrl();
@@ -112,6 +105,5 @@ export function useRecorder() {
     startRecording,
     stopRecording,
     setAudioFromFile,
-    reset,
   };
 }

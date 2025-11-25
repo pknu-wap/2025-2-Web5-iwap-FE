@@ -1,7 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
 import WavingAnimation from "./WavingAnimation";
-import { useTheme } from "@/components/theme/ThemeProvider";
 
 export default function RecorderButton({
   isRecording,
@@ -12,7 +11,6 @@ export default function RecorderButton({
   startRecording: () => Promise<void> | void;
   stopRecording: () => void;
 }) {
-  const { theme } = useTheme();
   const [elapsed, setElapsed] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isPreppingRecording, setIsPreppingRecording] = useState(false);
@@ -48,7 +46,7 @@ export default function RecorderButton({
       await startRecording();
     } catch (error) {
       setIsPreppingRecording(false);
-      console.error("Error starting recording:", error);
+      console.error("녹음 시작 중 오류가 발생했습니다.", error);
     }
   };
 
@@ -185,10 +183,7 @@ export default function RecorderButton({
               style={{ width: `${(elapsed % 60) * (100 / 60)}%` }}
             />
           </div>
-          <p 
-            className={`text-sm font-medium tracking-wide ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-            style={{ transform: 'translateX(-1px)' }} // 원하는 픽셀만큼 조절하세요 (음수: 왼쪽, 양수: 오른쪽)
-          >
+          <p className="text-sm text-gray-700 font-medium tracking-wide">
             {formatTime(elapsed)}
           </p>
         </div>

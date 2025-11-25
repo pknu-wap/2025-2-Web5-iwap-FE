@@ -112,7 +112,7 @@ const ImageUploader = forwardRef<ImageUploaderHandles, ImageUploaderProps>(
               }
             })
             .catch((err) => {
-              console.error("Camera access error:", err);
+              console.error("카메라 접근 오류:", err);
               alert("카메라에 접근할 수 없습니다. 권한을 확인해주세요.");
               closeCamera();
             });

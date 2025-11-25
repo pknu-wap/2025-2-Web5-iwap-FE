@@ -4,9 +4,9 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 function getBackendBase() {
-  // 서버 전용 환경 변수 우선 사용, 호환성을 위해 대체
+  // Prefer server-only env, fall back for compatibility
   const base = process.env.BACKEND_API_URL || process.env.NEXT_PUBLIC_BACKEND_API_URL;
-  if (!base) throw new Error("Missing BACKEND_API_URL environment variable.");
+  if (!base) throw new Error("Missing BACKEND_API_URL");
   return base.endsWith("/") ? base.slice(0, -1) : base;
 }
 
@@ -31,8 +31,6 @@ export async function POST(req: NextRequest) {
   try {
     const base = getBackendBase();
     const targetUrl = `${base}/api/piano/`;
-    
-    console.log(`[API/piano] POST request: ${targetUrl}`);
 
     const contentType = req.headers.get("content-type") || "";
     const commonHeaders: Record<string, string> = {
@@ -63,10 +61,6 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    if (!res.ok) {
-        console.error(`[API/piano] Backend response status: ${res.status}`);
-    }
-
     return new Response(res.body, {
       status: res.status,
       statusText: res.statusText,
@@ -74,7 +68,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Proxy error";
-    console.error("[API/piano] Error:", message);
+    console.error("[proxy:/api/piano]", message);
     return new Response(JSON.stringify({ error: message }), {
       status: 502,
       headers: { "content-type": "application/json" },
