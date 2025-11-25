@@ -149,18 +149,27 @@ export default function SlidesPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden flex items-center justify-center bg-white dark:bg-[var(--background)]">
+    <main
+      className="relative min-h-screen overflow-hidden flex items-center justify-center"
+      style={{ backgroundColor: theme === "dark" ? "#171717" : "#ffffff" }}
+    >
       <div className="absolute top-0 left-0 right-0 flex flex-col items-center pt-10 z-30 pointer-events-none" />
 
       <div className="relative w-full flex justify-center">
         <div className="relative w-[90vw] max-w-[2000px] min-w-[320px]">
           <div
-            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[38%] w-[110%] h-[33%] bg-white dark:bg-[var(--background)] z-20 pointer-events-none [--mask-rx:50%] [--mask-ry:32%] md:-translate-y-[46%] md:w-[120%] md:h-[55%] md:[--mask-ry:40%]"
-            style={maskStyle}
+            className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[38%] w-[110%] h-[33%] z-20 pointer-events-none [--mask-rx:50%] [--mask-ry:32%] md:-translate-y-[46%] md:w-[120%] md:h-[55%] md:[--mask-ry:40%]"
+            style={{
+              ...maskStyle,
+              backgroundColor: theme === "dark" ? "#171717" : "#ffffff",
+            }}
           />
           <div
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[38%] w-[110%] h-[33%] bg-white dark:bg-[var(--background)] z-20 pointer-events-none [--mask-rx:50%] [--mask-ry:32%] md:translate-y-[50%] md:w-[120%] md:h-[55%] md:[--mask-ry:40%]"
-            style={maskStyle}
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-[38%] w-[110%] h-[33%] z-20 pointer-events-none [--mask-rx:50%] [--mask-ry:32%] md:translate-y-[50%] md:w-[120%] md:h-[55%] md:[--mask-ry:40%]"
+            style={{
+              ...maskStyle,
+              backgroundColor: theme === "dark" ? "#171717" : "#ffffff",
+            }}
           />
 
           <div className="relative w-full z-10" ref={sliderWrapperRef}>

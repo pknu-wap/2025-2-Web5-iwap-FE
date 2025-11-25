@@ -32,6 +32,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     window.localStorage.setItem(STORAGE_KEY, theme);
+    if (theme === "dark") {
+      document.body.style.backgroundColor = "#171717";
+      document.body.style.color = "#ededed";
+    } else {
+      document.body.style.backgroundColor = "#ffffff";
+      document.body.style.color = "#171717";
+    }
   }, [theme]);
 
   const setTheme = useCallback((mode: ThemeMode) => {

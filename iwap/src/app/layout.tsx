@@ -86,7 +86,7 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body
-        className={`relative overflow-x-hidden text-black transition-colors duration-300 dark:text-neutral-100 ${Pretendard.className}`}
+        className={`relative overflow-x-hidden transition-colors duration-300 ${Pretendard.className}`}
       >
         <ThemeProvider>
           {showHeader && <MainHeader />}
