@@ -51,9 +51,9 @@ const SECTION_DATA: Record<
         <span>기계가 세상을 ‘본다’는 것이 무엇인지 탐구합니다.</span>
         <br />
         <br />
-        <span>사용자는 화면 위에서 숫자를 그리면, 인공지능의 내부 feature</span>
+        <span>사용자는 화면 위에서 숫자를 그리면, 인공지능의 내부</span>
         <br />
-        <span> map이 실시간으로 나타나며</span>
+        <span>feature map이 실시간으로 나타나며</span>
         <br />
         <span>기계의 시각적 사고 과정을 체험할 수 있습니다.</span>
       </>
@@ -70,9 +70,9 @@ const SECTION_DATA: Record<
         <span>기계가 세상을 ‘본다’는 것이 무엇인지 탐구합니다.</span>
         <br />
         <br />
-        <span>사용자는 화면 위에서 숫자를 그리면,</span>
+        <span>사용자는 화면 위에서 숫자를 그리면, 인공지능의</span>
         <br />
-        <span> 인공지능의 내부 featuremap이 실시간으로 나타나며</span>
+        <span>내부 feature map이 실시간으로 나타나며</span>
         <br />
         <span>기계의 시각적 사고 과정을 체험할 수 있습니다.</span>
       </>

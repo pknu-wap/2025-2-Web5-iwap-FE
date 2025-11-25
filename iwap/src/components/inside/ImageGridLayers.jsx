@@ -6,6 +6,7 @@ import { useDrag } from '@use-gesture/react';
 import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import ProgressBar from '@/components/inside/ProgressBar';
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 // --- [최적화 설정] ---
 // 한 번에 렌더링할 레이어 수 
@@ -86,9 +87,9 @@ function AnimatedElement({ layer, focusIndexRef, globalOpacityRef }) {
 
   return layer.isTextLayer ? (
     <group ref={meshRef}>
-      <Text font="/fonts/static/Pretendard-Thin.otf" fontSize={100} color="white" anchorX="center" anchorY="middle">
+      <Text font="/fonts/static/Pretendard-Thin.otf" fontSize={100} color={layer.color || "white"} anchorX="center" anchorY="middle">
         {layer.text}
-        <meshStandardMaterial ref={textMaterialRef} color="white" transparent />
+        <meshStandardMaterial ref={textMaterialRef} color={layer.color || "white"} transparent />
       </Text>
     </group>
   ) : (
@@ -255,6 +256,7 @@ function AnimationController({
  * Main Component
  */
 export default function ImageGridLayers({ layersData }) {
+  const { theme } = useTheme(); // 테마 훅 사용
   // --- 1. React State (UI 표시용으로만 사용, 애니메이션 로직에서 배제) ---
   const [uiLiveIndex, setUiLiveIndex] = useState(0);
 
@@ -304,7 +306,9 @@ export default function ImageGridLayers({ layersData }) {
       if (actualLayers.fc?.[0]) {
         const fcData = actualLayers.fc[0];
         const maxIdx = fcData.indexOf(Math.max(...fcData));
-        tLayer = { id: 'final-text', isTextLayer: true, text: maxIdx.toString(), originalIndex: processedLayers.length };
+        // 테마에 따라 텍스트 색상 결정
+        const textColor = theme === 'dark' ? 'white' : 'black';
+        tLayer = { id: 'final-text', isTextLayer: true, text: maxIdx.toString(), originalIndex: processedLayers.length, color: textColor };
       }
 
       const lPos = []; let cx = 0;
@@ -324,7 +328,7 @@ export default function ImageGridLayers({ layersData }) {
       });
       return { layers: lPos, textLayer: tLayer, sizeChangeIndices: sIndices };
     } catch (e) { return { layers: [], textLayer: null, sizeChangeIndices: [] }; }
-  }, [layersData]);
+  }, [layersData, theme]);
 
   const totalLayers = layers.length + (textLayer ? 1 : 0);
 
@@ -417,7 +421,8 @@ export default function ImageGridLayers({ layersData }) {
         <Canvas
           gl={{ alpha: true, antialias: false }} // 앤티앨리어싱 꺼서 성능 향상
           dpr={[1, 1.5]} // 픽셀 비율 제한
-          style={{ background: 'linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113)' }}
+          // 그라데이션 투명도 절반으로 변경 (0.5)
+          style={{ background: 'linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5))' }}
           camera={{ position: [0, 0, BASE_CAMERA_Z], fov: 60 }}
           onCreated={({ scene }) => { scene.background = null; }}
         >

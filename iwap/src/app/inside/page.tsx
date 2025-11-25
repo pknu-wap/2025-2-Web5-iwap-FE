@@ -88,7 +88,6 @@ export default function InsidePage() {
   };
 
   /**
-   * [!! 수정된 부분 !!]
    * 시각화 뷰에서 그리기 뷰로 돌아갈 때 호출됩니다.
    */
   const handleReturnToDraw = useCallback(() => {
@@ -96,7 +95,7 @@ export default function InsidePage() {
     setView('draw');
     setError(null); // 에러 메시지도 함께 초기화
     setTaskId(null); // 혹시 모를 task ID도 초기화
-  }, []); // 의존성 배열은 비어있습니다.
+  }, []); 
 
   // task_id가 설정되면 폴링을 시작하는 useEffect
   useEffect(() => {
@@ -154,20 +153,24 @@ export default function InsidePage() {
           />
         );
       case 'loading':
-        return <LoadingIndicator text="분석 중..." />;
+        return <LoadingIndicator text="분석 중..." className={theme === 'dark' ? 'text-white' : 'text-zinc-900'} />;
       default:
         return null;
     }
   };
 
   const pageBackgroundStyle = {
+    // 배경 그라데이션 제거, 이미지만 유지
     backgroundImage: theme === 'dark'
-      ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #0d1113), url('/images/bg-dark/inside_dark.jpg')`
-      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113), url('/images/bg-light/inside_light.jpg')`,
+      ? `url('/images/bg-dark/inside_dark.jpg')`
+      : `url('/images/bg-light/inside_light.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
   };
+
+  // 공통 텍스트 색상 스타일 (!important로 강제 적용)
+  const textColorClass = theme === 'dark' ? "!text-white" : "!text-zinc-900";
 
   return (
     <div className="flex flex-col">
@@ -186,8 +189,14 @@ export default function InsidePage() {
         <FullScreenView
           title="!nside."
           subtitle="인공지능이 숫자를 인식하는 과정"
-          onClose={handleReturnToDraw} // 이제 이 함수를 찾을 수 있습니다.
+          onClose={handleReturnToDraw}
           backgroundUrl={theme === 'dark' ? "/images/bg-dark/inside_dark.jpg" : "/images/bg-light/inside_light.jpg"}
+          // 여기에서 텍스트 색상을 직접 주입
+          className={textColorClass}
+          titleClassName={textColorClass}
+          subtitleClassName={textColorClass}
+          closeButtonClassName={textColorClass}
+          darkBackground={theme === 'dark'}
         >
           <ImageGridLayers layersData={layersData} />
         </FullScreenView>
@@ -200,10 +209,17 @@ export default function InsidePage() {
                 subtitle="인공지능이 숫자를 인식하는 과정"
                 goBack={true}
                 padding='p-0'
+                // 여기에서 텍스트 색상을 직접 주입
+                className={textColorClass}
+                titleClassName={textColorClass}
+                subtitleClassName={textColorClass}
+                closeButtonClassName={textColorClass}
+                darkBackground={theme === 'dark'}
               />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 
-                  className="font-semibold text-white translate -translate-y-3 -translate-x-3" 
+                  // 텍스트 색상 강제 적용
+                  className={`font-semibold translate -translate-y-3 -translate-x-3 ${textColorClass}`}
                   style={{
                     fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)',
                   }}
