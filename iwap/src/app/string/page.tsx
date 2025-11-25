@@ -69,8 +69,8 @@ export default function StringArtPage() {
   // --- Styles ---
   const pageBackgroundStyle = {
     backgroundImage: theme === 'dark'
-      ? `url('/images/bg-dark/string_dark.jpg')`
-      : `url('/images/bg-light/string_light.jpg')`,
+      ? `url('/images/bg-dark/string_dark.webp')`
+      : `url('/images/bg-light/string_light.webp')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',

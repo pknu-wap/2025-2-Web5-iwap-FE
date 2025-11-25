@@ -162,8 +162,8 @@ export default function InsidePage() {
   const pageBackgroundStyle = {
     // 배경 그라데이션 제거, 이미지만 유지
     backgroundImage: theme === 'dark'
-      ? `url('/images/bg-dark/inside_dark.jpg')`
-      : `url('/images/bg-light/inside_light.jpg')`,
+      ? `url('/images/bg-dark/inside_dark.webp')`
+      : `url('/images/bg-light/inside_light.webp')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -190,7 +190,7 @@ export default function InsidePage() {
           title="!nside."
           subtitle="인공지능이 숫자를 인식하는 과정"
           onClose={handleReturnToDraw}
-          backgroundUrl={theme === 'dark' ? "/images/bg-dark/inside_dark.jpg" : "/images/bg-light/inside_light.jpg"}
+          backgroundUrl={theme === 'dark' ? "/images/bg-dark/inside_dark.webp" : "/images/bg-light/inside_light.webp"}
           // 여기에서 텍스트 색상을 직접 주입
           className={textColorClass}
           titleClassName={textColorClass}

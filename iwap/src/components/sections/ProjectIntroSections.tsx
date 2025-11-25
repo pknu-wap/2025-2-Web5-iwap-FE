@@ -27,8 +27,8 @@ const SECTION_DATA: Record<
 > = {
   inside: {
     imageSrc: {
-      light: "/images/bg-light/inside_light.jpg",
-      dark: "/images/bg-dark/inside_dark.jpg",
+      light: "/images/bg-light/inside_light.webp",
+      dark: "/images/bg-dark/inside_dark.webp",
     },
     imageAlt: "!nside background",
     imageOverlayLeft: "!nside",
@@ -80,8 +80,8 @@ const SECTION_DATA: Record<
   },
   "this-is-for-u": {
     imageSrc: {
-      light: "/images/bg-light/this-is-for-u_light.jpg",
-      dark: "/images/bg-dark/this-is-for-u_dark.jpg",
+      light: "/images/bg-light/this-is-for-u_light.webp",
+      dark: "/images/bg-dark/this-is-for-u_dark.webp",
     },
     imageAlt: "This-is-for-u background",
     imageOverlayLeft: "Th!s !s for u",
@@ -131,8 +131,8 @@ const SECTION_DATA: Record<
   },
   piano: {
     imageSrc: {
-      light: "/images/bg-light/piano_light.jpg",
-      dark: "/images/bg-dark/piano_dark.jpg",
+      light: "/images/bg-light/piano_light.webp",
+      dark: "/images/bg-dark/piano_dark.webp",
     },
     imageAlt: "Piano background",
     imageOverlayLeft: "P!ano",
@@ -186,8 +186,8 @@ const SECTION_DATA: Record<
   },
   ascii: {
     imageSrc: {
-      light: "/images/bg-light/ascii_light.jpg",
-      dark: "/images/bg-dark/ascii_dark.jpg",
+      light: "/images/bg-light/ascii_light.webp",
+      dark: "/images/bg-dark/ascii_dark.webp",
     },
     imageAlt: "ascii background",
     imageOverlayLeft: "ASCi!",
@@ -233,8 +233,8 @@ const SECTION_DATA: Record<
   },
   string: {
     imageSrc: {
-      light: "/images/bg-light/string_light.jpg",
-      dark: "/images/bg-dark/string_dark.jpg",
+      light: "/images/bg-light/string_light.webp",
+      dark: "/images/bg-dark/string_dark.webp",
     },
     imageAlt: "string background",
     imageOverlayLeft: "Str!ng",
@@ -281,8 +281,8 @@ const SECTION_DATA: Record<
   },
   graffiti: {
     imageSrc: {
-      light: "/images/bg-light/graffiti_light.jpg",
-      dark: "/images/bg-dark/graffiti_dark.jpg",
+      light: "/images/bg-light/graffiti_light.webp",
+      dark: "/images/bg-dark/graffiti_dark.webp",
     },
     imageAlt: "graffiti background",
     imageOverlayLeft: "Graff!ti",
@@ -318,8 +318,8 @@ const SECTION_DATA: Record<
   },
   facial: {
     imageSrc: {
-      light: "/images/bg-light/facial_light.jpg",
-      dark: "/images/bg-dark/facial_dark.jpg",
+      light: "/images/bg-light/facial_light.webp",
+      dark: "/images/bg-dark/facial_dark.webp",
     },
     imageAlt: "facial background",
     imageOverlayLeft: "Fac!al",

@@ -406,7 +406,7 @@ export default function VoiceToPiano() {
         goBack={false} // 커스텀 핸들러 사용을 위해 false로 설정
         onClose={handleGoBack} // 닫기 버튼 핸들러 연결
         className={`font-[Pretendard] ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-        backgroundUrl={theme === 'dark' ? "/images/bg-dark/piano_dark.jpg" : "/images/bg-light/piano_light.jpg"}
+        backgroundUrl={theme === 'dark' ? "/images/bg-dark/piano_dark.webp" : "/images/bg-light/piano_light.webp"}
         darkBackground={theme === 'dark'}
         
         // 모바일 재생 뷰에서 '기본' 헤더 숨김

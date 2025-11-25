@@ -22,8 +22,8 @@ type SlideContent = {
 const baseSlides: SlideContent[] = [
   {
     src: {
-      light: "/images/bg-light/inside_light.jpg",
-      dark: "/images/bg-dark/inside_dark.jpg",
+      light: "/images/bg-light/inside_light.webp",
+      dark: "/images/bg-dark/inside_dark.webp",
     },
     link: "/inside",
     title: "!nside",
@@ -33,8 +33,8 @@ const baseSlides: SlideContent[] = [
   },
   {
     src: {
-      light: "/images/bg-light/this-is-for-u_light.jpg",
-      dark: "/images/bg-dark/this-is-for-u_dark.jpg",
+      light: "/images/bg-light/this-is-for-u_light.webp",
+      dark: "/images/bg-dark/this-is-for-u_dark.webp",
     },
     link: "/this-is-for-u",
     title: "Th!s !s for u",
@@ -44,8 +44,8 @@ const baseSlides: SlideContent[] = [
   },
   {
     src: {
-      light: "/images/bg-light/piano_light.jpg",
-      dark: "/images/bg-dark/piano_dark.jpg",
+      light: "/images/bg-light/piano_light.webp",
+      dark: "/images/bg-dark/piano_dark.webp",
     },
     link: "/piano",
     title: "P!ano",
@@ -55,8 +55,8 @@ const baseSlides: SlideContent[] = [
   },
   {
     src: {
-      light: "/images/bg-light/ascii_light.jpg",
-      dark: "/images/bg-dark/ascii_dark.jpg",
+      light: "/images/bg-light/ascii_light.webp",
+      dark: "/images/bg-dark/ascii_dark.webp",
     },
     link: "/ascii",
     title: "ASCi!",
@@ -66,8 +66,8 @@ const baseSlides: SlideContent[] = [
   },
   {
     src: {
-      light: "/images/bg-light/string_light.jpg",
-      dark: "/images/bg-dark/string_dark.jpg",
+      light: "/images/bg-light/string_light.webp",
+      dark: "/images/bg-dark/string_dark.webp",
     },
     link: "/string",
     title: "Str!ng",
@@ -77,8 +77,8 @@ const baseSlides: SlideContent[] = [
   },
   {
     src: {
-      light: "/images/bg-light/graffiti_light.jpg",
-      dark: "/images/bg-dark/graffiti_dark.jpg",
+      light: "/images/bg-light/graffiti_light.webp",
+      dark: "/images/bg-dark/graffiti_dark.webp",
     },
     link: "/graffiti",
     title: "Graff!ti",
@@ -88,8 +88,8 @@ const baseSlides: SlideContent[] = [
   },
   {
     src: {
-      light: "/images/bg-light/facial_light.jpg",
-      dark: "/images/bg-dark/facial_dark.jpg",
+      light: "/images/bg-light/facial_light.webp",
+      dark: "/images/bg-dark/facial_dark.webp",
     },
     link: "/facial",
     title: "Fac!al",

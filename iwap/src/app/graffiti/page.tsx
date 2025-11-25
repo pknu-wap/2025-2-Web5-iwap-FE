@@ -943,8 +943,8 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
   /* ---------------- 배경 스타일 ---------------- */
   const pageBackgroundStyle = {
     backgroundImage: theme === 'dark'
-      ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000), url('/images/bg-dark/graffiti_dark.jpg')`
-      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), #090223), url('/images/bg-light/graffiti_light.jpg')`,
+      ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000), url('/images/bg-dark/graffiti_dark.webp')`
+      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), #090223), url('/images/bg-light/graffiti_light.webp')`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     backgroundAttachment: "fixed",

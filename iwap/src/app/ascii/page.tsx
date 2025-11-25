@@ -116,8 +116,8 @@ export default function AsciiPage() {
   // --- Styles ---
   const pageBackgroundStyle = {
     backgroundImage: theme === 'dark'
-      ? `url('/images/bg-dark/ascii_dark.jpg')`
-      : `url('/images/bg-light/ascii_light.jpg')`,
+      ? `url('/images/bg-dark/ascii_dark.webp')`
+      : `url('/images/bg-light/ascii_light.webp')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',

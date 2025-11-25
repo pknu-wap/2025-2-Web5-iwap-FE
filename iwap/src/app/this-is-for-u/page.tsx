@@ -181,7 +181,7 @@ const singleTrace1 = useMemo((): Data[] => {
         goBack={true}
         onPrev={handlePrev}
         onNext={handleNext}
-        backgroundUrl={theme === 'dark' ? "/images/bg-dark/this-is-for-u_dark.jpg" : "/images/bg-light/this-is-for-u_light.jpg"}
+        backgroundUrl={theme === 'dark' ? "/images/bg-dark/this-is-for-u_dark.webp" : "/images/bg-light/this-is-for-u_light.webp"}
         titleClassName="translate-y-[60px] translate-x-[9px] md:translate-x-0 md:translate-y-0 font-semibold"
         subtitleClassName="translate-y-[60px] translate-x-[10px] md:translate-x-0 md:translate-y-0 font-semilight"
         closeButtonClassName="translate-y-[60px] md:translate-y-0"
