@@ -21,35 +21,16 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 const STORAGE_KEY = "iwap.theme";
 
-const getSystemPreference = (): ThemeMode => {
-  if (typeof window === "undefined" || !window.matchMedia) return "light";
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-};
-
 const getInitialTheme = (): ThemeMode => {
-  if (typeof window === "undefined") return "light";
-  const stored = window.localStorage.getItem(STORAGE_KEY);
-  if (stored === "light" || stored === "dark") return stored;
-  return getSystemPreference();
-};
-
-const applyThemeClass = (mode: ThemeMode) => {
-  if (typeof document === "undefined") return;
-  const root = document.documentElement;
-  root.classList.toggle("dark", mode === "dark");
+  return "light";
 };
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setThemeState] = useState<ThemeMode>(() => {
-    const initial = getInitialTheme();
-    applyThemeClass(initial);
-    return initial;
+    return getInitialTheme();
   });
 
   useEffect(() => {
-    applyThemeClass(theme);
     window.localStorage.setItem(STORAGE_KEY, theme);
   }, [theme]);
 
@@ -59,18 +40,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 
   const toggleTheme = useCallback(() => {
     setThemeState((prev) => (prev === "dark" ? "light" : "dark"));
-  }, []);
-
-  useEffect(() => {
-    if (typeof window === "undefined" || !window.matchMedia) return;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const handler = (event: MediaQueryListEvent) => {
-      const newTheme = window.localStorage.getItem(STORAGE_KEY);
-      if (newTheme === "light" || newTheme === "dark") return;
-      setThemeState(event.matches ? "dark" : "light");
-    };
-    media.addEventListener("change", handler);
-    return () => media.removeEventListener("change", handler);
   }, []);
 
   const value = useMemo(
