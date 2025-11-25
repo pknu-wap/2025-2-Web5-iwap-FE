@@ -22,10 +22,8 @@ import PianoBackendManager, {
 } from "@/app/api/piano/PianoBackendManager";
 import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
-import { useTheme } from "@/components/theme/ThemeProvider";
 
 export default function VoiceToPiano() {
-  const { theme } = useTheme();
   const pageTitle = "P!ano";
   const pageSubtitle = "음성을 피아노로 변환하기";
   const {
@@ -34,7 +32,6 @@ export default function VoiceToPiano() {
     startRecording,
     stopRecording,
     setAudioFromFile,
-    reset,
   } = useRecorder();
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
@@ -382,12 +379,7 @@ export default function VoiceToPiano() {
 
   //  3. 뒤로 가기 핸들러 함수
   const handleGoBack = () => {
-    if (audioUrl) {
-      reset();
-      handleTransportReset();
-    } else {
-      router.back();
-    }
+    router.back();
   };
 
   const hasTransport = Boolean(transport);
@@ -403,17 +395,15 @@ export default function VoiceToPiano() {
       <FullScreenView
         title="P!ano"
         subtitle="음성을 피아노로 변환하기"
-        goBack={false} // 커스텀 핸들러 사용을 위해 false로 설정
-        onClose={handleGoBack} // 닫기 버튼 핸들러 연결
-        className={`font-[Pretendard] ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-        backgroundUrl={theme === 'dark' ? "/images/bg-dark/piano_dark.webp" : "/images/bg-light/piano_light.webp"}
-        darkBackground={theme === 'dark'}
+        goBack={true} // 이 goBack은 FullScreenView의 기본 버튼에만 적용됩니다.
+        className="text-black font-[Pretendard]"
+        backgroundUrl="/images/piano_background.png"
         
         // 모바일 재생 뷰에서 '기본' 헤더 숨김
         titleClassName={`${audioUrl ? "hidden" : ""} 
-                          md:block md:rotate-0 md:translate-x-0 md:translate-y-0 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                          md:block md:rotate-0 md:translate-x-0 md:translate-y-0`}
         subtitleClassName={`${audioUrl ? "hidden" : ""} 
-                             md:block md:rotate-0 md:translate-x-0 md:translate-y-0 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                             md:block md:rotate-0 md:translate-x-0 md:translate-y-0`}
         closeButtonClassName={`${audioUrl ? "hidden" : ""} 
                                 md:block md:rotate-0 md:translate-y-0`}
       >
@@ -426,16 +416,16 @@ export default function VoiceToPiano() {
           onMidiReady={handleMidiReady}
         />
         {audioUrl && (
-          <div 
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: 'linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5))' }}
-          />
+          <>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[10%] to-[#1D263D]"></div>
+            <div className="absolute inset-0 bg-gradient-to-b from-transparent from-[60%] to-[#00020B]"></div>
+          </>
         )}
 
         <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible">
           <>
             <div className={`${audioUrl ? "hidden" : "flex"} flex-col items-center justify-center gap-8 transform translate-y-[35px]`}>
-              <h1 className={`text-2xl md:text-3xl font-bold text-center ${theme === 'dark' ? 'text-white' : 'text-black'}`}>음성을 입력해주세요</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-center">음성을 입력해주세요</h1>
                 <RecorderButton
                   isRecording={isRecording}
                   startRecording={startRecording}

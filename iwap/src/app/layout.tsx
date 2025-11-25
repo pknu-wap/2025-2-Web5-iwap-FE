@@ -1,13 +1,13 @@
 "use client";
 
 import "./globals.css";
+// import "@/components/lightswind.css";
 import Link from "next/link";
 import localFont from "next/font/local";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ThemeProvider } from "@/components/theme/ThemeProvider";
-import MainHeader from "@/components/layout/MainHeader";
-import FloatingThemeToggle from "@/components/layout/FloatingThemeToggle";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 const Pretendard = localFont({
   src: "../../public/fonts/PretendardVariable.woff2",
@@ -86,31 +86,27 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body
-        suppressHydrationWarning
-        className={`relative overflow-x-hidden transition-colors duration-300 ${Pretendard.className}`}
+        className={`relative overflow-x-hidden bg-white text-black transition-colors duration-300 dark:bg-neutral-900 dark:text-neutral-100 ${Pretendard.className}`}
       >
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `
-              (function() {
-                try {
-                  var stored = localStorage.getItem('iwap.theme');
-                  if (stored === 'dark') {
-                    document.body.style.backgroundColor = '#171717';
-                    document.body.style.color = '#ededed';
-                  } else {
-                    document.body.style.backgroundColor = '#ffffff';
-                    document.body.style.color = '#171717';
-                  }
-                } catch (e) {}
-              })();
-            `,
-          }}
-        />
         <ThemeProvider>
-          {showHeader && <MainHeader />}
+          {showHeader && (
+            <header className="fixed top-0 left-0 z-50 flex h-[30px] w-full flex-col items-center justify-center bg-white text-black transition-colors duration-300 dark:bg-neutral-900 dark:text-neutral-100 md:h-[60px]">
+              <div className="relative flex w-full max-w-4xl items-center justify-center px-4">
+                <Link href="/slides" className="select-none text-center">
+                  <h1 className="text-[21px] font-semibold md:text-2xl">!WAP</h1>
+                  <p className="hidden text-base font-extralight -translate-y-0.5 md:block">
+                    !nteractive Web Art Project
+                  </p>
+                </Link>
+              </div>
+            </header>
+          )}
 
-          {!isMobileLandscape && <FloatingThemeToggle />}
+          {!isMobileLandscape && (
+            <div className="fixed bottom-4 right-4 z-50 md:bottom-6 md:right-6">
+              <ThemeToggle className="scale-90 md:scale-100 shadow-lg shadow-black/10 dark:shadow-none" />
+            </div>
+          )}
 
           <main
             className={

@@ -16,6 +16,17 @@ import { ERASER_TOKEN } from "@/components/graffiti/constants";
 type RunningMode = "IMAGE" | "VIDEO";
 type Landmark = { x: number; y: number; z: number };
 
+/* ---------------- 배경 스타일 (예전 Graffiti 스타일) ---------------- */
+const pageBackgroundStyle = {
+  backgroundImage: `
+    linear-gradient(to bottom, rgba(13, 17, 19, 0), #090223),
+    url('/images/instrument_background.jpg')
+  `,
+  backgroundSize: "cover",
+  backgroundPosition: "center",
+  backgroundAttachment: "fixed",
+};
+
 /* ---------------- 공통 유틸 ---------------- */
 function dist3(a: Landmark, b: Landmark) {
   const dx = a.x - b.x;
@@ -163,7 +174,6 @@ function detectGesture(hands: Landmark[][]): Gesture {
 const COLOR_PALETTE = ["#FA4051", "#FDD047","#2FB665", "#FFFFFF", "#000000"];
 
 export default function HandLandmarkerPage() {
-  const { theme } = useTheme();
   const [isReady, setIsReady] = useState(false);
   const [isWebcamRunning, setIsWebcamRunning] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
@@ -949,16 +959,6 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
     if (!isReady || isWebcamRunning) return;
     void startWebcam(facingMode);
   }, [facingMode, isReady, isWebcamRunning, startWebcam]);
-
-  /* ---------------- 배경 스타일 ---------------- */
-  const pageBackgroundStyle = {
-    backgroundImage: theme === 'dark'
-      ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000), url('/images/bg-dark/graffiti_dark.webp')`
-      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), #090223), url('/images/bg-light/graffiti_light.webp')`,
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    backgroundAttachment: "fixed",
-  };
 
   /* ---------------- JSX (예전 Graffiti 디자인 + 새 기능) ---------------- */
   return (

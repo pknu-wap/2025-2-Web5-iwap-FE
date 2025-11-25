@@ -26,8 +26,6 @@ type FullScreenViewProps = {
   titleClassName?: string;
   subtitleClassName?: string;
   closeButtonClassName?: string;
-  /** 다크 모드 또는 어두운 배경 여부 (true면 흰색 아이콘 사용) */
-  darkBackground?: boolean;
 };
 
 /**
@@ -38,7 +36,6 @@ export default function FullScreenView({
   children, title, subtitle, onClose, goBack, padding,
   onPrev, onNext, backgroundUrl, backgroundStyle, className = '',titleClassName = '',        // [추가]
   subtitleClassName = '', closeButtonClassName  = '',  // [추가]
-  darkBackground = true, // 기본값 true (기존 동작 유지)
 }: FullScreenViewProps) {
   
   // backgroundUrl prop이 있으면 그라데이션과 이미지 배경 스타일을 동적으로 생성.
@@ -70,7 +67,6 @@ export default function FullScreenView({
         titleClassName={titleClassName}       // [추가]
         subtitleClassName={subtitleClassName}
         closeButtonClassName={closeButtonClassName}
-        darkBackground={darkBackground}
       />
       
       {/* 컨텐츠 영역 */}

@@ -47,19 +47,19 @@ const isMobileDevice = () => {
 };
 
 export const getBackendUrl = (path: string) => {
-  // CORS 문제를 피하고 백엔드 URL을 숨기기 위해 항상 동일 출처 API 라우트를 우선 사용합니다.
-  // Next.js API 라우트가 실제 백엔드 서버로 프록시 역할을 합니다.
+  // Always prefer same-origin API route to avoid CORS and hide backend URL.
+  // The Next.js API route will proxy to the real backend server.
   return path.startsWith("/") ? path : `/${path}`;
 };
 
 const describeFetchError = (err: unknown) => {
   if (err instanceof TypeError) {
-    return "네트워크 연결 또는 백엔드 주소를 확인해주세요.";
+    return "네트워크 연결이나 백엔드 주소를 확인해주세요.";
   }
   if (err instanceof Error && err.message) {
     return err.message;
   }
-  return "알 수 없는 오류가 발생했습니다.";
+  return "알 수 없는 오류가 발생했어요.";
 };
 
 const parseConversionResponse = async (
@@ -73,7 +73,7 @@ const parseConversionResponse = async (
   }
 
   if (!data || typeof data !== "object") {
-    throw new Error("유효하지 않은 응답입니다.");
+    throw new Error("올바르지 않은 응답입니다.");
   }
 
   const payload = data as Record<string, unknown>;
@@ -98,7 +98,7 @@ const parseConversionResponse = async (
   };
 };
 /**
- * 피아노 백엔드와의 통신을 처리하고 MIDI 재생을 스케줄링합니다.
+ * Handles communication with the piano backend and schedules MIDI playback.
  */
 export default function PianoBackendManager({
   audioUrl,
@@ -164,7 +164,7 @@ export default function PianoBackendManager({
             conversion.mp3Filename ?? `piano-${downloadBaseName}.mp3`;
         } catch (mp3Error) {
           console.warn(
-            "Failed to fetch MP3 conversion, falling back to MIDI.",
+            "MP3 변환본을 가져오지 못해 MIDI로 대체합니다.",
             mp3Error
           );
         }
@@ -180,7 +180,7 @@ export default function PianoBackendManager({
         const midi = new Midi(midiArray);
 
         await Tone.start();
-        // 모바일에서의 안정성을 위해 lookAhead를 약간 늘립니다.
+        // Favor stability on mobile by increasing lookAhead slightly
         const ctx = Tone.getContext();
         ctx.lookAhead = isMobileDevice() ? 0.2 : 0.1;
         Tone.getDestination().volume.value = -20;
@@ -249,7 +249,7 @@ export default function PianoBackendManager({
         onStatusChange?.("");
         onTransportReady?.(controls, conversion);
       } catch (err) {
-        console.error("MIDI conversion failed:", err);
+        console.error("MIDI 변환 실패:", err);
         if (!isCancelled) {
           onStatusChange?.(describeFetchError(err));
         }
@@ -273,7 +273,7 @@ export default function PianoBackendManager({
 
         if (!uploadRes.ok) {
           throw new Error(
-            "오디오 업로드에 실패했습니다. 나중에 다시 시도해주세요."
+            "오디오 업로드에 실패했습니다. 잠시 후 다시 시도해 주세요."
           );
         }
 
@@ -284,7 +284,7 @@ export default function PianoBackendManager({
 
         await fetchAndPlayMidi(conversion);
       } catch (err) {
-        console.error("Audio upload failed:", err);
+        console.error("오디오 업로드 실패:", err);
         if (!isCancelled) {
           onStatusChange?.(describeFetchError(err));
         }

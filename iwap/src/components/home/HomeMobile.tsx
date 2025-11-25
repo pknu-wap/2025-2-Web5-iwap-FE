@@ -95,7 +95,7 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
         timerRef.current = null;
       }
     };
-  }, [phase, router]);
+  }, [phase]);
 
   // After the first animation reaches final, keep vertical for ~2s then switch to horizontal
   useEffect(() => {
@@ -362,14 +362,14 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
   return (
     <main className="relative h-dvh w-full select-none overflow-hidden">
       <Image
-        src="/images/home/home_light.webp"
+        src="/images/home_background.jpg"
         alt="Background Light"
         fill
         priority
         className={`object-cover ${isDarkTheme ? "hidden" : "block"}`}
       />
       <Image
-        src="/images/home/home_dark.webp"
+        src="/images/home-black_background.jpg"
         alt="Background Dark"
         fill
         priority

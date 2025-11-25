@@ -7,7 +7,6 @@ import LoadingIndicator from '@/components/ui/LoadingIndicator';
 import FullScreenView from '@/components/ui/FullScreenView';
 import PageHeader from '@/components/ui/PageHeader';
 import { ProjectIntroModal } from '@/components/sections/ProjectIntroSections';
-import { useTheme } from "@/components/theme/ThemeProvider";
 
 // 백엔드 데이터 구조에 대한 타입 정의
 interface LayersData {
@@ -25,7 +24,6 @@ interface TaskIdResponse {
  * AI 모델의 숫자 인식 과정을 시각화하는 '!nside' 페이지 컴포넌트.
  */
 export default function InsidePage() {
-  const { theme } = useTheme();
   const [view, setView] = useState('draw'); 
   const [layersData, setLayersData] = useState<LayersData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +55,7 @@ export default function InsidePage() {
   const handleDataReady = useCallback((data: LayersData) => {
     try {
       if (!data || !data.layers || typeof data.layers !== 'object' || Object.keys(data.layers).length === 0) {
-        throw new Error("Did not receive valid layer data from server.");
+        throw new Error("서버로부터 유효한 레이어 데이터를 받지 못했습니다.");
       }
       
       setLayersData(data);
@@ -66,7 +64,7 @@ export default function InsidePage() {
 
     } catch (err) {
       console.error('[InsidePage] Error: An error occurred during data processing:', err);
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
+      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
       handleUploadFail(`[데이터 처리 오류]: ${errorMessage}`);
     }
   }, [handleUploadFail]);
@@ -77,17 +75,18 @@ export default function InsidePage() {
   const handleUploadAccepted = (data: TaskIdResponse) => {
     try {
       if (!data || typeof data.task_id !== 'string') {
-        throw new Error("Did not receive valid task_id from server.");
+        throw new Error("서버로부터 유효한 task_id를 받지 못했습니다.");
       }
       setTaskId(data.task_id);
     } catch (err) {
       console.error('[InsidePage] Error: An error occurred processing task_id:', err);
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      handleUploadFail(`[Task ID 처리 오류]: ${errorMessage}`);
+      const errorMessage = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      handleUploadFail(`[작업 ID 처리 오류]: ${errorMessage}`);
     }
   };
 
   /**
+   * [!! 수정된 부분 !!]
    * 시각화 뷰에서 그리기 뷰로 돌아갈 때 호출됩니다.
    */
   const handleReturnToDraw = useCallback(() => {
@@ -95,7 +94,7 @@ export default function InsidePage() {
     setView('draw');
     setError(null); // 에러 메시지도 함께 초기화
     setTaskId(null); // 혹시 모를 task ID도 초기화
-  }, []); 
+  }, []); // 의존성 배열은 비어있습니다.
 
   // task_id가 설정되면 폴링을 시작하는 useEffect
   useEffect(() => {
@@ -119,15 +118,15 @@ export default function InsidePage() {
           console.log(`[InsidePage] Polling... task ${taskId} is still processing.`);
         } else {
           if (intervalId) clearInterval(intervalId);
-          let errorText = 'No response';
+          let errorText = '응답 없음';
           try {
             errorText = await response.text();
           } catch {}
-          throw new Error(`[Data Fetch Error ${response.status}]: ${errorText}`);
+          throw new Error(`[데이터 조회 오류 ${response.status}]: ${errorText}`);
         }
       } catch (error) {
         if (intervalId) clearInterval(intervalId);
-        const errorMessage = error instanceof Error ? error.message : '폴링 중 알 수 없는 오류가 발생했습니다.';
+        const errorMessage = error instanceof Error ? error.message : '폴링 중 알 수 없는 오류 발생';
         handleUploadFail(errorMessage);
       } finally {
         isFetching = false;
@@ -153,24 +152,21 @@ export default function InsidePage() {
           />
         );
       case 'loading':
-        return <LoadingIndicator text="분석 중..." className={theme === 'dark' ? 'text-white' : 'text-zinc-900'} />;
+        return <LoadingIndicator text="분석 중..." />;
       default:
         return null;
     }
   };
 
   const pageBackgroundStyle = {
-    // 배경 그라데이션 제거, 이미지만 유지
-    backgroundImage: theme === 'dark'
-      ? `url('/images/bg-dark/inside_dark.webp')`
-      : `url('/images/bg-light/inside_light.webp')`,
+    backgroundImage: `
+      linear-gradient(to bottom, rgba(13, 17, 19, 0), #0d1113),
+      url('/images/inside_background.jpg')
+    `,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
   };
-
-  // 공통 텍스트 색상 스타일 (!important로 강제 적용)
-  const textColorClass = theme === 'dark' ? "!text-white" : "!text-zinc-900";
 
   return (
     <div className="flex flex-col">
@@ -189,14 +185,8 @@ export default function InsidePage() {
         <FullScreenView
           title="!nside."
           subtitle="인공지능이 숫자를 인식하는 과정"
-          onClose={handleReturnToDraw}
-          backgroundUrl={theme === 'dark' ? "/images/bg-dark/inside_dark.webp" : "/images/bg-light/inside_light.webp"}
-          // 여기에서 텍스트 색상을 직접 주입
-          className={textColorClass}
-          titleClassName={textColorClass}
-          subtitleClassName={textColorClass}
-          closeButtonClassName={textColorClass}
-          darkBackground={theme === 'dark'}
+          onClose={handleReturnToDraw} // 이제 이 함수를 찾을 수 있습니다.
+          backgroundUrl="/images/inside_background.jpg"
         >
           <ImageGridLayers layersData={layersData} />
         </FullScreenView>
@@ -209,17 +199,10 @@ export default function InsidePage() {
                 subtitle="인공지능이 숫자를 인식하는 과정"
                 goBack={true}
                 padding='p-0'
-                // 여기에서 텍스트 색상을 직접 주입
-                className={textColorClass}
-                titleClassName={textColorClass}
-                subtitleClassName={textColorClass}
-                closeButtonClassName={textColorClass}
-                darkBackground={theme === 'dark'}
               />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 
-                  // 텍스트 색상 강제 적용
-                  className={`font-semibold translate -translate-y-3 -translate-x-3 ${textColorClass}`}
+                  className="font-semibold text-white translate -translate-y-3 -translate-x-3" 
                   style={{
                     fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)',
                   }}
