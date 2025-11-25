@@ -11,6 +11,7 @@ import PageHeader from "@/components/ui/PageHeader";
 import GraffitiToolbar from "@/components/graffiti/GraffitiToolbar";
 import GraffitiToolbarMobile from "@/components/graffiti/GraffitiToolbarMobile";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
+import { ERASER_TOKEN } from "@/components/graffiti/constants";
 
 type RunningMode = "IMAGE" | "VIDEO";
 type Landmark = { x: number; y: number; z: number };
@@ -170,7 +171,7 @@ function detectGesture(hands: Landmark[][]): Gesture {
 
 /* ---------------- Toolbar 관련 (색·두께·undo/redo) ---------------- */
 
-const COLOR_PALETTE = ["#FA4051", "#FDD047", "#2FB665", "#FFFFFF", "#000000"];
+const COLOR_PALETTE = ["#FA4051", "#FDD047","#2FB665", "#FFFFFF", "#000000"];
 
 export default function HandLandmarkerPage() {
   const [isReady, setIsReady] = useState(false);
@@ -813,8 +814,14 @@ if (landmarksList.length > 0) {
 
       drawCtx.lineCap = "round";
       drawCtx.lineJoin = "round";
-      drawCtx.strokeStyle = brushColorRef.current;
-      drawCtx.lineWidth = brushSizeRef.current;
+      const isEraser = brushColorRef.current === ERASER_TOKEN;
+      drawCtx.globalCompositeOperation = isEraser ? "destination-out" : "source-over";
+      drawCtx.strokeStyle = isEraser ? "rgba(0,0,0,1)" : brushColorRef.current;
+      drawCtx.lineWidth = isEraser ? brushSizeRef.current * 1.15 : brushSizeRef.current;
+      drawCtx.shadowColor = isEraser ? "rgba(0,0,0,0)" : brushColorRef.current;
+      drawCtx.shadowBlur = isEraser ? 0 : 8;
+      drawCtx.filter = isEraser ? "none" : "blur(0.35px)";
+      drawCtx.globalAlpha = isEraser ? 1 : 0.92;
 
       if (prev) {
         drawCtx.beginPath();
@@ -833,6 +840,10 @@ if (landmarksList.length > 0) {
 }
 
 overlayCtx.restore();
+drawCtx.globalCompositeOperation = "source-over";
+drawCtx.shadowBlur = 0;
+drawCtx.filter = "none";
+drawCtx.globalAlpha = 1;
 
 /** ---- stroke 시작/종료 상태 업데이트 ---- **/
 if (!hadDrawingPrev && hasDrawingNow) {
@@ -1024,6 +1035,8 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   shadow-[0_0_50px_20px_rgba(0,0,0,0.25)]
                   flex flex-col items-center justify-center
                   text-center
+                  cursor-pointer
+                  transition
                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-white
                 "
               >
@@ -1158,7 +1171,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   onSave={handleSave}
                   onSaveWithVideo={handleSaveWithVideo}
                 />
-              </div>
+        </div>
         <div
           ref={toolbarWrapperRef}
           className={

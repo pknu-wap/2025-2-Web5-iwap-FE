@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ERASER_TOKEN } from "./constants";
 
 type GraffitiToolbarProps = {
   colorPalette: string[];
@@ -92,6 +93,7 @@ export default function GraffitiToolbar({
   const calculatedPercentage =
     sliderRange === 0 ? 0 : ((brushSize - sliderMin) / sliderRange) * 100;
   const sliderPercentage = Math.min(Math.max(calculatedPercentage, 0), 100);
+  const isEraserSelected = brushColor === ERASER_TOKEN;
 
   return (
     <div
@@ -136,7 +138,7 @@ export default function GraffitiToolbar({
       <div className="flex items-center gap-3">
         {colorPalette.map((color) => {
           const normalizedColor = color.toLowerCase();
-          const isSelected = normalizedBrushColor === normalizedColor;
+          const isSelected = !isEraserSelected && normalizedBrushColor === normalizedColor;
           const isWhite = normalizedColor === "#ffffff";
           const checkColor = isWhite ? "#000000" : "#ffffff";
           return (
@@ -259,7 +261,7 @@ export default function GraffitiToolbar({
                 )}
                 {customPatterns.map((hex) => {
                   const normalizedColor = hex.toLowerCase();
-                  const isCustomSelected = normalizedBrushColor === normalizedColor;
+                  const isCustomSelected = !isEraserSelected && normalizedBrushColor === normalizedColor;
                   const isWhite = normalizedColor === "#ffffff";
                   const checkColor = isWhite ? "#000000" : "#ffffff";
                   return (
@@ -318,7 +320,20 @@ export default function GraffitiToolbar({
         </div>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          aria-pressed={isEraserSelected}
+          className={`h-[32px] flex items-center justify-center hover:opacity-75 transition`}
+          onClick={() => onBrushColorChange(ERASER_TOKEN)}
+        >
+          <img
+            src="/icons/eraser.svg"
+            alt="eraser"
+            className="w-[32px] h-[32px]"
+          />
+        </button>
+
         <button
           onClick={onClear}
           aria-label="Clear"
@@ -327,7 +342,7 @@ export default function GraffitiToolbar({
         >
           <img
             src="/icons/trash_white.svg"
-            className="w-[24px] h-[24px]"
+            className="w-[32px] h-[32px]"
           />
         </button>
         <div className="relative" ref={saveMenuRef}>
@@ -354,7 +369,7 @@ export default function GraffitiToolbar({
               alt="download hover"
               className="w-[18px] h-[18px] hidden group-hover:block"
             />
-            <span className="group-hover:text-white">save</span>
+            <span className="group-hover:text-white">PNG</span>
           </button>
           {showSaveMenu && (
             <div
