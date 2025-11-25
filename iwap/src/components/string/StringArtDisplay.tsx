@@ -4,6 +4,7 @@ import Image from 'next/image';
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import ProgressBar from './ProgressBar';
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 type Point = [number, number];
 
@@ -38,6 +39,7 @@ const PauseIcon = () => (
 
 // --- MAIN COMPONENT ---
 export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, nailCount }: StringArtDisplayProps) {
+  const { theme } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameId = useRef<number | null>(null);
   
@@ -244,7 +246,9 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
 
   // --- 렌더링 ---
   const backgroundStyle = {
-    backgroundImage: "url('/images/string_background.png')",
+    backgroundImage: theme === 'dark'
+      ? `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-dark/string_dark.jpg')`
+      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-light/string_light.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -267,6 +271,7 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
             onClose={onClose}
             isAbsolute={false}
             padding="p-0"
+            darkBackground={theme === 'dark'}
           />
         </div>
 

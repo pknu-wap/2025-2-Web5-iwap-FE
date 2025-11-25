@@ -66,10 +66,11 @@ export default function StringArtPage() {
     }
   }, [previewUrl, colorImageUrl]);
 
+  // --- Styles ---
   const pageBackgroundStyle = {
     backgroundImage: theme === 'dark'
-      ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000), url('/images/bg-dark/string_dark.jpg')`
-      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), #98B9C2), url('/images/bg-light/string_light.jpg')`,
+      ? `url('/images/bg-dark/string_dark.jpg')`
+      : `url('/images/bg-light/string_light.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -79,7 +80,7 @@ export default function StringArtPage() {
 
   const renderContent = () => {
     if (view === 'loading') {
-      return <LoadingIndicator text="변환 중..." />;
+      return <LoadingIndicator text="변환 중..." className={theme === 'dark' ? 'text-white' : 'text-zinc-900'} />;
     }
     // 'upload' view
     return (
@@ -159,9 +160,19 @@ export default function StringArtPage() {
         <div className="w-full h-full flex translate-x-5 md:translate-x-0 items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-5/6 relative">
             <div className="w-[90%] md:w-full h-[90%] md:h-full pt-[100px]">
-              <PageHeader title="Str!ng" subtitle="선들로 이미지를 표현" goBack={true} padding='p-0' closeButtonClassName="-translate-x-6 md:translate-x-0"/>
+              <PageHeader 
+                title="Str!ng" 
+                subtitle="선들로 이미지를 표현" 
+                goBack={true} 
+                padding='p-0' 
+                closeButtonClassName="-translate-x-6 md:translate-x-0"
+                darkBackground={theme === 'dark'}
+              />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
-                <h3 className="-translate-y-3 -translate-x-3 md:translate-y-0 md:translate-x-0 font-semibold text-white shrink-0" style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}>
+                <h3 
+                  className={`-translate-y-3 -translate-x-3 md:translate-y-0 md:translate-x-0 font-semibold shrink-0 ${theme === 'dark' ? 'text-white' : 'text-black'}`} 
+                  style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}
+                >
                   이미지를 업로드하세요
                 </h3>
                 <div className="relative min-h-0 scale-[1.1] md:scale-[1]">
