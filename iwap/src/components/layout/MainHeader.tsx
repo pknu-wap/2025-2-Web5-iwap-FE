@@ -6,13 +6,8 @@ import { useEffect, useState } from "react";
 
 export default function MainHeader() {
   const { theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted && theme === "dark";
+  const isDark = theme === "dark";
 
   return (
     <header

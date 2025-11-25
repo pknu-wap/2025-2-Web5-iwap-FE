@@ -6,13 +6,8 @@ import { useEffect, useState } from "react";
 
 export default function FloatingThemeToggle() {
   const { theme } = useTheme();
-  const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  const isDark = mounted && theme === "dark";
+  const isDark = theme === "dark";
 
   return (
     <div className="fixed bottom-4 right-4 z-50 md:bottom-6 md:right-6">

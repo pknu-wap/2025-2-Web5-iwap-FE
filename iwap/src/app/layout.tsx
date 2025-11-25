@@ -86,8 +86,27 @@ export default function RootLayout({
   return (
     <html lang="ko">
       <body
+        suppressHydrationWarning
         className={`relative overflow-x-hidden transition-colors duration-300 ${Pretendard.className}`}
       >
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var stored = localStorage.getItem('iwap.theme');
+                  if (stored === 'dark') {
+                    document.body.style.backgroundColor = '#171717';
+                    document.body.style.color = '#ededed';
+                  } else {
+                    document.body.style.backgroundColor = '#ffffff';
+                    document.body.style.color = '#171717';
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
         <ThemeProvider>
           {showHeader && <MainHeader />}
 

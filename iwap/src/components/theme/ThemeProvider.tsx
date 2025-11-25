@@ -21,16 +21,21 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
 const STORAGE_KEY = "iwap.theme";
 
-const getInitialTheme = (): ThemeMode => {
-  return "light";
-};
-
 export function ThemeProvider({ children }: { children: ReactNode }) {
-  const [theme, setThemeState] = useState<ThemeMode>(() => {
-    return getInitialTheme();
-  });
+  const [theme, setThemeState] = useState<ThemeMode>("light");
+  const [isInitialized, setIsInitialized] = useState(false);
 
   useEffect(() => {
+    const stored = window.localStorage.getItem(STORAGE_KEY);
+    if (stored === "dark" || stored === "light") {
+      setThemeState(stored);
+    }
+    setIsInitialized(true);
+  }, []);
+
+  useEffect(() => {
+    if (!isInitialized) return;
+
     window.localStorage.setItem(STORAGE_KEY, theme);
     if (theme === "dark") {
       document.body.style.backgroundColor = "#171717";
@@ -39,7 +44,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
       document.body.style.backgroundColor = "#ffffff";
       document.body.style.color = "#171717";
     }
-  }, [theme]);
+  }, [theme, isInitialized]);
 
   const setTheme = useCallback((mode: ThemeMode) => {
     setThemeState(mode);
@@ -57,6 +62,10 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }),
     [theme, setTheme, toggleTheme]
   );
+
+  if (!isInitialized) {
+    return null;
+  }
 
   return (
     <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
