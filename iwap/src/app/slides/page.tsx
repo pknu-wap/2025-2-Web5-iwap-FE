@@ -217,6 +217,7 @@ export default function SlidesPage() {
                       src={item.src[theme]}
                       alt={item.title}
                       fill
+                      priority
                       className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
                     <div
