@@ -14,6 +14,9 @@ type PageHeaderProps = {
   closeButtonClassName?: string;
   /** close 버튼을 텍스트 옆에 인라인으로 둘지 여부 */
   inlineClose?: boolean;
+  className?: string;
+  /** 다크 모드 또는 어두운 배경 여부 (true면 흰색 아이콘 사용) */
+  darkBackground?: boolean;
 };
 
 export default function PageHeader({
@@ -27,6 +30,8 @@ export default function PageHeader({
   subtitleClassName = "",
   closeButtonClassName = "",
   inlineClose = false,
+  className = "",
+  darkBackground = true,
 }: PageHeaderProps) {
   const positionClasses = isAbsolute
     ? "absolute top-0 left-0 z-20"
@@ -36,7 +41,7 @@ export default function PageHeader({
     <header
       className={`${positionClasses} w-full flex pointer-events-none ${
         inlineClose ? "flex-col items-start gap-1" : "justify-between items-end"
-      } text-white ${padding}`}
+      } ${padding} ${className}`}
     >
       {(title || subtitle) && (
         <div
@@ -53,7 +58,7 @@ export default function PageHeader({
               </h1>
               {inlineClose && (goBack || onClose) && (
                 <div className={`pointer-events-auto flex-shrink-0 pb-0 ${closeButtonClassName}`}>
-                  <CloseButton onClick={onClose} goBack={goBack} />
+                  <CloseButton onClick={onClose} goBack={goBack} darkBackground={darkBackground} />
                 </div>
               )}
             </div>
@@ -68,7 +73,7 @@ export default function PageHeader({
 
       {!inlineClose && (goBack || onClose) && (
         <div className={`pointer-events-auto flex-shrink-0 pb-0 ${closeButtonClassName}`}>
-          <CloseButton onClick={onClose} goBack={goBack} />
+          <CloseButton onClick={onClose} goBack={goBack} darkBackground={darkBackground} />
         </div>
       )}
     </header>

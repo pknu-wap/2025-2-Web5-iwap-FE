@@ -8,11 +8,12 @@ const BACKEND_URL = process.env.ASYNC_BACKEND_API_URL;
 
 export async function GET(request, { params }) {
   const { task_id } = params;
+  console.log(`[API/inside] GET request started: task_id=${task_id}`);
 
   // 1. 환경 변수 확인
   if (!BACKEND_URL) {
-    console.error('[API Proxy Error] BACKEND_API_URL이 서버 환경 변수에 설정되지 않았습니다.');
-    return new NextResponse(JSON.stringify({ message: '서버 환경 변수 설정 오류입니다.' }), {
+    console.error('[API/inside] Error: BACKEND_API_URL environment variable is not set.');
+    return new NextResponse(JSON.stringify({ message: 'Server environment variable configuration error.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
@@ -30,6 +31,8 @@ export async function GET(request, { params }) {
       cache: 'no-store', 
     });
 
+    console.log(`[API/inside] Backend response: ${response.status} ${response.statusText}`);
+
     // 3. 백엔드의 응답을 클라이언트로 그대로 전달
     const responseBody = await response.text();
     
@@ -42,8 +45,8 @@ export async function GET(request, { params }) {
 
   } catch (error) {
     // 4. 프록시 과정에서 에러 발생 시
-    console.error(`[API Proxy Error] GET /api/inside/${task_id}: ${error.message}`);
-    return new NextResponse(JSON.stringify({ message: 'API 프록시 서버에서 내부 오류가 발생했습니다.' }), {
+    console.error(`[API/inside] Proxy error: ${error.message}`);
+    return new NextResponse(JSON.stringify({ message: 'Internal error in API proxy server.' }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });

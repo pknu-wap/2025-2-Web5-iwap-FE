@@ -4,7 +4,7 @@
 /** 간단한 SVG 스피너 아이콘 */
 const SpinnerIcon = () => (
   <svg
-    className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
+    className="animate-spin -ml-1 mr-3 h-5 w-5"
     xmlns="http://www.w3.org/2000/svg"
     fill="none"
     viewBox="0 0 24 24"
@@ -27,11 +27,11 @@ const SpinnerIcon = () => (
 
 /**
  * 로딩 중임을 나타내는 인디케이터 컴포넌트
- * @param {{ text: string }} props - 표시할 텍스트
+ * @param {{ text: string, className?: string }} props - 표시할 텍스트 및 추가 클래스
  */
-export default function LoadingIndicator({ text }) {
+export default function LoadingIndicator({ text, className = "text-white" }) {
   return (
-    <div className="flex flex-col items-center justify-center w-full h-full text-white">
+    <div className={`flex flex-col items-center justify-center w-full h-full ${className}`}>
       <div className="flex items-center">
         <SpinnerIcon />
         <span className="text-lg">{text}</span>

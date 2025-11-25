@@ -1,18 +1,8 @@
 @import "tailwindcss";
-/* @import "@/styles/lightswind.css"; */
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-.dark {
-  color-scheme: dark;
-}
-
-.dark body {
-  --background: #0a0a0a;
-  --foreground: #ededed;
 }
 
 @theme inline {
@@ -20,13 +10,6 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {

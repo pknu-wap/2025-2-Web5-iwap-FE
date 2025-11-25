@@ -6,6 +6,7 @@ import Image from 'next/image';
 import PageHeader from '@/components/ui/PageHeader';
 import ResolutionSlider from './ResolutionSlider';
 import DownloadOptions from './DownloadOptions';
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 // --- Types & Constants ---
 type ArtDimensions = { w: number; h: number };
@@ -236,7 +237,15 @@ export default function AsciiArtDisplay({
     }
   };
 
-  const backgroundStyle = { backgroundImage: `linear-gradient(to bottom, rgba(214, 211, 209, 0), #d6d3d1), url('/images/ascii_background.jpg')`, backgroundSize: 'cover', backgroundPosition: 'center', backgroundAttachment: 'fixed' };
+  const { theme } = useTheme();
+  const backgroundStyle = {
+    backgroundImage: theme === 'dark'
+      ? `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-dark/ascii_dark.webp')`
+      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-light/ascii_light.webp')`,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+    backgroundAttachment: 'fixed'
+  };
 
   const downloadOptionsProps = {
     pngScaleFactor,
@@ -461,7 +470,14 @@ export default function AsciiArtDisplay({
       <div className="w-full max-w-[620px] flex flex-col h-full relative">
         
         {/* 'z-10' 추가 */}
-        <PageHeader title="ASCi!" subtitle="이미지를 텍스트로 표현" onClose={onClose} isAbsolute={false} padding="p-0 pb-2 z-10" />
+        <PageHeader 
+          title="ASCi!" 
+          subtitle="이미지를 텍스트로 표현" 
+          onClose={onClose} 
+          isAbsolute={false} 
+          padding="p-0 pb-2 z-10" 
+          darkBackground={theme === 'dark'}
+        />
         
         <div 
           ref={containerRef} 
