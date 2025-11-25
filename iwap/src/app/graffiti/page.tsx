@@ -12,7 +12,6 @@ import GraffitiToolbar from "@/components/graffiti/GraffitiToolbar";
 import GraffitiToolbarMobile from "@/components/graffiti/GraffitiToolbarMobile";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
 import { ERASER_TOKEN } from "@/components/graffiti/constants";
-import { useTheme } from "@/components/theme/ThemeProvider";
 
 type RunningMode = "IMAGE" | "VIDEO";
 type Landmark = { x: number; y: number; z: number };
