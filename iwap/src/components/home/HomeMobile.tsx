@@ -82,12 +82,6 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
   const highlightRefs = useRef<Record<string, HTMLSpanElement | null>>({});
 
   useEffect(() => {
-    // Check if user has visited before
-    const hasVisited = sessionStorage.getItem("visited");
-    if (hasVisited) {
-      router.replace("/slides");
-    }
-
     if (phase === "animating") {
       timerRef.current = setTimeout(() => {
         setPhase("final");
@@ -129,7 +123,6 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
       setLeaving(true);
       leaveTimerRef.current = null;
       setTimeout(() => {
-        sessionStorage.setItem("visited", "true");
         router.push("/slides");
       }, flyOutDurationMs);
     }, horizontalHoldMs);
