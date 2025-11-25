@@ -19,7 +19,7 @@ import PianoBackendManager, {
   type ConversionContext,
   type MidiReadyPayload,
   getBackendUrl,
-} from "@/app/api/piano/PianoBackendManager";
+} from "@/lib/piano/PianoBackendManager";
 import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
 import { useTheme } from "@/components/theme/ThemeProvider";

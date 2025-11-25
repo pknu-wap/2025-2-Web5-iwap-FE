@@ -77,10 +77,11 @@ const parseConversionResponse = async (
   }
 
   const payload = data as Record<string, unknown>;
-  const requestId = payload.requestId;
+  // 백엔드 응답이 { "task_id": "..." } 형태이므로 이를 requestId로 매핑합니다.
+  const requestId = (payload.task_id as string) || (payload.requestId as string);
 
   if (typeof requestId !== "string" || requestId.length === 0) {
-    throw new Error("요청 ID를 받지 못했습니다.");
+    throw new Error("요청 ID(task_id)를 받지 못했습니다.");
   }
 
   return {
@@ -137,13 +138,35 @@ export default function PianoBackendManager({
       try {
         onStatusChange?.("MIDI 변환 중...");
         const requestToken = encodeURIComponent(conversion.requestId);
-        const midiRes = await fetch(
-          getBackendUrl(`/api/piano/midi?request_id=${requestToken}`)
-        );
-        if (!midiRes.ok) {
-          throw new Error("MIDI 파일 다운로드에 실패했습니다.");
-        }
 
+        const pollForFile = async (url: string, timeoutMs = 60000): Promise<Response> => {
+          const start = Date.now();
+          while (Date.now() - start < timeoutMs) {
+            if (isCancelled) throw new Error("Cancelled");
+            
+            const res = await fetch(url);
+            if (res.status === 200) {
+              return res;
+            }
+            if (res.status === 202) {
+              // Still processing, wait and retry
+              await new Promise((resolve) => setTimeout(resolve, 2000));
+              continue;
+            }
+            // If it's not 200 or 202, it's an error (e.g. 404, 500)
+            if (!res.ok) {
+               throw new Error(`File fetch failed with status: ${res.status}`);
+            }
+             // If ok but not 200/202 (unlikely for this API but possible), return it
+            return res;
+          }
+          throw new Error("변환 시간이 초과되었습니다.");
+        };
+
+        const midiRes = await pollForFile(
+          getBackendUrl(`/api/piano/midi/${requestToken}`)
+        );
+        
         const midiArray = await midiRes.arrayBuffer();
         const downloadBaseName = new Date().toISOString().replace(/[:.]/g, "-");
         let downloadBlob: Blob = new Blob([midiArray], {
@@ -152,12 +175,9 @@ export default function PianoBackendManager({
         let downloadFilename = conversion.midiFilename ?? `piano-${downloadBaseName}.mid`;
 
         try {
-          const mp3Res = await fetch(
-            getBackendUrl(`/api/piano/mp3?request_id=${requestToken}`)
+          const mp3Res = await pollForFile(
+            getBackendUrl(`/api/piano/mp3/${requestToken}`)
           );
-          if (!mp3Res.ok) {
-            throw new Error("MP3 파일 다운로드에 실패했습니다.");
-          }
           const mp3Array = await mp3Res.arrayBuffer();
           downloadBlob = new Blob([mp3Array], { type: "audio/mpeg" });
           downloadFilename =
@@ -263,8 +283,12 @@ export default function PianoBackendManager({
         const res = await fetch(audioUrl);
         const blob = await res.blob();
 
+        // Blob을 File 객체로 변환하여 파일명을 명시적으로 지정합니다.
+        // 이는 백엔드에서 파일 확장자를 올바르게 인식하도록 돕습니다.
+        const file = new File([blob], "voice.webm", { type: blob.type || "audio/webm" });
+
         const formData = new FormData();
-        formData.append("voice", blob, "voice.webm");
+        formData.append("voice", file);
 
         const uploadRes = await fetch(getBackendUrl("/api/piano"), {
           method: "POST",
