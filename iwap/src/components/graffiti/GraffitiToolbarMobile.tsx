@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { ERASER_TOKEN } from "./constants";
 
 type GraffitiToolbarMobileProps = {
   colorPalette: string[];
@@ -68,6 +69,7 @@ export default function GraffitiToolbarMobile({
     sliderRange === 0 ? 0 : ((brushSize - sliderMin) / sliderRange) * 100;
   const sliderPercentage = Math.min(Math.max(calculatedPercentage, 0), 100);
   const isValidHex = (value: string) => /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value.trim());
+  const isEraserSelected = brushColor === ERASER_TOKEN;
   const stopPointerPropagation = useCallback((event: React.PointerEvent) => {
     event.stopPropagation();
   }, []);
@@ -292,7 +294,7 @@ export default function GraffitiToolbarMobile({
             <div className="flex flex-wrap items-center justify-center gap-3 w-full pointer-events-auto">
               {colorPalette.map((color) => {
                 const normalizedColor = color.toLowerCase();
-                const isSelected = normalizedBrushColor === normalizedColor;
+                const isSelected = !isEraserSelected && normalizedBrushColor === normalizedColor;
                 const isWhite = normalizedColor === "#ffffff";
                 const checkColor = isWhite ? "#000000" : "#ffffff";
                 return (
@@ -320,7 +322,7 @@ export default function GraffitiToolbarMobile({
 
               {customPatterns.map((hex) => {
                 const normalizedColor = hex.toLowerCase();
-                const isSelected = normalizedBrushColor === normalizedColor;
+                const isSelected = !isEraserSelected && normalizedBrushColor === normalizedColor;
                 const isWhite = normalizedColor === "#ffffff";
                 const checkColor = isWhite ? "#000000" : "#ffffff";
                 return (
@@ -363,6 +365,20 @@ export default function GraffitiToolbarMobile({
                 }}
                 onClick={openColorPicker}
               />
+
+                            <button
+                type="button"
+                aria-pressed={isEraserSelected}
+                className={`h-[28px] flex items-center justify-center hover:opacity-75 transition`}
+                onClick={() => onBrushColorChange(ERASER_TOKEN)}
+              >
+                <img
+                  src="/icons/eraser.svg"
+                  alt="eraser"
+                  className="w-[32px] h-[32px]"
+                />
+              </button>
+              
               <div className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded-full border border-white">
                 <span className="text-[12px] text-white">HEX</span>
                 <input
