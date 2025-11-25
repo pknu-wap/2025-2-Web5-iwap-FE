@@ -190,14 +190,14 @@ const SECTION_DATA: Record<
       dark: "/images/bg-dark/ascii_dark.jpg",
     },
     imageAlt: "ascii background",
-    imageOverlayLeft: "Asci!",
+    imageOverlayLeft: "ASCi!",
     overlayLeftClassName: "md:-translate-x-[46px] md:-translate-y-[80px] -translate-x-[26px] -translate-y-[40px]",
     imageOverlayRight: "04",
     side: "left",
     badgeText: "Vision",
     textAlign: "left",
     badgeAlign: "left",
-    heading: "04  Asci!",
+    heading: "04  ASCi!",
     body: (
       <>
         <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">

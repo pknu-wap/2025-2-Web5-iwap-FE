@@ -116,8 +116,8 @@ export default function AsciiPage() {
   // --- Styles ---
   const pageBackgroundStyle = {
     backgroundImage: theme === 'dark'
-      ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #1a1a1a), url('/images/bg-dark/ascii_dark.jpg')`
-      : `linear-gradient(to bottom, rgba(214, 211, 209, 0), #d6d3d1), url('/images/bg-light/ascii_light.jpg')`,
+      ? `url('/images/bg-dark/ascii_dark.jpg')`
+      : `url('/images/bg-light/ascii_light.jpg')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -222,11 +222,12 @@ export default function AsciiPage() {
                 subtitle="이미지를 텍스트로 표현" 
                 goBack={true} 
                 padding='p-0' 
+                darkBackground={theme === 'dark'}
               />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 
                   // [수정] Tailwind CSS 클래스를 표준에 맞게 수정합니다.
-                  className="font-semibold text-white shrink-0 -translate-y-3 -translate-x-3" 
+                  className={`font-semibold shrink-0 -translate-y-3 -translate-x-3 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
                   style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}
                 >
                   이미지를 업로드하세요
