@@ -67,6 +67,14 @@ const baseSlides: SlideContent[] = [
     leftTexts: ["Graff!ti", "움직임으로만 드로잉"],
     rightTexts: ["Project", "06"],
   },
+  {
+    src: "/images/string_background.jpg",
+    link: "/facial",
+    title: "Fac!al",
+    description: "얼굴의 특징을 변경",
+    leftTexts: ["Fac!al", "얼굴의 특징을 변경"],
+    rightTexts: ["Project", "07"],
+  },
 ];
 
 const images = [...baseSlides, ...baseSlides];
