@@ -185,7 +185,7 @@ export default function GraffitiToolbar({
               rounded-full translate-y-[4px]
             "
             style={{
-              backgroundImage: "url('/icons/rainbow.svg')",
+              backgroundImage: "url('/icons/rainbow_color.svg')",
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",
@@ -329,7 +329,7 @@ export default function GraffitiToolbar({
           onClick={() => onBrushColorChange(ERASER_TOKEN)}
         >
           <img
-            src="/icons/eraser.svg"
+            src="/icons/eraser_white.svg"
             alt="eraser"
             className="w-[32px] h-[32px]"
           />
@@ -361,12 +361,12 @@ export default function GraffitiToolbar({
             aria-expanded={showSaveMenu}
           >
             <img
-              src="/icons/download_b.svg"
+              src="/icons/download_black.svg"
               alt="download"
               className="w-[18px] h-[18px] block group-hover:hidden"
             />
             <img
-              src="/icons/download.svg"
+              src="/icons/download_white.svg"
               alt="download hover"
               className="w-[18px] h-[18px] hidden group-hover:block"
             />
