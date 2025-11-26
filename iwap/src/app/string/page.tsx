@@ -26,8 +26,37 @@ export default function StringArtPage() {
   const [nailCount, setNailCount] = useState<number>(0);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const imageUploaderRef = useRef<ImageUploaderHandles>(null);
+  const [loadingMessage, setLoadingMessage] = useState("변환 중... (약 2분 소요)");
 
   useEffect(() => { setHasMounted(true); }, []);
+
+  useEffect(() => {
+    if (view !== 'loading') return;
+
+    let elapsed = 0;
+    let currentTimeText = "약 2분 소요";
+    setLoadingMessage(`변환 중 (${currentTimeText}).`);
+
+    const interval = setInterval(() => {
+      elapsed += 1;
+      const remaining = 120 - elapsed;
+
+      if (remaining === 90) {
+        currentTimeText = "약 1분 30초 소요";
+      } else if (remaining === 60) {
+        currentTimeText = "약 1분 소요";
+      } else if (remaining === 30) {
+        currentTimeText = "약 30초 소요";
+      } else if (remaining === 15) {
+        currentTimeText = "곧 완료됩니다";
+      }
+
+      const dots = ".".repeat((elapsed % 3) + 1);
+      setLoadingMessage(`변환 중 (${currentTimeText})${dots}`);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [view]);
 
   const handleConversion = useCallback(async () => {
     if (!sourceImage) return;
@@ -80,7 +109,37 @@ export default function StringArtPage() {
 
   const renderContent = () => {
     if (view === 'loading') {
-      return <LoadingIndicator text="변환 중..." className={theme === 'dark' ? 'text-white' : 'text-zinc-900'} />;
+      return (
+        <div className="relative w-full h-full">
+          <LoadingIndicator text={loadingMessage} className={theme === 'dark' ? 'text-white' : 'text-zinc-900'} />
+          <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+            <button
+              type="button"
+              onClick={() => window.open('/slides', '_blank')}
+              className={`
+                pointer-events-auto
+                w-auto h-auto
+                px-6 py-3
+                md:px-8 md:py-4
+                rounded-full
+                border border-white
+                bg-white/60 backdrop-blur-[4px]
+                flex flex-col items-center justify-center
+                text-center
+                cursor-pointer
+                transition
+                focus-visible:outline focus-visible:outline-2 focus-visible:outline-white
+                animate-shadow-pulse
+                mt-32
+              `}
+            >
+              <span className="text-black text-[16px] md:text-[20px] font-semibold">
+                다른 프로젝트 탐색하고 오기
+              </span>
+            </button>
+          </div>
+        </div>
+      );
     }
     // 'upload' view
     return (
