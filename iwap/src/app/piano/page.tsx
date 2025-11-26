@@ -174,12 +174,18 @@ export default function VoiceToPiano() {
 
       const allowedTypes = new Set([
         "audio/mpeg",
-        "audio/mp3",
         "audio/wav",
       ]);
 
       if (!allowedTypes.has(file.type)) {
         setStatus("MP3, WAV 파일만 업로드할 수 있습니다.");
+        event.target.value = "";
+        return;
+      }
+
+      const maxSize = 10 * 1024 * 1024; // 10MB
+      if (file.size > maxSize) {
+        setStatus("파일 크기는 10MB를 초과할 수 없습니다.");
         event.target.value = "";
         return;
       }
@@ -468,12 +474,12 @@ export default function VoiceToPiano() {
                     >
                       <img src="/icons/Upload.svg" alt="" className="w-5 h-5 block group-hover:hidden" aria-hidden="true" />
                       <img src="/icons/Upload_white.svg" alt="" className="w-5 h-5 hidden group-hover:block" aria-hidden="true" />
-                      <span className="relative top-[1px]">MP3 업로드</span>
+                      <span className="relative top-[1px]">음원 업로드</span>
                     </button>
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="audio/mpeg,audio/mp3,audio/wav"
+                      accept="audio/mpeg,audio/wav"
                       className="hidden"
                       onChange={handleFileSelected}
                     />
