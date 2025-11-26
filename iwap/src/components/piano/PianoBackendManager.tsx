@@ -131,7 +131,7 @@ export default function PianoBackendManager({
       const downloadBaseName = new Date().toISOString().replace(/[:.]/g, "-");
       let downloadBlob: Blob = new Blob([midiArray], { type: "audio/midi" });
       let downloadFilename = `piano-${downloadBaseName}.mid`;
-      let mp3Filename = `piano-${downloadBaseName}.mp3`;
+      const mp3Filename = `piano-${downloadBaseName}.mp3`;
 
       // Try to fetch MP3 if available
       try {
@@ -250,7 +250,6 @@ export default function PianoBackendManager({
         
         const file = new File([blob], `voice.${extension}`, { type: blob.type });
 
-        console.log(`[PianoBackendManager] Uploading file: ${file.name}, Type: ${file.type}, Size: ${file.size} bytes`);
 
         const formData = new FormData();
         formData.append("voice", file);
@@ -271,7 +270,6 @@ export default function PianoBackendManager({
         const taskId = data.task_id || data.request_id;
 
         if (!taskId) {
-          console.error("Server response:", data);
           throw new Error("서버로부터 작업 ID를 받지 못했습니다.");
         }
 
@@ -291,9 +289,7 @@ export default function PianoBackendManager({
         await processMidiData(midiArray, taskId);
 
       } catch (err) {
-        console.error("Conversion failed:", err);
         if (err instanceof Error) {
-            console.error("Error details:", err.message, err.stack);
         }
         if (!isCancelled) {
           onStatusChange?.(describeFetchError(err));

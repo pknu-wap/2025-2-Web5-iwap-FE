@@ -36,6 +36,8 @@ export async function POST(request) {
         if (value instanceof File) {
           const filename = value.name || "voice.mp3";
           
+          console.log(`[API/piano] Processing file: ${filename}, Type: ${value.type}, Size: ${value.size} bytes`);
+
           // File 객체를 ArrayBuffer로 변환하여 새로운 Blob 생성 (filename 강제 적용 보장)
           const fileBuffer = await value.arrayBuffer();
           

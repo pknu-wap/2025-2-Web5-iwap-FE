@@ -116,7 +116,6 @@ export default function InsidePage() {
           const data: LayersData = await response.json();
           handleDataReady(data);
         } else if (response.status === 202) {
-          console.log(`[InsidePage] Polling... task ${taskId} is still processing.`);
         } else {
           if (intervalId) clearInterval(intervalId);
           let errorText = 'No response';

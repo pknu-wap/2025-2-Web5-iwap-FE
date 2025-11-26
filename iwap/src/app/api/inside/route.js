@@ -21,6 +21,13 @@ export async function POST(request) {
     // 2. 클라이언트의 FormData를 가져옴
     const formData = await request.formData();
     
+    // 파일 정보 로깅 (Vercel 모니터링용)
+    for (const [key, value] of formData.entries()) {
+      if (value instanceof File) {
+        console.log(`[API/inside] Input file: "${value.name}" | Type: "${value.type}" | Size: ${value.size} bytes`);
+      }
+    }
+
     const targetUrl = `${BACKEND_URL}/api/inside`;
 
     // 3. 백엔드로 FormData를 그대로 전달

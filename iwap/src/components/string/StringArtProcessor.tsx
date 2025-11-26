@@ -78,7 +78,6 @@ export const processImageToStringArt = async (
         detailedMessage = `JSON이 아닌 오류 (상태: ${postRes.status}): ${errorText.substring(0, 200)}...`;
       }
       
-      console.error("[StringArtProcessor] Detailed Backend Error:", detailedMessage, {rawResponse: errorText});
       throw new Error(detailedMessage);
     }
 
