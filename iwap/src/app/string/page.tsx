@@ -159,13 +159,12 @@ export default function StringArtPage() {
       ) : (
         <div className="w-full h-full flex translate-x-5 md:translate-x-0 items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-5/6 relative">
-            <div className="w-[90%] md:w-full h-[90%] md:h-full pt-[100px]">
+            <div className="w-[90%] md:w-full h-[90%] md:h-full pt-[100px] relative">
               <PageHeader 
                 title="Str!ng" 
                 subtitle="선들로 이미지를 표현" 
                 goBack={true} 
                 padding='p-0' 
-                closeButtonClassName="-translate-x-6 md:translate-x-0"
                 darkBackground={theme === 'dark'}
               />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">

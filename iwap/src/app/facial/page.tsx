@@ -40,7 +40,6 @@ export default function FacialPage() {
               goBack={true}
               padding="p-0"
               isAbsolute={false}
-              closeButtonClassName="-translate-x-6 md:translate-x-0"
               darkBackground={theme === 'dark'}
             />
             <div className="w-full flex flex-col">
