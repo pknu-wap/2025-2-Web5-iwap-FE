@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server';
 const BACKEND_URL = process.env.ASYNC_BACKEND_API_URL;
 
 export async function GET(request, { params }) {
-  const { task_id } = params;
+  const { task_id } = await params;
   console.log(`[API/piano/mp3] GET request started: task_id=${task_id}`);
 
   if (!BACKEND_URL) {
