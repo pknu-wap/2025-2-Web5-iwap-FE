@@ -301,6 +301,21 @@ export default function VoiceToPiano() {
       };
 
       mp3AudioRef.current = mp3;
+
+      setTimeout(() => {
+        if (mp3AudioRef.current !== mp3) return;
+
+        setIsTransportPlaying(true);
+        void (async () => {
+          try {
+            await mp3.play();
+            await controls.start();
+          } catch (err) {
+            console.warn("Auto playback failed", err);
+            setIsTransportPlaying(false);
+          }
+        })();
+      }, 750);
     },
     [disposeMp3Audio]
   );

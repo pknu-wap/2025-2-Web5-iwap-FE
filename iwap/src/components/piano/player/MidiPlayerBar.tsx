@@ -59,7 +59,7 @@ const PauseIcon = () => (
 
 const RewindIcon = () => (
   <svg
-    className="h-5 w-5 text-white"
+    className="h-6 w-6 text-white"
     viewBox="0 0 24 24"
     fill="currentColor"
     aria-hidden="true"
@@ -113,12 +113,12 @@ export default function MidiPlayerBar({
   const downloadDisabled = disabled || !onDownload || !canDownload;
 
   return (
-    <div className="fixed bottom-5 md:bottom-20 inset-x-0 z-50 flex justify-center px-4 pointer-events-none">
+    <div className={`w-full flex justify-center pointer-events-none ${className}`}>
       <div
-        className={`pointer-events-auto w-full max-w-2xl flex flex-col items-center p-4 text-white ${className}`}
+        className="pointer-events-auto w-full max-w-2xl flex flex-col items-center p-4 text-white"
       >
         {/* transport controls */}
-        <div className="flex items-center gap-3 translate-y-7 md:translate-y-0">
+        <div className="flex items-center gap-6 mb-2">
           {onRewind ? (
             <button
               type="button"
@@ -174,7 +174,7 @@ export default function MidiPlayerBar({
             value={clampedPosition}
             style={
               {
-                "--value": `${(clampedPosition / (duration || 1)) * 100}`,
+                "--value": `${(clampedPosition / (duration || 1)) * 100}%`,
               } as React.CSSProperties
             }
             readOnly
