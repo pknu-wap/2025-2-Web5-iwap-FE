@@ -11,16 +11,16 @@ import {
 import { useRouter } from "next/navigation"; //  1. useRouter import
 import FullScreenView from "@/components/ui/FullScreenView";
 import CloseButton from "@/components/ui/CloseButton";
-import { useRecorder } from "@/components/audio/useRecorder";
-import RecorderButton from "@/components/audio/RecorderButton";
-import Piano from "@/components/piano/Piano";
+import { useRecorder } from "@/components/piano/recorder/useRecorder";
+import RecorderButton from "@/components/piano/recorder/RecorderButton";
+import Piano from "@/components/piano/keyboard/Piano";
 import PianoBackendManager, {
   type MidiTransportControls,
   type ConversionContext,
   type MidiReadyPayload,
   getBackendUrl,
-} from "@/lib/piano/PianoBackendManager";
-import MidiPlayerBar from "@/components/audio/MidiPlayerBar";
+} from "@/components/piano/PianoBackendManager";
+import MidiPlayerBar from "@/components/piano/player/MidiPlayerBar";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
 import { useTheme } from "@/components/theme/ThemeProvider";
 
