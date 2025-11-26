@@ -51,7 +51,7 @@ export default function ProgressBar({
     >
       <div className="relative w-full h-2">
         {/* 바 배경 */}
-        <div className="w-full h-full bg-gray-600 rounded-full"></div>
+        <div className="w-full h-full bg-white/30 rounded-full"></div>
         
         {/* 채워진 진행 상태 */}
         <div
