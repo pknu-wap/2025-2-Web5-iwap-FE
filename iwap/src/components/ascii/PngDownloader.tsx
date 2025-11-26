@@ -73,7 +73,7 @@ export default function PngDownloader({
       title="선택한 배율로 PNG 파일을 다운로드합니다."
     >
       <Image 
-        src="/icons/download.svg" 
+        src="/icons/download_white.svg" 
         alt="Download"
         width={16}
         height={16} 

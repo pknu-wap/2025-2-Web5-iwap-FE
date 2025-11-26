@@ -1089,12 +1089,12 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   <div className="relative w-[200px] h-[180px] flex items-center justify-center">
                     <div className="relative w-full h-full">
                       <img
-                        src="/icons/Vector1.png"
+                        src="/icons/vector_1.png"
                         alt="Hand shape 1"
                         className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_0_4.6px_#fff] pointer-events-none -translate-x-[30px] translate-y-[8px] vector-highlight"
                       />
                       <img
-                        src="/icons/Vector2.png"
+                        src="/icons/vector_2.png"
                         alt="Hand shape 2"
                         className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_0_4.6px_#fff] pointer-events-none translate-x-[120px] -translate-y-[6px] vector-highlight-2"
                       />

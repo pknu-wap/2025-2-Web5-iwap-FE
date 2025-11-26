@@ -53,7 +53,7 @@ export default function SideNavButton({ direction, onClick }: SideNavButtonProps
     direction === "left" ? { left: horizontalSpacing } : { right: horizontalSpacing };
 
   const iconSrc =
-    direction === "left" ? "/icons/left.svg" : "/icons/right.svg";
+    direction === "left" ? "/icons/left_white.svg" : "/icons/right_white.svg";
 
   // isMobile 상태에 따라 아이콘 크기를 변수로 지정
   const iconSize = isMobile ? 30 : 45;

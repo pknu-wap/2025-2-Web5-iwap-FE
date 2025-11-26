@@ -161,7 +161,7 @@ export default function GraffitiToolbarMobile({
         rounded-full
       "
       style={{
-        backgroundImage: "url('/icons/rainbow.svg')",
+        backgroundImage: "url('/icons/rainbow_color.svg')",
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundRepeat: "no-repeat",
@@ -211,7 +211,7 @@ export default function GraffitiToolbarMobile({
             type="button"
           >
             <img
-              src="/icons/download_b.svg"
+              src="/icons/download_black.svg"
               className={`w-[32px] h-[32px] ${iconRotate}`}
               alt="save options"
             />
@@ -358,7 +358,7 @@ export default function GraffitiToolbarMobile({
                 rounded-full
               "
                 style={{
-                  backgroundImage: "url('/icons/rainbow.svg')",
+                  backgroundImage: "url('/icons/rainbow_color.svg')",
                   backgroundSize: "cover",
                   backgroundPosition: "center",
                   backgroundRepeat: "no-repeat",
@@ -373,7 +373,7 @@ export default function GraffitiToolbarMobile({
                 onClick={() => onBrushColorChange(ERASER_TOKEN)}
               >
                 <img
-                  src="/icons/eraser.svg"
+                  src="/icons/eraser_white.svg"
                   alt="eraser"
                   className="w-[32px] h-[32px]"
                 />

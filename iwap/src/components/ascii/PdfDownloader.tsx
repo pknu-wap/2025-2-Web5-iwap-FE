@@ -76,7 +76,7 @@ export default function PdfDownloader({
       title="현재 해상도의 ASCII 아트를 벡터 PDF 파일로 다운로드합니다."
     >
       <Image
-        src="/icons/download.svg" 
+        src="/icons/download_white.svg" 
         alt="Download"
         width={16}
         height={16}
