@@ -50,10 +50,15 @@ const describeFetchError = (err: unknown) => {
   if (err instanceof TypeError) {
     return "네트워크 연결 또는 백엔드 주소를 확인해주세요.";
   }
-  if (err instanceof Error && err.message) {
-    return err.message;
+  if (err instanceof Error) {
+    if (err.message.includes("413")) {
+      return "파일 용량이 너무 큽니다. (서버 제한 초과)";
+    }
+    if (err.message) {
+      return err.message;
+    }
   }
-  return "알 수 없는 오류가 발생했습니다.";
+  return `알 수 없는 오류가 발생했습니다. (${String(err)})`;
 };
 
 export default function PianoBackendManager({
@@ -89,7 +94,7 @@ export default function PianoBackendManager({
       flushActiveNotes();
     };
 
-    const pollForFile = async (url: string, timeoutMs = 60000): Promise<Response> => {
+    const pollForFile = async (url: string, timeoutMs = 120000): Promise<Response> => {
       const start = Date.now();
       while (Date.now() - start < timeoutMs) {
         if (isCancelled) throw new Error("Cancelled");
@@ -97,6 +102,12 @@ export default function PianoBackendManager({
         try {
           const res = await fetch(url);
           if (res.status === 200) {
+            const contentType = res.headers.get("content-type");
+            if (contentType && contentType.includes("application/json")) {
+                const clone = res.clone();
+                const text = await clone.text();
+                throw new Error(`Server returned JSON instead of MIDI: ${text.substring(0, 200)}`);
+            }
             return res;
           }
           if (res.status === 202) {
@@ -106,6 +117,9 @@ export default function PianoBackendManager({
           throw new Error(`File fetch failed with status: ${res.status}`);
         } catch (e) {
           if (isCancelled) throw e;
+          if (e instanceof Error && e.message.startsWith("Server returned JSON")) {
+              throw e;
+          }
           console.warn("Polling error, retrying...", e);
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
@@ -179,6 +193,13 @@ export default function PianoBackendManager({
       const duration = midi.duration || midi.tracks.reduce(
         (max, track) => Math.max(max, ...track.notes.map((n) => n.time + n.duration)), 0
       );
+
+      // 재생이 끝까지 완료되면 자동으로 멈추고 처음으로 되돌아감
+      Tone.Transport.schedule(() => {
+        Tone.Transport.stop();
+        Tone.Transport.seconds = 0;
+        flushActiveNotes();
+      }, duration);
 
       const controls: MidiTransportControls = {
         duration,
@@ -258,7 +279,7 @@ export default function PianoBackendManager({
         
         // Fetch MIDI result directly
         // 백엔드 API 변경: Query param -> Path param
-        const midiRes = await fetch(
+        const midiRes = await pollForFile(
           getBackendUrl(`/api/piano/midi/${encodeURIComponent(taskId)}`)
         );
         
@@ -271,6 +292,9 @@ export default function PianoBackendManager({
 
       } catch (err) {
         console.error("Conversion failed:", err);
+        if (err instanceof Error) {
+            console.error("Error details:", err.message, err.stack);
+        }
         if (!isCancelled) {
           onStatusChange?.(describeFetchError(err));
         }
