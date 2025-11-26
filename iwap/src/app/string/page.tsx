@@ -98,8 +98,8 @@ export default function StringArtPage() {
   // --- Styles ---
   const pageBackgroundStyle = {
     backgroundImage: theme === 'dark'
-      ? `url('/images/bg-dark/string_dark.webp')`
-      : `url('/images/bg-light/string_light.webp')`,
+      ? `linear-gradient(to bottom, rgba(98, 144, 153, 0), rgba(98, 144, 153, 0.5)), url('/images/bg-dark/string_dark.webp')`
+      : `linear-gradient(to bottom, rgba(98, 144, 153, 0), rgba(98, 144, 153, 0.5)), url('/images/bg-light/string_light.webp')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -122,8 +122,8 @@ export default function StringArtPage() {
                 px-6 py-3
                 md:px-8 md:py-4
                 rounded-full
-                border border-white
-                bg-white/60 backdrop-blur-[4px]
+                border border-gray-600
+                bg-white/30 backdrop-blur-[4px]
                 flex flex-col items-center justify-center
                 text-center
                 cursor-pointer

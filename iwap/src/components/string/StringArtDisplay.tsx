@@ -247,8 +247,8 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
   // --- 렌더링 ---
   const backgroundStyle = {
     backgroundImage: theme === 'dark'
-      ? `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-dark/string_dark.webp')`
-      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-light/string_light.webp')`,
+      ? `linear-gradient(to bottom, rgba(98, 144, 153, 0), rgba(98, 144, 153, 0.5)), url('/images/bg-dark/string_dark.webp')`
+      : `linear-gradient(to bottom, rgba(98, 144, 153, 0), rgba(98, 144, 153, 0.5)), url('/images/bg-light/string_light.webp')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
