@@ -386,3 +386,19 @@ body {
   animation: graffiti-intro-zoom 900ms ease-in-out forwards;
 }
 
+@keyframes shadow-pulse {
+  0% {
+    box-shadow: 0 0 50px 20px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 60px 30px rgba(255, 255, 255, 0.4);
+  }
+  100% {
+    box-shadow: 0 0 50px 20px rgba(255, 255, 255, 0.1);
+  }
+}
+
+.animate-shadow-pulse {
+  animation: shadow-pulse 2s infinite;
+}
+

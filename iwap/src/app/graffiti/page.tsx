@@ -284,6 +284,16 @@ export default function HandLandmarkerPage() {
     return () => window.clearTimeout(finishTimer);
   }, [overlayExpanding]);
 
+  // Auto-dismiss camera prompt after 3 seconds
+  useEffect(() => {
+    if (showCameraPrompt) {
+      const timer = setTimeout(() => {
+        handleIntroReady();
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [showCameraPrompt, handleIntroReady]);
+
   const handleFingerAnimationComplete = useCallback(() => {
     if (!introFinished || fingerAnimationDone) return;
     setFingerAnimationDone(true);
@@ -1027,20 +1037,20 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
               <button
                 type="button"
                 onClick={handleIntroReady}
-                className="
+                className={`
                   pointer-events-auto
                   w-[275px] h-[100px]
                   md:w-[500px] md:h-[100px]
                   rounded-[84px]
                   border border-white
                   bg-white/60 backdrop-blur-[4px]
-                  shadow-[0_0_50px_20px_rgba(0,0,0,0.25)]
                   flex flex-col items-center justify-center
                   text-center
                   cursor-pointer
                   transition
                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-white
-                "
+                  animate-shadow-pulse
+                `}
               >
                 <span className="hidden md:block text-black text-[20px]">
                   손동작 인식을 위해 카메라 접근을 허용해주세요.
