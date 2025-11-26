@@ -27,14 +27,14 @@ const SpinnerIcon = () => (
 
 /**
  * 로딩 중임을 나타내는 인디케이터 컴포넌트
- * @param {{ text: string, className?: string }} props - 표시할 텍스트 및 추가 클래스
+ * @param {{ text: string, className?: string, textClassName?: string }} props - 표시할 텍스트 및 추가 클래스
  */
-export default function LoadingIndicator({ text, className = "text-white" }) {
+export default function LoadingIndicator({ text, className = "text-white", textClassName = "text-lg" }) {
   return (
     <div className={`flex flex-col items-center justify-center w-full h-full ${className}`}>
       <div className="flex items-center">
         <SpinnerIcon />
-        <span className="text-lg">{text}</span>
+        <span className={textClassName}>{text}</span>
       </div>
     </div>
   );

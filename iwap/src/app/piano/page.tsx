@@ -24,6 +24,7 @@ import MidiPlayerBar from "@/components/piano/player/MidiPlayerBar";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import ThemeToggle from "@/components/ui/ThemeToggle";
+import LoadingIndicator from "@/components/ui/LoadingIndicator";
 
 export default function VoiceToPiano() {
   const { theme } = useTheme();
@@ -523,7 +524,7 @@ export default function VoiceToPiano() {
                     <button
                       type="button"
                       onClick={handlePickUpload}
-                      className="w-[144px] h-[32px] md:w-[180px] md:h-[40px] rounded-[6px] text-[16px] md:text-[20px] font-SemiBold border-[1px] border-[#9D9DC5] bg-white text-[#9D9DC5] transition hover:border-[#9D9DC5] hover:bg-[#9D9DC5] hover:text-white -translate-y-20 inline-flex items-center justify-center gap-2 group"
+                      className="w-[144px] h-[32px] md:w-[180px] md:h-[40px] rounded-[6px] text-[16px] md:text-[20px] font-SemiBold border-[1px] border-[#9D9DC5] bg-white text-black transition hover:border-[#9D9DC5] hover:bg-[#9D9DC5] hover:text-white -translate-y-20 inline-flex items-center justify-center gap-2 group"
                     >
                       <img src="/icons/upload_black.svg" alt="" className="w-5 h-5 block group-hover:hidden" aria-hidden="true" />
                       <img src="/icons/upload_white.svg" alt="" className="w-5 h-5 hidden group-hover:block" aria-hidden="true" />
@@ -547,7 +548,15 @@ export default function VoiceToPiano() {
               {/* (기존 코드와 동일) */}
               <div className={`hidden w-full flex-col items-center gap-6 ${audioUrl ? "md:flex" : ""}`}>
                 {status ? (
-                  <p className="text-lg text-center whitespace-nowrap">{status}</p>
+                  status.includes("중...") ? (
+                    <LoadingIndicator
+                      text={status}
+                      className={`h-auto ${theme === "dark" ? "text-white" : "text-black"}`}
+                      textClassName="text-lg whitespace-nowrap"
+                    />
+                  ) : (
+                    <p className="text-lg text-center whitespace-nowrap">{status}</p>
+                  )
                 ) : null}
                 <div
                   className="relative flex items-center justify-center w-full overflow-visible md:h-[10px] md:py-6 min-h-[30vh] py-10"
@@ -607,7 +616,17 @@ export default function VoiceToPiano() {
                   
                   {/* 6. Status 메시지를 피아노 위로 이동 */}
                   {status ? (
-                    <p className="text-sm whitespace-nowrap mb-2">{status}</p>
+                    status.includes("중...") ? (
+                      <div className="mb-2">
+                        <LoadingIndicator
+                          text={status}
+                          className={`h-auto ${theme === "dark" ? "text-white" : "text-black"}`}
+                          textClassName="text-sm whitespace-nowrap"
+                        />
+                      </div>
+                    ) : (
+                      <p className="text-sm whitespace-nowrap mb-2">{status}</p>
+                    )
                   ) : (
                     // Status가 없을 때도 공간을 차지해 레이아웃이 밀리지 않게 함
                     <div className="h-3 mb-2"></div> 
