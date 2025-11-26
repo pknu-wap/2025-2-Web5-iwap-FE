@@ -56,9 +56,11 @@ export default function FullScreenView({
   // 동적으로 생성된 스타일과 외부에서 주입된 커스텀 스타일을 병합.
   const finalStyle = { ...dynamicBackgroundStyle, ...backgroundStyle };
 
+  const textColorClass = darkBackground ? "text-white" : "text-black";
+
   return (
     <div
-      className={`relative w-full h-full overflow-hidden ${className}`}
+      className={`relative w-full h-full overflow-hidden ${textColorClass} ${className}`}
       style={finalStyle}
     >
       <PageHeader

@@ -962,7 +962,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
 
   /* ---------------- JSX (예전 Graffiti 디자인 + 새 기능) ---------------- */
   return (
-    <div className="relative w-full h-dvh text-black dark:text-slate-50" style={pageBackgroundStyle}>
+    <div className={`relative w-full h-dvh ${theme === 'dark' ? 'text-slate-50' : 'text-black'}`} style={pageBackgroundStyle}>
       <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleModalClose} />
       {/* 모바일 가로 전용 헤더 */}
       {!showIntro && isMobileLandscape && (

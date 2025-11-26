@@ -195,7 +195,7 @@ export default function AsciiPage() {
         onClose={() => setShowIntro(false)}
       />
       <div 
-        className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" 
+        className={`relative w-full h-dvh md:h-[calc(100dvh-60px)] ${theme === 'dark' ? 'text-white' : 'text-black'}`}
         style={pageBackgroundStyle}
       >
       {error && (
@@ -227,7 +227,7 @@ export default function AsciiPage() {
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 
                   // [수정] Tailwind CSS 클래스를 표준에 맞게 수정합니다.
-                  className={`font-semibold shrink-0 -translate-y-3 -translate-x-3 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                  className="font-semibold shrink-0 -translate-y-3 -translate-x-3"
                   style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}
                 >
                   이미지를 업로드하세요

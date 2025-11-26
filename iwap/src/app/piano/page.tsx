@@ -474,15 +474,15 @@ export default function VoiceToPiano() {
         subtitle="음성을 피아노로 변환하기"
         goBack={false} // 커스텀 핸들러 사용을 위해 false로 설정
         onClose={handleGoBack} // 닫기 버튼 핸들러 연결
-        className={`font-[Pretendard] ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+        className="font-[Pretendard]"
         backgroundUrl={theme === 'dark' ? "/images/bg-dark/piano_dark.webp" : "/images/bg-light/piano_light.webp"}
         darkBackground={theme === 'dark'}
         
         // 모바일 재생 뷰에서 '기본' 헤더 숨김
         titleClassName={`${audioUrl ? "hidden" : ""} 
-                          md:block md:rotate-0 md:translate-x-0 md:translate-y-0 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                          md:block md:rotate-0 md:translate-x-0 md:translate-y-0`}
         subtitleClassName={`${audioUrl ? "hidden" : ""} 
-                             md:block md:rotate-0 md:translate-x-0 md:translate-y-0 ${theme === 'dark' ? 'text-white' : 'text-black'}`}
+                             md:block md:rotate-0 md:translate-x-0 md:translate-y-0`}
         closeButtonClassName={`${audioUrl ? "hidden" : ""} 
                                 md:block md:rotate-0 md:translate-y-0`}
       >
@@ -504,7 +504,7 @@ export default function VoiceToPiano() {
         <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible">
           <>
             <div className={`${audioUrl ? "hidden" : "flex"} flex-col items-center justify-center gap-8 transform translate-y-[35px]`}>
-              <h1 className={`text-2xl md:text-3xl font-bold text-center ${theme === 'dark' ? 'text-white' : 'text-black'}`}>음성을 입력해주세요</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-center">음성을 입력해주세요</h1>
                 <RecorderButton
                   isRecording={isRecording}
                   startRecording={startRecording}
@@ -572,7 +572,7 @@ export default function VoiceToPiano() {
                 rotate-90
                 
                 flex flex-col items-center justify-center
-                overflow-hidden p-4 ${theme === 'dark' ? 'text-white' : 'text-black'}
+                overflow-hidden p-4
               `}>
                 {/* 배경 그라디언트 (데스크탑과 동일) */}
                 <div 

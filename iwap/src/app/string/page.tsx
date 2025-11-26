@@ -139,7 +139,7 @@ export default function StringArtPage() {
         open={showIntro}
         onClose={() => setShowIntro(false)}
       />
-      <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" style={pageBackgroundStyle}>
+      <div className={`relative w-full h-dvh md:h-[calc(100dvh-60px)] ${theme === 'dark' ? 'text-white' : 'text-black'}`} style={pageBackgroundStyle}>
       {error && (
         <p className="absolute top-4 left-1/2 -translate-x-1/2 text-red-500 bg-black/50 p-2 rounded z-30 text-center">
           {error}
@@ -170,7 +170,7 @@ export default function StringArtPage() {
               />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 
-                  className={`-translate-y-3 -translate-x-3 md:translate-y-0 md:translate-x-0 font-semibold shrink-0 ${theme === 'dark' ? 'text-white' : 'text-black'}`} 
+                  className="-translate-y-3 -translate-x-3 md:translate-y-0 md:translate-x-0 font-semibold shrink-0" 
                   style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}
                 >
                   이미지를 업로드하세요

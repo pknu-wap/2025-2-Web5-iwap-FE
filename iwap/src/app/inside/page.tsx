@@ -169,9 +169,6 @@ export default function InsidePage() {
     backgroundAttachment: 'fixed',
   };
 
-  // 공통 텍스트 색상 스타일 (!important로 강제 적용)
-  const textColorClass = theme === 'dark' ? "!text-white" : "!text-zinc-900";
-
   return (
     <div className="flex flex-col">
       <ProjectIntroModal projects={["inside"]} open={showIntro} onClose={() => setShowIntro(false)}/>
@@ -191,11 +188,6 @@ export default function InsidePage() {
           subtitle="인공지능이 숫자를 인식하는 과정"
           onClose={handleReturnToDraw}
           backgroundUrl={theme === 'dark' ? "/images/bg-dark/inside_dark.webp" : "/images/bg-light/inside_light.webp"}
-          // 여기에서 텍스트 색상을 직접 주입
-          className={textColorClass}
-          titleClassName={textColorClass}
-          subtitleClassName={textColorClass}
-          closeButtonClassName={textColorClass}
           darkBackground={theme === 'dark'}
         >
           <ImageGridLayers layersData={layersData} />
@@ -209,17 +201,12 @@ export default function InsidePage() {
                 subtitle="인공지능이 숫자를 인식하는 과정"
                 goBack={true}
                 padding='p-0'
-                // 여기에서 텍스트 색상을 직접 주입
-                className={textColorClass}
-                titleClassName={textColorClass}
-                subtitleClassName={textColorClass}
-                closeButtonClassName={textColorClass}
                 darkBackground={theme === 'dark'}
               />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 
                   // 텍스트 색상 강제 적용
-                  className={`font-semibold translate -translate-y-3 -translate-x-3 ${textColorClass}`}
+                  className={`font-semibold translate -translate-y-3 -translate-x-3 ${theme === 'dark' ? "text-white" : "text-zinc-900"}`}
                   style={{
                     fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)',
                   }}
