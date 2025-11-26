@@ -13,6 +13,7 @@ export default function ClientLayout({
 }) {
   const pathname = usePathname();
   const [forceHideHeader, setForceHideHeader] = useState(false);
+  const [forceHideThemeToggle, setForceHideThemeToggle] = useState(false);
   const isLanding = (pathname || "").toLowerCase() === "/landing";
   const [isMobile, setIsMobile] = useState(false);
   const [isMobileLandscape, setIsMobileLandscape] = useState(false);
@@ -60,6 +61,18 @@ export default function ClientLayout({
   }, []);
 
   useEffect(() => {
+    const handler = (event: Event) => {
+      const customEvent = event as CustomEvent<{ hidden: boolean }>;
+      setForceHideThemeToggle(Boolean(customEvent.detail?.hidden));
+    };
+
+    window.addEventListener("iwap:toggle-theme-btn", handler as EventListener);
+    return () => {
+      window.removeEventListener("iwap:toggle-theme-btn", handler as EventListener);
+    };
+  }, []);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     const updateOrientation = () => {
       const w = window.innerWidth;
@@ -79,7 +92,7 @@ export default function ClientLayout({
     <ThemeProvider>
       {showHeader && <MainHeader />}
 
-      {!isMobileLandscape && <FloatingThemeToggle />}
+      {!isMobileLandscape && !forceHideThemeToggle && <FloatingThemeToggle />}
 
       <main
         className={

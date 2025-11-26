@@ -23,6 +23,7 @@ import PianoBackendManager, {
 import MidiPlayerBar from "@/components/piano/player/MidiPlayerBar";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
 import { useTheme } from "@/components/theme/ThemeProvider";
+import ThemeToggle from "@/components/ui/ThemeToggle";
 
 export default function VoiceToPiano() {
   const { theme } = useTheme();
@@ -55,6 +56,24 @@ export default function VoiceToPiano() {
   } | null>(null);
   const [showIntro, setShowIntro] = useState(true);
   const conversionContextRef = useRef<ConversionContext | null>(null);
+
+  // 모바일 가로모드(회전된 뷰) 진입 시 글로벌 테마 토글 숨기기
+  useEffect(() => {
+    if (audioUrl && isMobile) {
+      window.dispatchEvent(
+        new CustomEvent("iwap:toggle-theme-btn", { detail: { hidden: true } })
+      );
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("iwap:toggle-theme-btn", { detail: { hidden: false } })
+      );
+    }
+    return () => {
+      window.dispatchEvent(
+        new CustomEvent("iwap:toggle-theme-btn", { detail: { hidden: false } })
+      );
+    };
+  }, [audioUrl, isMobile]);
 
   const router = useRouter(); //  2. router 선언
   const mp3AudioRef = useRef<HTMLAudioElement | null>(null);
@@ -502,11 +521,16 @@ export default function VoiceToPiano() {
                 rotate-90
                 
                 flex flex-col items-center justify-center
-                overflow-hidden p-4 text-white
+                overflow-hidden p-4 ${theme === 'dark' ? 'text-white' : 'text-black'}
               `}>
+                {/* 배경 그라디언트 (데스크탑과 동일) */}
+                <div 
+                  className="absolute inset-0 pointer-events-none z-0"
+                  style={{ background: 'linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5))' }}
+                />
                 
                 {/* 1. 모바일용 헤더 */}
-                <header className="w-full flex justify-between items-start px-6 pt-4">
+                <header className="w-full flex justify-between items-start px-6 pt-4 z-10">
                   
                   {/* 2. 제목/부제목 (왼쪽) */}
                   <div className="flex flex-col items-start ">
@@ -516,11 +540,11 @@ export default function VoiceToPiano() {
                   </div>
                   
                   {/*  4. 닫기 버튼 (오른쪽) - onClick 추가 */}
-                  <CloseButton onClick={handleGoBack} /> 
+                  <CloseButton onClick={handleGoBack} darkBackground={theme === 'dark'} /> 
                 </header>
 
                 {/* 5. 피아노 + Status 래퍼 */}
-                <div className="flex-1 flex flex-col items-center justify-center w-full">
+                <div className="flex-1 flex flex-col items-center justify-center w-full z-10">
                   
                   {/* 6. Status 메시지를 피아노 위로 이동 */}
                   {status ? (
@@ -538,7 +562,7 @@ export default function VoiceToPiano() {
 
                 {/* 모바일용 MIDI 플레이어 바 (하단) */}
                 {hasTransport && (
-                  <footer className="w-full flex justify-center pb-2">
+                  <footer className="w-full flex justify-center pb-2 z-10">
                     <MidiPlayerBar
                       isPlaying={isTransportPlaying}
                       duration={transportDuration}
@@ -553,6 +577,11 @@ export default function VoiceToPiano() {
                     />
                   </footer>
                 )}
+
+                {/* 다크모드 토글 (우하단) */}
+                <div className="absolute bottom-4 right-4 z-50">
+                  <ThemeToggle className={theme === 'dark' ? "shadow-none" : "shadow-lg shadow-black/10"} />
+                </div>
               </div>
             </>
           </>
