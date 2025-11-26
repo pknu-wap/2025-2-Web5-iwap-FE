@@ -159,10 +159,9 @@ export default function InsidePage() {
   };
 
   const pageBackgroundStyle = {
-    // 배경 그라데이션 제거, 이미지만 유지
     backgroundImage: theme === 'dark'
-      ? `url('/images/bg-dark/inside_dark.webp')`
-      : `url('/images/bg-light/inside_light.webp')`,
+      ? `linear-gradient(to bottom, rgba(15, 34, 47, 0), rgba(15, 34, 47, 0.6)), url('/images/bg-dark/inside_dark.webp')`
+      : `linear-gradient(to bottom, rgba(15, 34, 47, 0), rgba(15, 34, 47, 0.3)), url('/images/bg-light/inside_light.webp')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',

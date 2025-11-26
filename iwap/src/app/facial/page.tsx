@@ -15,8 +15,8 @@ export default function FacialPage() {
 
   const pageBackgroundStyle = {
     backgroundImage: theme === 'dark'
-      ? `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-dark/facial_dark.webp')`
-      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-light/facial_light.webp')`,
+      ? `linear-gradient(to bottom, rgba(237, 184, 153, 0), rgba(237, 184, 153, 0.5)), url('/images/bg-dark/facial_dark.webp')`
+      : `linear-gradient(to bottom, rgba(237, 184, 153, 0), rgba(237, 184, 153, 0.5)), url('/images/bg-light/facial_light.webp')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',

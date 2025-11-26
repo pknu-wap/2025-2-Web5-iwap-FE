@@ -518,12 +518,12 @@ export default function VoiceToPiano() {
           onTransportReset={handleTransportReset}
           onMidiReady={handleMidiReady}
         />
-        {audioUrl && (
-          <div 
-            className="absolute inset-0 pointer-events-none"
-            style={{ background: 'linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5))' }}
-          />
-        )}
+        <div 
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: theme === 'dark'
+            ? 'linear-gradient(to bottom, rgba(139, 139, 188, 0), rgba(139, 139, 188, 0.8))' 
+            : 'linear-gradient(to bottom, rgba(139, 139, 188, 0), rgba(139, 139, 188, 0.8))' }}
+        />
 
         <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible">
           <>
@@ -609,7 +609,7 @@ export default function VoiceToPiano() {
                 {/* 배경 그라디언트 (데스크탑과 동일) */}
                 <div 
                   className="absolute inset-0 pointer-events-none z-0"
-                  style={{ background: 'linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5))' }}
+                  style={{ background: 'linear-gradient(to bottom, rgba(139, 139, 188, 0), rgba(139, 139, 188, 0.3))' }}
                 />
                 
                 {/* 1. 모바일용 헤더 */}

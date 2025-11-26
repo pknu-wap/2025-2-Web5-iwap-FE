@@ -422,7 +422,7 @@ export default function ImageGridLayers({ layersData }) {
           gl={{ alpha: true, antialias: false }} // 앤티앨리어싱 꺼서 성능 향상
           dpr={[1, 1.5]} // 픽셀 비율 제한
           // 그라데이션 투명도 절반으로 변경 (0.5)
-          style={{ background: 'linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5))' }}
+          style={{ background: 'linear-gradient(to bottom, rgba(15, 34, 47, 0), rgba(15, 34, 147, 0.5))' }}
           camera={{ position: [0, 0, BASE_CAMERA_Z], fov: 60 }}
           onCreated={({ scene }) => { scene.background = null; }}
         >
