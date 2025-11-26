@@ -164,7 +164,7 @@ export default function PianoBackendManager({
       await Tone.start();
       
       const ctx = Tone.getContext();
-      ctx.lookAhead = isMobileDevice() ? 0.2 : 0.1;
+      ctx.lookAhead = 0.2; 
       Tone.getDestination().volume.value = -20;
 
       disposeTransport();
