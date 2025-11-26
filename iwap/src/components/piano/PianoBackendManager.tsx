@@ -121,9 +121,9 @@ export default function PianoBackendManager({
 
       // Try to fetch MP3 if available
       try {
-        // 백엔드 API 변경: Path param -> Query param
+        // 백엔드 API 변경: Query param -> Path param
         const mp3Res = await fetch(
-          getBackendUrl(`/api/piano/mp3?request_id=${encodeURIComponent(taskId)}`)
+          getBackendUrl(`/api/piano/mp3/${encodeURIComponent(taskId)}`)
         );
         if (mp3Res.ok) {
           const mp3Array = await mp3Res.arrayBuffer();
@@ -246,19 +246,20 @@ export default function PianoBackendManager({
         }
 
         const data = await uploadRes.json();
-        // 백엔드 응답 키: request_id
-        const taskId = data.request_id;
+        // 백엔드 응답 키: task_id 또는 request_id
+        const taskId = data.task_id || data.request_id;
 
         if (!taskId) {
+          console.error("Server response:", data);
           throw new Error("서버로부터 작업 ID를 받지 못했습니다.");
         }
 
         onStatusChange?.("결과 다운로드 중...");
         
         // Fetch MIDI result directly
-        // 백엔드 API 변경: Path param -> Query param
+        // 백엔드 API 변경: Query param -> Path param
         const midiRes = await fetch(
-          getBackendUrl(`/api/piano/midi?request_id=${encodeURIComponent(taskId)}`)
+          getBackendUrl(`/api/piano/midi/${encodeURIComponent(taskId)}`)
         );
         
         if (!midiRes.ok) {

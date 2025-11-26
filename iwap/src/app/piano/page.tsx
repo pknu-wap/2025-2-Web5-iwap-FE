@@ -246,7 +246,7 @@ export default function VoiceToPiano() {
       const effectiveContext = context ?? conversionContextRef.current;
       const remoteSource = effectiveContext
         ? getBackendUrl(
-            `/api/piano/mp3?request_id=${encodeURIComponent(
+            `/api/piano/mp3/${encodeURIComponent(
               effectiveContext.requestId
             )}`
           )
