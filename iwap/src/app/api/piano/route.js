@@ -53,12 +53,17 @@ export async function POST(request) {
       
       for (const [key, value] of incomingFormData.entries()) {
         if (value instanceof File) {
-          const filename = value.name || "voice.webm";
+          const filename = value.name || "voice.mp3";
           logToFile(`Repacking file field '${key}': name=${filename}, type=${value.type}, size=${value.size}`);
           
           // File 객체를 ArrayBuffer로 변환하여 새로운 Blob 생성 (filename 강제 적용 보장)
           const fileBuffer = await value.arrayBuffer();
-          const fileBlob = new Blob([fileBuffer], { type: value.type });
+          
+          // 백엔드의 엄격한 Content-Type 검사를 통과하기 위해 파라미터(codecs 등) 제거
+          // 예: "audio/webm;codecs=opus" -> "audio/webm"
+          const mimeType = value.type.split(';')[0];
+          
+          const fileBlob = new Blob([fileBuffer], { type: mimeType });
           outgoingFormData.append(key, fileBlob, filename);
         } else {
           logToFile(`Repacking text field '${key}': ${value}`);

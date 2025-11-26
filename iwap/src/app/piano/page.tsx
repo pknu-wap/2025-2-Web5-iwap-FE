@@ -156,12 +156,11 @@ export default function VoiceToPiano() {
       const allowedTypes = new Set([
         "audio/mpeg",
         "audio/mp3",
-        "audio/webm",
         "audio/wav",
       ]);
 
       if (!allowedTypes.has(file.type)) {
-        setStatus("MP3, WAV, WEBM 파일만 업로드할 수 있습니다.");
+        setStatus("MP3, WAV 파일만 업로드할 수 있습니다.");
         event.target.value = "";
         return;
       }
@@ -455,7 +454,7 @@ export default function VoiceToPiano() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="audio/mpeg,audio/mp3,audio/webm,audio/wav"
+                      accept="audio/mpeg,audio/mp3,audio/wav"
                       className="hidden"
                       onChange={handleFileSelected}
                     />
