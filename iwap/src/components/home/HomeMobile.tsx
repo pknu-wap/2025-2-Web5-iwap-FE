@@ -379,14 +379,18 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
       <div
         className={`pointer-events-none absolute inset-0 bg-gradient-to-b ${
           isDarkTheme
-            ? "from-transparent via-white/10 to-white/60"
+            ? "from-transparent via-black/10 to-black/60"
             : "from-transparent via-white/15 to-white/70"
         }`}
       />
 
-      {/* Intensified white gradient overlay during fly-out */}
+      {/* Intensified gradient overlay during fly-out */}
       <div
-        className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-white/20 via-white/100 to-white transition-opacity duration-700 ${
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-b ${
+          isDarkTheme
+            ? "from-black/20 via-black/100 to-black"
+            : "from-white/20 via-white/100 to-white"
+        } transition-opacity duration-700 ${
           leaving ? "opacity-100" : "opacity-0"
         }`}
       />
