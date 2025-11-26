@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ERASER_TOKEN } from "./constants";
+import { ERASER_TOKEN } from "./GraffitiToolbar";
 
 type GraffitiToolbarMobileProps = {
   colorPalette: string[];

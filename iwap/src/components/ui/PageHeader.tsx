@@ -37,6 +37,8 @@ export default function PageHeader({
     ? "absolute top-0 left-0 z-20"
     : "relative flex-shrink-0";
 
+  const textColorClass = darkBackground ? "text-white" : "text-black";
+
   return (
     <header
       className={`${positionClasses} w-full flex pointer-events-none ${
@@ -45,11 +47,11 @@ export default function PageHeader({
     >
       {(title || subtitle) && (
         <div
-          className={
+          className={`${
             inlineClose
               ? "pointer-events-auto flex flex-col items-start gap-1"
               : "pointer-events-auto flex flex-col sm:flex-row sm:items-baseline sm:gap-x-3"
-          }
+          } ${textColorClass}`}
         >
           {title && (
             <div className="flex items-center gap-[50px]">

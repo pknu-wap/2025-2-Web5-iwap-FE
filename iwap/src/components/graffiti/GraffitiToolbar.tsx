@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ERASER_TOKEN } from "./constants";
+
+export const ERASER_TOKEN = "__ERASER__";
 
 type GraffitiToolbarProps = {
   colorPalette: string[];

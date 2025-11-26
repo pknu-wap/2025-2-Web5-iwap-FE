@@ -8,10 +8,9 @@ import {
   type CSSProperties,
 } from "react";
 import PageHeader from "@/components/ui/PageHeader";
-import GraffitiToolbar from "@/components/graffiti/GraffitiToolbar";
+import GraffitiToolbar, { ERASER_TOKEN } from "@/components/graffiti/GraffitiToolbar";
 import GraffitiToolbarMobile from "@/components/graffiti/GraffitiToolbarMobile";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
-import { ERASER_TOKEN } from "@/components/graffiti/constants";
 import { useTheme } from "@/components/theme/ThemeProvider";
 
 type RunningMode = "IMAGE" | "VIDEO";
@@ -955,7 +954,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
   const pageBackgroundStyle = {
     backgroundImage: theme === 'dark'
       ? `linear-gradient(to bottom, rgba(0, 0, 0, 0), #000000), url('/images/bg-dark/graffiti_dark.webp')`
-      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), #090223), url('/images/bg-light/graffiti_light.webp')`,
+      : `linear-gradient(to bottom, rgba(13, 17, 19, 0), rgba(13, 17, 19, 0.5)), url('/images/bg-light/graffiti_light.webp')`,
     backgroundSize: "cover",
     backgroundPosition: "center",
     backgroundAttachment: "fixed",
@@ -963,7 +962,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
 
   /* ---------------- JSX (예전 Graffiti 디자인 + 새 기능) ---------------- */
   return (
-    <div className="relative w-full h-dvh text-slate-50" style={pageBackgroundStyle}>
+    <div className="relative w-full h-dvh text-black dark:text-slate-50" style={pageBackgroundStyle}>
       <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleModalClose} />
       {/* 모바일 가로 전용 헤더 */}
       {!showIntro && isMobileLandscape && (
@@ -984,6 +983,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
               isAbsolute={false}
               titleClassName="text-[22px] font-semibold"
               subtitleClassName="text-[11px]"
+              darkBackground={theme === 'dark'}
             />
           </div>
         </div>
@@ -1002,6 +1002,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                       padding="p-0"
                       titleClassName="-translate-x-[10px]"
                       subtitleClassName="-translate-x-[10px]"
+                      darkBackground={theme === 'dark'}
                     />
                   </div>
                 </div>
