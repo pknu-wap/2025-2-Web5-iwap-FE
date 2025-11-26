@@ -183,9 +183,9 @@ export default function VoiceToPiano() {
         return;
       }
 
-      const maxSize = 10 * 1024 * 1024; // 10MB
+      const maxSize = 4.6 * 1024 * 1024; // 4.6MB
       if (file.size > maxSize) {
-        setStatus("파일 크기는 10MB를 초과할 수 없습니다.");
+        setStatus("파일 크기는 4.5MB를 초과할 수 없습니다.");
         event.target.value = "";
         return;
       }
@@ -285,6 +285,12 @@ export default function VoiceToPiano() {
         mp3.crossOrigin = "anonymous";
       }
       mp3.volume = 0.2; // keep slightly under the MIDI sampler
+      
+      // 오디오 재생이 끝나면 시간을 0으로 초기화 (다음 재생 시 처음부터 시작)
+      mp3.onended = () => {
+        mp3.currentTime = 0;
+      };
+
       mp3AudioRef.current = mp3;
     },
     [audioUrl, disposeMp3Audio]
@@ -342,33 +348,72 @@ export default function VoiceToPiano() {
     }
     setIsTransportPlaying(true);
     void (async () => {
-      await transport.start();
       const audio = mp3AudioRef.current;
       if (audio) {
-        syncMp3Position();
+        const currentAudioTime = audio.currentTime;
+        const currentTransportTime = transport.getPosition();
+        
+        // 오디오가 0초 부근인데 Transport(UI)는 진행된 상태라면, Transport 위치를 신뢰하여 오디오를 이동
+        // (일시정지 상태에서 Seek 후 재생 시 오디오가 0초로 인식되는 문제 방지)
+        if (currentAudioTime < 0.1 && currentTransportTime > 0.1) {
+            audio.currentTime = currentTransportTime;
+            transport.seek(currentTransportTime);
+        } 
+        // 오디오가 끝에 도달해 있다면 처음으로 리셋
+        else if (Math.abs(currentAudioTime - audio.duration) < 0.1) {
+            audio.currentTime = 0;
+            transport.seek(0);
+        } 
+        // 그 외의 경우 오디오 시간을 기준으로 Transport 동기화
+        else {
+            transport.seek(currentAudioTime);
+        }
+
         try {
           await audio.play();
+          await transport.start();
         } catch (err) {
           console.warn("MP3 playback failed", err);
+          await transport.start();
         }
+      } else {
+        await transport.start();
       }
     })();
-  }, [transport, isTransportPlaying, syncMp3Position]);
+  }, [transport, isTransportPlaying]);
 
   const handleSeek = useCallback(
     (seconds: number, resume: boolean) => {
       if (!transport) return;
       const clamped = Math.max(0, Math.min(transportDuration, seconds));
-      transport.seek(clamped, resume);
+      
       setTransportPosition(clamped);
+      
       const audio = mp3AudioRef.current;
       if (audio) {
         audio.currentTime = clamped;
-        if (resume) {
-          void audio.play().catch((err) => {
-            console.warn("MP3 resume failed", err);
-          });
-        } else {
+      }
+
+      if (resume) {
+        transport.pause();
+        transport.seek(clamped, false);
+        
+        void (async () => {
+          if (audio) {
+            try {
+              await audio.play();
+              await transport.start();
+            } catch (err) {
+              console.warn("MP3 seek resume failed", err);
+              await transport.start();
+            }
+          } else {
+            await transport.start();
+          }
+        })();
+      } else {
+        transport.seek(clamped, false);
+        if (audio) {
           audio.pause();
         }
       }

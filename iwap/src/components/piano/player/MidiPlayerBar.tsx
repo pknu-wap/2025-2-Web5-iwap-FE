@@ -177,14 +177,9 @@ export default function MidiPlayerBar({
                 "--value": `${(clampedPosition / (duration || 1)) * 100}`,
               } as React.CSSProperties
             }
+            readOnly
             disabled={isSeekingDisabled}
-            onChange={(event) => {
-              const next = Number(event.target.value);
-              const percent = (next / (duration || 1)) * 100;
-              event.target.style.setProperty("--value", `${percent}`);
-              if (Number.isFinite(next)) onSeek(next, isPlaying);
-            }}
-            className="flex-1 h-1 cursor-pointer appearance-none rounded-full bg-white/20 accent-white disabled:cursor-not-allowed disabled:opacity-40"
+            className="flex-1 h-1 appearance-none rounded-full bg-white/20 accent-white pointer-events-none disabled:opacity-40"
           />
         </div>
       </div>
