@@ -6,12 +6,12 @@ import Image from "next/image";
 
 const UploadIcon = () => (
   <svg className="w-10 h-10 mb-3 text-gray-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
-    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
+    <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2" />
   </svg>
 );
 
 const CameraIcon = () => (
-  <svg className="w-8 h-8 text-gray-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+  <svg className="w-10 h-10 text-gray-600" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
     <path strokeLinecap="round" strokeLinejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
     <path strokeLinecap="round" strokeLinejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
   </svg>
@@ -26,8 +26,9 @@ interface ImageUploaderProps {
   id: string;
   onFileSelect: (file: File | null) => void;
   previewUrl: string | null;
-  title?: string;
+  title1?: string;
   subtitle?: string;
+  title2?: string;
   onCameraStateChange?: (isOpen: boolean) => void;
 }
 
@@ -37,8 +38,9 @@ const ImageUploader = forwardRef<ImageUploaderHandles, ImageUploaderProps>(
       id,
       onFileSelect,
       previewUrl,
-      title = "이미지를 드래그 앤 드롭",
-      subtitle = "또는 클릭하여 업로드",
+      title1 = "드래그 앤 드롭",
+      subtitle = "OR",
+      title2 = "촬영하기",
       onCameraStateChange,
     },
     ref,
@@ -181,17 +183,18 @@ const ImageUploader = forwardRef<ImageUploaderHandles, ImageUploaderProps>(
             <Image src={previewUrl} alt="업로드 미리보기" fill className="object-contain" />
           </div>
         ) : (
-          <div className="flex flex-col items-center text-center text-gray-500">
+          <div className="flex flex-col items-center text-center">
             <UploadIcon />
-            <p className="text-lg font-semibold">{title}</p>
-            <p className="mt-2 text-sm">{subtitle}</p>
+            <p className="-mt-3 text-lg font-semibold text-gray-800">{title1}</p>
+            <p className="mt-2 mb-2 text-sm text-gray-400">{subtitle}</p>
+            <p className="-mb-3 text-lg font-semibold text-gray-800">{title2}</p>
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 openCamera();
               }}
-              className="p-2 mt-2 rounded-full hover:bg-gray-200"
+              className="p-2 mt-2 rounded-full hover:bg-gray-200 cursor-pointer"
             >
               <CameraIcon />
             </button>

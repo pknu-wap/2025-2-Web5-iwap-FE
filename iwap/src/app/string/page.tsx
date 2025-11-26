@@ -182,8 +182,6 @@ export default function StringArtPage() {
             id="string-art-uploader"
             onFileSelect={handleFileSelect}
             previewUrl={previewUrl}
-            title="이미지 선택"
-            subtitle="파일을 드래그하거나 클릭하여 선택"
             onCameraStateChange={setIsCameraOpen}
           />
         </div>
