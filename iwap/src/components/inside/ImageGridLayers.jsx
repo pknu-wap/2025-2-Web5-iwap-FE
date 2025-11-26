@@ -416,7 +416,7 @@ export default function ImageGridLayers({ layersData }) {
   if (totalLayers === 0) return null;
 
   return (
-    <div className="w-full h-full relative select-none">
+    <div className="w-full h-full relative">
       <div className="w-full h-full cursor-grab active:cursor-grabbing touch-none" {...bind()}>
         <Canvas
           gl={{ alpha: true, antialias: false }} // 앤티앨리어싱 꺼서 성능 향상

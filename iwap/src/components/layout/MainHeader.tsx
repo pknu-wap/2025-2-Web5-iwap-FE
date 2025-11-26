@@ -19,7 +19,7 @@ export default function MainHeader() {
       }`}
     >
       <div className="relative flex w-full max-w-4xl items-center justify-center px-4">
-        <Link href={isSlidesPage ? "/" : "/slides"} className="select-none text-center">
+        <Link href={isSlidesPage ? "/" : "/slides"} className="text-center">
           <h1 className={`text-[21px] font-semibold md:text-2xl ${isDark ? "text-neutral-100" : "text-black"}`}>!WAP</h1>
           <p className={`hidden text-base font-extralight -translate-y-0.5 md:block ${isDark ? "text-neutral-100" : "text-black"}`}>
             !nteractive Web Art Project

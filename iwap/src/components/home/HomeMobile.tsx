@@ -360,7 +360,7 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
   };
 
   return (
-    <main className="relative h-dvh w-full select-none overflow-hidden">
+    <main className="relative h-dvh w-full overflow-hidden">
       <Image
         src="/images/home/home_light.webp"
         alt="Background Light"

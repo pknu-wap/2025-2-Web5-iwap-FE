@@ -64,7 +64,7 @@ export default function HomeDesktop({ isDarkTheme }: HomeDesktopProps) {
   };
 
   return (
-    <main className="relative w-full h-dvh overflow-hidden select-none">
+    <main className="relative w-full h-dvh overflow-hidden">
       <Image
         src="/images/home/home_light.webp"
         alt="Background Light"

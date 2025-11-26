@@ -121,7 +121,7 @@ export default function ProgressBar({
   return (
     <div className="absolute bottom-5 left-1/2 -translate-x-1/2 w-[80%] max-w-4xl h-8 flex flex-col items-center justify-center z-10">
       {/* 인덱스 텍스트 */}
-      <span className="absolute left-0 -top-5 text-white text-sm font-mono select-none">
+      <span className="absolute left-0 -top-5 text-white text-sm font-mono">
         {displayIndex} / {totalLayers - 1}
       </span>
       

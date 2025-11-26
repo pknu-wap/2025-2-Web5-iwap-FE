@@ -313,7 +313,7 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
               </button>
               
               <div className="flex-1 flex items-center relative h-full min-w-0">
-                  <span className="absolute -top-1 left-0 text-white text-sm font-mono select-none">
+                  <span className="absolute -top-1 left-0 text-white text-sm font-mono">
                       {currentIndex} / {totalCoordinates > 0 ? totalCoordinates - 1 : 0}
                   </span>
 
