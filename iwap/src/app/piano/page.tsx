@@ -56,6 +56,11 @@ export default function VoiceToPiano() {
   } | null>(null);
   const [showIntro, setShowIntro] = useState(true);
   const conversionContextRef = useRef<ConversionContext | null>(null);
+  const audioUrlRef = useRef<string | null>(null);
+
+  useLayoutEffect(() => {
+    audioUrlRef.current = audioUrl;
+  }, [audioUrl]);
 
   // 모바일 가로모드(회전된 뷰) 진입 시 글로벌 테마 토글 숨기기
   useEffect(() => {
@@ -255,6 +260,8 @@ export default function VoiceToPiano() {
 
   const handleTransportReady = useCallback(
     (controls: MidiTransportControls, context?: ConversionContext) => {
+      if (!audioUrlRef.current) return;
+
       if (context) {
         conversionContextRef.current = context;
       }
@@ -264,9 +271,10 @@ export default function VoiceToPiano() {
       setIsTransportPlaying(false);
       disposeMp3Audio();
 
+      const currentUrl = audioUrlRef.current;
       const localSource =
-        audioUrl && (audioUrl.startsWith("blob:") || audioUrl.startsWith("data:"))
-          ? audioUrl
+        currentUrl && (currentUrl.startsWith("blob:") || currentUrl.startsWith("data:"))
+          ? currentUrl
           : null;
       const effectiveContext = context ?? conversionContextRef.current;
       const remoteSource = effectiveContext
@@ -279,7 +287,7 @@ export default function VoiceToPiano() {
       const shouldUseRemote = Boolean(effectiveContext) || !localSource;
       const source = shouldUseRemote ? remoteSource : localSource;
 
-      const mp3 = new Audio(source);
+      const mp3 = new Audio(source!);
       mp3.preload = "auto";
       if (!localSource) {
         mp3.crossOrigin = "anonymous";
@@ -293,7 +301,7 @@ export default function VoiceToPiano() {
 
       mp3AudioRef.current = mp3;
     },
-    [audioUrl, disposeMp3Audio]
+    [disposeMp3Audio]
   );
 
   const handleMidiReady = useCallback(
