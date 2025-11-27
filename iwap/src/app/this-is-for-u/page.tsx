@@ -55,13 +55,13 @@ type SketchStyles = {
 };
 
 const DEFAULT_STYLES: SketchStyles = {
-  backgroundColor: "#000000",
+  backgroundColor: "#FFFFFF",
   epicycleColor: "#50a0ff",
   epicycleAlpha: 2040,
   showEpicycles: true,
-  pathColor: "#ffb6dc",
+  pathColor: "#000000",
   pathAlpha: 255,
-  pathWidth: 15,
+  pathWidth: 10,
 };
 
 const COLOR_PALETTE = ["#FA4051", "#FDD047", "#2FB665", "#FFFFFF", "#000000"];
@@ -1166,19 +1166,19 @@ textAlpha={styles.pathAlpha}
   // phase === "preview" ||
   phase === "back-fourier") && (
   <div
-  className="z-30 flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-xs text-slate-200 z-90 translate-y-[32px] md:translate-y-[52px]"
+  className="z-30 flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-[14px] text-slate-200 z-90 translate-y-[32px] md:translate-y-[42px]"
 >
 
     <button
       onClick={startStop.onClick}
-      className="rounded-full bg-rose-500 px-4 py-2 font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500/80"
+      className="rounded-full border border-white/30 px-3 py-1.5 font-light text-white transition hover:border-white/60"
     >
       {startStop.label}
     </button>
 
     <button
       onClick={toggleSide.onClick}
-      className="rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white hover:border-white/60"
+      className="rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60"
     >
       {toggleSide.label}
     </button>
@@ -1186,7 +1186,7 @@ textAlpha={styles.pathAlpha}
     <button
       onClick={edit.onClick}
       disabled={edit.disabled}
-      className={`rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white ${
+      className={`rounded-full border border-white/30 px-3 py-1.5 font-light text-white ${
         edit.disabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/60"
       }`}
     >
@@ -1195,7 +1195,7 @@ textAlpha={styles.pathAlpha}
 
     <button
       onClick={preview.onClick}
-      className="rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white hover:border-white/60"
+      className="rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60"
     >
       엽서 미리보기
     </button>
@@ -1352,38 +1352,42 @@ textAlpha={styles.pathAlpha}
       </div>
 
       {/* 버튼 영역 */}
-      <div className="flex flex-nowrap items-center justify-center gap-3 mt-6">
-        <button
-          onClick={startStop.onClick}
-          className="rounded-full bg-rose-500 px-4 py-2 font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500/80 text-[9px] md:text-xs"
-        >
-          {startStop.label}
-        </button>
+  <div
+  className="z-30 flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-[14px] text-slate-200 z-90 translate-y-[32px] md:translate-y-[42px]"
+>
 
-        <button
-          onClick={toggleSide.onClick}
-          className="rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white hover:border-white/60 text-[9px] md:text-xs"
-        >
-          {toggleSide.label}
-        </button>
+    <button
+      onClick={startStop.onClick}
+      className="rounded-full border border-white px-3 py-1.5 font-light text-white transition  hover:border-white/60"
+    >
+      {startStop.label}
+    </button>
 
-        <button
-          onClick={edit.onClick}
-          disabled={edit.disabled}
-          className={`rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white text-[9px] md:text-xs ${
-            edit.disabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/60"
-          }`}
-        >
-          수정
-        </button>
+    <button
+      onClick={toggleSide.onClick}
+      className="rounded-full border border-white px-3 py-1.5 font-light text-white hover:border-white/60"
+    >
+      {toggleSide.label}
+    </button>
 
-        <button
-          onClick={preview.onClick}
-          className="rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white hover:border-white/60 text-[9px] md:text-xs"
-        >
-          엽서 미리보기
-        </button>
-      </div>
+    <button
+      onClick={edit.onClick}
+      disabled={edit.disabled}
+      className={`rounded-full border border-white px-3 py-1.5 font-light text-white ${
+        edit.disabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/60"
+      }`}
+    >
+      수정
+    </button>
+
+    <button
+      onClick={preview.onClick}
+      className="rounded-full border border-white px-3 py-1.5 font-light text-white hover:border-white/60"
+    >
+      엽서 미리보기
+    </button>
+
+  </div>
     </div>
   </div>
 )}

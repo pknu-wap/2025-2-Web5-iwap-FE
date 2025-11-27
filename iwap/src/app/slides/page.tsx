@@ -243,15 +243,23 @@ export default function SlidesPage() {
                         </div>
                       ) : (
                         <>
-                          <div className="flex flex-col gap-[5px] max-w-[60%] text-left ">
+                          <div className="flex flex-col gap-[5px] max-w-[120%] text-left md:translate-y-0 translate-y-[25px]">
                             <span className="text-[24px] font-medium">
                               {item.leftTexts[0]}
                             </span>
                             <span className="text-[14px] font-normal">
-                              {item.leftTexts[1]}
+                              {isMobile && item.title === "!nside" ? (
+                                <>
+                                  인공지능이 숫자를
+                                  <br />
+                                  인식하는 과정
+                                </>
+                              ) : (
+                                item.leftTexts[1]
+                              )}
                             </span>
                           </div>
-                          <div className="flex flex-col gap-[5px] items-end text-right max-w-[40%]">
+                          <div className="flex flex-col gap-[5px] items-end text-right max-w-[10%] md:translate-y-0 translate-y-[25px]">
                             <span className="text-[12px] font-light">
                               {item.rightTexts[0]}
                             </span>
