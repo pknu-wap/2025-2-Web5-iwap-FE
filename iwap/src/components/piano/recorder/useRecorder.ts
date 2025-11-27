@@ -1,4 +1,3 @@
-// useRecorder.ts
 import { useState, useRef, useCallback, useEffect } from "react";
 
 export function useRecorder() {
@@ -33,7 +32,7 @@ export function useRecorder() {
         return type;
       }
     }
-    return ""; // Fallback
+    return "";
   };
 
   // MIME Type에 따른 적절한 확장자 결정
@@ -41,7 +40,7 @@ export function useRecorder() {
     if (mimeType.includes("mp4") || mimeType.includes("aac")) return "m4a";
     if (mimeType.includes("ogg")) return "ogg";
     if (mimeType.includes("wav")) return "wav";
-    return "webm"; // default
+    return "webm";
   };
 
   const startRecording = useCallback(async () => {
@@ -53,7 +52,14 @@ export function useRecorder() {
       chunksRef.current = [];
 
       // 1. 마이크 권한 요청
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // [Modified] 모바일 Safari 튕김 방지를 위한 옵션 (echoCancellation 등)
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        } 
+      });
       streamRef.current = stream;
 
       // 2. 지원되는 MIME Type 감지
@@ -88,6 +94,7 @@ export function useRecorder() {
 
         const url = URL.createObjectURL(blob);
         
+        // 상태 업데이트 순서 보장
         setAudioUrl(url);
         setAudioFile(file);
         
@@ -98,8 +105,7 @@ export function useRecorder() {
         }
       };
 
-      // 6. 녹음 시작 (1초마다 데이터 슬라이스 - 데이터 유실 방지)
-      recorder.start(1000);
+      recorder.start();
       setIsRecording(true);
 
     } catch (error) {
@@ -116,12 +122,9 @@ export function useRecorder() {
     }
   }, []);
 
-  // 외부 파일 업로드 시 상태 업데이트용 (input type="file" 등에서 사용)
   const setAudioFromFile = useCallback((file: File | null) => {
     if (!file) return;
-    
-    revokeUrl(); // 기존 URL 해제
-    
+    revokeUrl();
     const url = URL.createObjectURL(file);
     setAudioFile(file);
     setAudioUrl(url);

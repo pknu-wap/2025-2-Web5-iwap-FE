@@ -8,7 +8,7 @@ import {
   useCallback,
   type ChangeEvent,
 } from "react";
-import { useRouter } from "next/navigation"; //  1. useRouter import
+import { useRouter } from "next/navigation";
 import FullScreenView from "@/components/ui/FullScreenView";
 import CloseButton from "@/components/ui/CloseButton";
 import { useRecorder } from "@/components/piano/recorder/useRecorder";
@@ -30,6 +30,7 @@ export default function VoiceToPiano() {
   const { theme } = useTheme();
   const pageTitle = "P!ano";
   const pageSubtitle = "음성을 피아노로 변환하기";
+  
   const {
     isRecording,
     audioUrl,
@@ -38,10 +39,12 @@ export default function VoiceToPiano() {
     setAudioFromFile,
     reset,
   } = useRecorder();
+
   const [isMobile, setIsMobile] = useState<boolean>(() => {
     if (typeof window === "undefined") return false;
     return window.matchMedia("(max-width: 767px)").matches;
   });
+
   const activeNotesRef = useRef<Set<number>>(new Set());
   const noteTimeoutsRef = useRef<Map<number, number>>(new Map());
   const [, forceRender] = useState(0);
@@ -50,20 +53,25 @@ export default function VoiceToPiano() {
   const [transportDuration, setTransportDuration] = useState(0);
   const [transportPosition, setTransportPosition] = useState(0);
   const [isTransportPlaying, setIsTransportPlaying] = useState(false);
+  
   const midiDownloadUrlRef = useRef<string | null>(null);
   const [midiDownload, setMidiDownload] = useState<{
     url: string;
     filename: string;
   } | null>(null);
+  
   const [showIntro, setShowIntro] = useState(true);
   const conversionContextRef = useRef<ConversionContext | null>(null);
   const audioUrlRef = useRef<string | null>(null);
 
+  // audioUrl 생성 즉시 로딩 상태 표시
   useLayoutEffect(() => {
     audioUrlRef.current = audioUrl;
-  }, [audioUrl]);
+    if (audioUrl && !transport) {
+       setStatus("오디오 분석 및 변환 준비 중...");
+    }
+  }, [audioUrl, transport]);
 
-  // 모바일 가로모드(회전된 뷰) 진입 시 글로벌 테마 토글 숨기기
   useEffect(() => {
     if (audioUrl && isMobile) {
       window.dispatchEvent(
@@ -81,14 +89,9 @@ export default function VoiceToPiano() {
     };
   }, [audioUrl, isMobile]);
 
-  const router = useRouter(); //  2. router 선언
+  const router = useRouter();
   const mp3AudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // ... (handleMidi 및 기타 useEffect, useCallback 함수들은 이전과 동일) ...
-  // (생략된 코드는 이전 답변과 동일하게 유지해 주세요)
-  // handleMidi, useEffect들, handleTransport... 함수들
-  
-  // (여기부터 handleMidi)
   const handleMidi = useCallback(
     ({ type, note }: { type: "on" | "off"; note: number }) => {
       const activeNotes = activeNotesRef.current;
@@ -172,6 +175,7 @@ export default function VoiceToPiano() {
     fileInputRef.current?.click();
   }, []);
 
+  // 파일 선택 핸들러 (용량 제한 및 에러 메시지 처리)
   const handleFileSelected = useCallback(
     (event: ChangeEvent<HTMLInputElement>) => {
       const files = event.target.files;
@@ -189,7 +193,7 @@ export default function VoiceToPiano() {
       ]);
 
       if (!allowedTypes.has(file.type)) {
-        setStatus("지원되지 않는 오디오 형식입니다.");
+        setStatus("지원되지 않는 오디오 형식입니다. (MP3, WAV, M4A 등 지원)");
         event.target.value = "";
         return;
       }
@@ -198,10 +202,12 @@ export default function VoiceToPiano() {
       if (file.size > maxSize) {
         setStatus("파일 크기는 4.5MB를 초과할 수 없습니다.");
         event.target.value = "";
+        // 3초 후 에러 메시지 자동 삭제
+        setTimeout(() => setStatus(""), 3000); 
         return;
       }
 
-      setStatus("파일 업로드 준비 중...");
+      setStatus("파일 분석 및 변환 준비 중...");
       setAudioFromFile(file);
       event.target.value = "";
     },
@@ -244,8 +250,11 @@ export default function VoiceToPiano() {
   const disposeMp3Audio = useCallback(() => {
     const audio = mp3AudioRef.current;
     if (!audio) return;
+    
     audio.pause();
     audio.src = "";
+    audio.load(); // Safari 메모리 해제
+    
     mp3AudioRef.current = null;
   }, []);
 
@@ -298,14 +307,15 @@ export default function VoiceToPiano() {
       if (!localSource) {
         mp3.crossOrigin = "anonymous";
       }
-      mp3.volume = 0.2; // keep slightly under the MIDI sampler
+      mp3.volume = 0.2; 
       
-      // 오디오 재생이 끝나면 시간을 0으로 초기화 (다음 재생 시 처음부터 시작)
       mp3.onended = () => {
         mp3.currentTime = 0;
       };
 
       mp3AudioRef.current = mp3;
+      
+      setStatus(""); // 로딩 완료 후 상태 메시지 클리어
 
       setTimeout(() => {
         if (mp3AudioRef.current !== mp3) return;
@@ -382,18 +392,14 @@ export default function VoiceToPiano() {
         const currentAudioTime = audio.currentTime;
         const currentTransportTime = transport.getPosition();
         
-        // 오디오가 0초 부근인데 Transport(UI)는 진행된 상태라면, Transport 위치를 신뢰하여 오디오를 이동
-        // (일시정지 상태에서 Seek 후 재생 시 오디오가 0초로 인식되는 문제 방지)
         if (currentAudioTime < 0.1 && currentTransportTime > 0.1) {
             audio.currentTime = currentTransportTime;
             transport.seek(currentTransportTime);
         } 
-        // 오디오가 끝에 도달해 있다면 처음으로 리셋
         else if (Math.abs(currentAudioTime - audio.duration) < 0.1) {
             audio.currentTime = 0;
             transport.seek(0);
         } 
-        // 그 외의 경우 오디오 시간을 기준으로 Transport 동기화
         else {
             transport.seek(currentAudioTime);
         }
@@ -476,9 +482,7 @@ export default function VoiceToPiano() {
     link.click();
     document.body.removeChild(link);
   }, [midiDownload]);
-  // (여기까지 handle... 함수들)
 
-  //  3. 뒤로 가기 핸들러 함수
   const handleGoBack = () => {
     if (audioUrl) {
       reset();
@@ -501,19 +505,15 @@ export default function VoiceToPiano() {
       <FullScreenView
         title="P!ano"
         subtitle="음성을 피아노로 변환하기"
-        goBack={false} // 커스텀 핸들러 사용을 위해 false로 설정
-        onClose={handleGoBack} // 닫기 버튼 핸들러 연결
+        goBack={false}
+        onClose={handleGoBack}
         className="font-[Pretendard]"
         backgroundUrl={theme === 'dark' ? "/images/bg-dark/piano_dark.webp" : "/images/bg-light/piano_light.webp"}
         darkBackground={theme === 'dark'}
         
-        // 모바일 재생 뷰에서 '기본' 헤더 숨김
-        titleClassName={`${audioUrl ? "hidden" : ""} 
-                          md:block md:rotate-0 md:translate-x-0 md:translate-y-0`}
-        subtitleClassName={`${audioUrl ? "hidden" : ""} 
-                             md:block md:rotate-0 md:translate-x-0 md:translate-y-0`}
-        closeButtonClassName={`${audioUrl ? "hidden" : ""} 
-                                md:block md:rotate-0 md:translate-y-0`}
+        titleClassName={`${audioUrl ? "hidden" : ""} md:block md:rotate-0 md:translate-x-0 md:translate-y-0`}
+        subtitleClassName={`${audioUrl ? "hidden" : ""} md:block md:rotate-0 md:translate-x-0 md:translate-y-0`}
+        closeButtonClassName={`${audioUrl ? "hidden" : ""} md:block md:rotate-0 md:translate-y-0`}
       >
         <PianoBackendManager
           audioUrl={audioUrl}
@@ -533,17 +533,30 @@ export default function VoiceToPiano() {
         <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible">
           <>
             <div className={`${audioUrl ? "hidden" : "flex"} flex-col items-center justify-center gap-8 transform translate-y-[35px]`}>
-              <h1 className="text-2xl md:text-3xl font-bold text-center">음성을 입력해주세요</h1>
+              <div className="relative flex flex-col items-center justify-center">
+                  <h1 className="text-2xl md:text-3xl font-bold text-center">음성을 입력해주세요</h1>
+                  {/* [수정 포인트] 에러 메시지를 Title 위쪽에 absolute로 배치 */}
+                  {status && !audioUrl && !isRecording && (
+                    <div className="absolute bottom-full mb-4 w-max max-w-[90vw] z-20">
+                      <p className="text-red-500 font-medium text-xs md:text-sm bg-white/90 px-3 py-1 rounded-full shadow-sm backdrop-blur-sm animate-pulse text-center">
+                          {status}
+                      </p>
+                    </div>
+                  )}
+              </div>
+
                 <RecorderButton
                   isRecording={isRecording}
                   startRecording={startRecording}
                   stopRecording={stopRecording}
                 />
+                
                 {!isRecording ? (
                   <>
                     <button
                       type="button"
                       onClick={handlePickUpload}
+                      // [수정 포인트] 원본 스타일 복구: -translate-y-20 유지
                       className="w-[144px] h-[32px] md:w-[180px] md:h-[40px] rounded-[6px] text-[16px] md:text-[20px] font-SemiBold border-[1px] border-[#9D9DC5] bg-white text-black transition hover:border-[#9D9DC5] hover:bg-[#9D9DC5] hover:text-white -translate-y-20 inline-flex items-center justify-center gap-2 group"
                     >
                       <img src="/icons/upload_black.svg" alt="" className="w-5 h-5 block group-hover:hidden" aria-hidden="true" />
@@ -571,7 +584,6 @@ export default function VoiceToPiano() {
           
             <>
               {/* === 데스크탑 뷰 (md:flex) === */}
-              {/* (기존 코드와 동일) */}
               <div className={`hidden w-full flex-col items-center gap-6 ${audioUrl ? "md:flex" : ""}`}>
                 {status ? (
                   status.includes("중...") ? (
@@ -581,7 +593,10 @@ export default function VoiceToPiano() {
                       textClassName="text-lg whitespace-nowrap"
                     />
                   ) : (
-                    <p className="text-lg text-center whitespace-nowrap">{status}</p>
+                    // 데스크탑에서 변환 중이 아닐 때의 일반 메시지
+                     !audioUrl && !isRecording ? null : (
+                      <p className="text-lg text-center whitespace-nowrap">{status}</p>
+                     )
                   )
                 ) : null}
                 <div
@@ -607,7 +622,7 @@ export default function VoiceToPiano() {
 
               {/* === 💡 모바일 뷰 (md:hidden) === */}
               <div className={`${audioUrl ? "" : "hidden"}
-                md:hidden /* 모바일에서만 보임 */
+                md:hidden
                 absolute top-1/2 left-1/2 
                 w-dvh h-dvw 
                 transform 
@@ -617,30 +632,22 @@ export default function VoiceToPiano() {
                 flex flex-col items-center justify-center
                 overflow-hidden p-4
               `}>
-                {/* 배경 그라디언트 (데스크탑과 동일) */}
                 <div 
                   className="absolute inset-0 pointer-events-none z-0"
                   style={{ background: 'linear-gradient(to bottom, rgba(139, 139, 188, 0), rgba(139, 139, 188, 0.3))' }}
                 />
                 
-                {/* 1. 모바일용 헤더 */}
                 <header className="w-full flex justify-between items-start px-6 pt-4 z-10">
-                  
-                  {/* 2. 제목/부제목 (왼쪽) */}
                   <div className="flex flex-col items-start ">
                     <h1 className="text-[30px] font-semibold">{pageTitle}</h1>
-                    {/* 3. 부제목 고정 */}
                     <p className="text-[12px] font-semilight">{pageSubtitle}</p>
                   </div>
-                  
-                  {/*  4. 닫기 버튼 (오른쪽) - onClick 추가 */}
                   <CloseButton onClick={handleGoBack} darkBackground={theme === 'dark'} /> 
                 </header>
 
-                {/* 5. 피아노 + Status 래퍼 */}
                 <div className="flex-1 flex flex-col items-center justify-center w-full z-10">
                   
-                  {/* 6. Status 메시지를 피아노 위로 이동 */}
+                  {/* Status 메시지 및 로딩 인디케이터 (모바일) */}
                   {status ? (
                     status.includes("중...") ? (
                       <div className="mb-2">
@@ -651,20 +658,19 @@ export default function VoiceToPiano() {
                         />
                       </div>
                     ) : (
-                      <p className="text-sm whitespace-nowrap mb-2">{status}</p>
+                      !audioUrl && !isRecording ? null : (
+                        <p className="text-sm whitespace-nowrap mb-2">{status}</p>
+                      )
                     )
                   ) : (
-                    // Status가 없을 때도 공간을 차지해 레이아웃이 밀리지 않게 함
                     <div className="h-3 mb-2"></div> 
                   )}
 
-                  {/* 피아노 */}
                   <div className="transform origin-center scale-[0.5]">
                     <Piano activeNotes={activeNotesRef.current} />
                   </div>
                 </div>
 
-                {/* 모바일용 MIDI 플레이어 바 (하단) */}
                 {hasTransport && (
                   <footer className="w-full flex justify-center pb-2 z-10">
                     <MidiPlayerBar
@@ -682,7 +688,6 @@ export default function VoiceToPiano() {
                   </footer>
                 )}
 
-                {/* 다크모드 토글 (우하단) */}
                 <div className="absolute bottom-4 right-4 z-50">
                   <ThemeToggle className={theme === 'dark' ? "shadow-none" : "shadow-lg shadow-black/10"} />
                 </div>
