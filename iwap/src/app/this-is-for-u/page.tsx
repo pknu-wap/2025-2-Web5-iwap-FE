@@ -1112,7 +1112,7 @@ textAlpha={styles.pathAlpha}
   // phase === "preview" ||
   phase === "back-fourier") && (
   <div
-  className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-200 z-90 translate-y-[52px]"
+  className="flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-xs text-slate-200 z-90 translate-y-[32px] md:translate-y-[52px]"
 >
 
     <button
@@ -1161,14 +1161,14 @@ textAlpha={styles.pathAlpha}
     </div>
 
     {/* 모바일 */}
-    <div className="block md:hidden w-full -translate-x-[8px] translate-y-[290px]">
+    <div className="block md:hidden w-full -translate-x-[8px] translate-y-[90px]">
       <GraffitiToolbarMobile {...toolbarProps} />
     </div>
   </>
 )}
 
 {phase === "back-write" && (
-  <div className="absolute top-0 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:w-[400px] md:h-[750px] w-[80vw] flex justify-center z-40">
+  <div className="absolute top-0 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 -translate-y-[300px] md:w-[400px] md:h-[750px] w-[80vw] flex justify-center z-40">
 
     {/* 카드 박스 */}
     <div
@@ -1176,8 +1176,9 @@ textAlpha={styles.pathAlpha}
         text-slate-50
         w-[340px] h-auto
         md:w-[400px] md:h-auto
-        px-4 py-6
+        md:px-4 py-6
         translate-y-[130px]
+        -trasnslate-x-[5px] md:-trasnslate-x-[5px]
       "
       style={{
         background: "rgba(255, 255, 255, 0.40)",
@@ -1211,15 +1212,16 @@ textAlpha={styles.pathAlpha}
             "
           />
           {/* 밑줄 */}
-          <div
-            className="absolute left-0 bg-white"
-            style={{
-              width: "290px",
-              height: "1px",
-              top: "42px",
-              opacity: 1,
-            }}
-          />
+<div
+  className="
+    absolute left-0 bg-white
+    w-[220px]        /* 기본: 모바일 */
+    md:w-[290px]     /* md 이상에서 290px */
+    h-[1px] 
+    opacity-100
+  "
+  style={{ top: "42px" }}
+/>
         </div>
       </div>
 
@@ -1228,7 +1230,7 @@ textAlpha={styles.pathAlpha}
       <div className="flex flex-col mb-3 pl-5">
 
         {/* 정렬 버튼 */}
-        <div className="flex items-center gap-2 bg-[#CECECE] px-2 h-[30px] w-[300px] md:w-[330px]">
+        <div className="flex items-center gap-2 bg-[#CECECE] px-2 h-[30px] w-[270px] md:w-[330px]">
           <button type="button" onClick={() => setTextAlign("left")}>
             <img src="/icons/Align_left.svg" className="w-[20px] h-[20px]" />
           </button>
@@ -1246,7 +1248,7 @@ textAlpha={styles.pathAlpha}
           onChange={(e) => setTextCanvasMessage(e.target.value)}
           maxLength={10}
           className="
-            w-[300px] h-[300px]
+            w-[270px] h-[200px]
             md:w-[330px] md:h-[240px]
             bg-white resize-none outline-none
             text-[18px] leading-tight text-black
@@ -1282,30 +1284,31 @@ textAlpha={styles.pathAlpha}
           />
 
           {/* 밑줄 */}
-          <div
-            className="absolute left-0 bg-white"
-            style={{
-              width: "250px",
-              height: "1px",
-              opacity: 1,
-              top: "35px",
-            }}
-          />
+<div
+  className="
+    absolute left-0 bg-white
+    w-[180px]        /* 기본: 모바일 */
+    md:w-[250px]     /* md 이상에서 290px */
+    h-[1px] 
+    opacity-100
+  "
+  style={{ top: "35px" }}
+/>
         </div>
       </div>
 
       {/* 버튼 영역 */}
-      <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+      <div className="flex flex-nowrap items-center justify-center gap-3 mt-6">
         <button
           onClick={startStop.onClick}
-          className="rounded-full bg-rose-500 px-4 py-2 font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500/80 text-xs"
+          className="rounded-full bg-rose-500 px-4 py-2 font-semibold uppercase tracking-wide text-white transition hover:bg-rose-500/80 text-[9px] md:text-xs"
         >
           {startStop.label}
         </button>
 
         <button
           onClick={toggleSide.onClick}
-          className="rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white hover:border-white/60 text-xs"
+          className="rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white hover:border-white/60 text-[9px] md:text-xs"
         >
           {toggleSide.label}
         </button>
@@ -1313,7 +1316,7 @@ textAlpha={styles.pathAlpha}
         <button
           onClick={edit.onClick}
           disabled={edit.disabled}
-          className={`rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white text-xs ${
+          className={`rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white text-[9px] md:text-xs ${
             edit.disabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/60"
           }`}
         >
@@ -1322,7 +1325,7 @@ textAlpha={styles.pathAlpha}
 
         <button
           onClick={preview.onClick}
-          className="rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white hover:border-white/60 text-xs"
+          className="rounded-full border border-white/30 px-4 py-2 font-semibold uppercase tracking-wide text-white hover:border-white/60 text-[9px] md:text-xs"
         >
           엽서 미리보기
         </button>
