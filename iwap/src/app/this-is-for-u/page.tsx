@@ -1009,7 +1009,25 @@ const { startStop, toggleSide, edit, preview } = getButtons();
         ></div>
 
         <div className="relative z-90 flex flex-col items-center gap-6 md:mt-16 w-[90vw] max-w-[1200px] px-2">
-              <div className="flex flex-col md:flex-row items-center gap-6 w-full justify-center translate-y-[40px]">
+              <div className="flex flex-col md:flex-row items-center gap-4 w-full justify-center translate-y-[40px]">
+                {/* Mobile background palette */}
+                {!isBackside && !isPreview && (
+                  <div className="flex flex-row justify-center gap-2.5 md:hidden">
+                    {BACKGROUND_COLORS.map((color) => {
+                      const isActive = styles.backgroundColor === color;
+                      return (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => handleBackgroundChange(color)}
+                          className={`w-11 h-7 border border-white/30 transition ${isActive ? 'ring-1 ring-white' : 'hover:opacity-80'}`}
+                          style={{ backgroundColor: color }}
+                          aria-label={`Set background to ${color}`}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
                 <div
   className={
     phase === "back-write"
@@ -1228,7 +1246,7 @@ textAlpha={styles.pathAlpha}
     <div
       className="
         text-slate-50
-        w-[340px] h-auto
+        w-[340px] h-[450px]
         md:w-[400px] md:h-auto
         md:px-4 py-6
         translate-y-[130px]
@@ -1353,7 +1371,7 @@ textAlpha={styles.pathAlpha}
 
       {/* 버튼 영역 */}
   <div
-  className="z-30 flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-[14px] text-slate-200 z-90 translate-y-[32px] md:translate-y-[42px]"
+  className="z-30 flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-[14px] text-slate-200 z-90 translate-y-[20px] md:translate-y-[42px]"
 >
 
     <button
