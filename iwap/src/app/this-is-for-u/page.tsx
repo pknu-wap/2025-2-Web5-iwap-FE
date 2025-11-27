@@ -1029,120 +1029,85 @@ const { startStop, toggleSide, edit, preview } = getButtons();
                   </div>
                 )}
                 <div
-  className={
-    phase === "back-write"
-      ? "hidden"
-      : "relative flex-shrink-0 mx-auto w-[320px] h-[200px] md:w-[600px] md:h-[375px] border border-white/30 overflow-hidden"
-  }
-  style={
-    isPreview
-      ? {
-          position: "absolute",
-          top: "30%",
-          left: "50%",
-          transform: "translate(-50%, -74%)",
-          zIndex: 2000,
-        }
-      : undefined
-  }
->
+                  className={
+                    phase === "back-write" || phase === "preview"
+                      ? "hidden"
+                      : "relative flex-shrink-0 mx-auto w-[320px] h-[200px] md:w-[600px] md:h-[375px] border border-white/30 overflow-hidden"
+                  }
+                >
                   <div
                     ref={frontContainerRef}
-                    className={isPreview || isBackside ? "hidden" : "absolute inset-0"}
+                    className={isBackside ? "hidden" : "absolute inset-0"}
                     style={{ backgroundColor: styles.backgroundColor }}
                   />
                   <div
                     ref={backContainerRef}
-                    className={!isPreview && phase === "back-fourier" ? "absolute inset-0" : "hidden"}
+                    className={phase === "back-fourier" ? "absolute inset-0" : "hidden"}
                     style={{ backgroundColor: styles.backgroundColor }}
                   />
-                  {isPreview && (
-  <div className="absolute inset-0 z-[100] pointer-events-auto">
-
-    {previewSide === "front" ? (
-      <FrontPreview
-        frontPreviewPng={frontPreviewPng}
-        frontSketches={frontSketches}
-        backgroundColor={styles.backgroundColor}
-      />
-    ) : (
-      <BackPreview
-        backPreviewPng={backPreviewPng}
-        messageText={textCanvasMessage.trim()}
-  recipientName={recipientName}
-        backgroundColor={styles.backgroundColor}
-textAlign={textAlign}
-textColor={styles.pathColor}
-textAlpha={styles.pathAlpha}
-      />
-    )}
-
-    <button
-      onClick={handleClosePreview}
-      className="
-        absolute top-2 right-2
-        w-8 h-8 flex items-center justify-center
-        bg-black/40 backdrop-blur-sm text-white rounded-full
-        border border-white/40 hover:bg-black/60
-      "
-    >
-      ×
-    </button>
-
-    <button
-      onClick={handlePreviewToggleSide}
-      className="
-        absolute bottom-2 right-2
-        px-3 py-1 text-xs text-white rounded-full border border-white/40
-        bg-black/30 hover:bg-black/50
-      "
-    >
-      {previewSide === "front" ? "Show back" : "Show front"}
-    </button>
-{/* ⬇ 새로 추가: 메일 전송 버튼 */}
-    {/* 이메일 입력 영역 */}
-<div
-  className="
-    absolute bottom-2 left-2
-    flex items-center gap-2
-    bg-black/40 backdrop-blur-sm
-    px-3 py-2 rounded-lg
-    border border-white/40
-  "
->
-  <input
-    type="email"
-    value={recipientEmail}
-    onChange={(e) => setRecipientEmail(e.target.value)}
-    placeholder="받는 사람 이메일"
-    className="
-      w-[150px]
-      text-[10px] md:text-xs
-      bg-transparent outline-none text-white placeholder-white/60
-    "
-  />
-
-  <button
-    onClick={handleSendPostcard}
-    className="
-      text-[10px] md:text-xs
-      px-2 py-1 rounded-full
-      bg-emerald-500 text-white
-      hover:bg-emerald-400
-    "
-  >
-    보내기
-  </button>
-</div>
-  </div>
-)}
-
                   {!readyAction && (
                     <div className="absolute inset-0 flex items-center justify-center text-xs uppercase tracking-[0.4em] text-white/60">
                       Loading...
                     </div>
                   )}
                 </div>
+                {isPreview && (
+                  <div className="fixed inset-0 z-[1000] pointer-events-auto flex flex-col items-center justify-center gap-4 p-4 bg-black/80 backdrop-blur-lg">
+
+                    {/* Front Preview */}
+                    <div className="relative w-[400px] max-w-[90vw] aspect-[8/5] flex-shrink-0" style={{ backgroundColor: styles.backgroundColor }}>
+                      <h3 className="absolute top-0 left-2 text-white text-sm bg-black/30 px-2 py-1 rounded-b-lg z-10">
+                        Front
+                      </h3>
+                      <FrontPreview
+                        frontPreviewPng={frontPreviewPng}
+                        backgroundColor={styles.backgroundColor}
+                      />
+                    </div>
+
+                    {/* Back Preview */}
+                    <div className="relative w-[400px] max-w-[90vw] aspect-[8/5] flex-shrink-0">
+                      <h3 className="absolute top-0 left-2 text-white text-sm bg-black/30 px-2 py-1 rounded-b-lg z-10">
+                        Back
+                      </h3>
+                      <BackPreview
+                        backPreviewPng={backPreviewPng}
+                        messageText={textCanvasMessage.trim()}
+                        recipientName={recipientName}
+                        backgroundColor={styles.backgroundColor}
+                        textAlign={textAlign}
+                        textColor={styles.pathColor}
+                        textAlpha={styles.pathAlpha}
+                      />
+                    </div>
+
+                    {/* Close Button */}
+                    <button
+                      onClick={handleClosePreview}
+                      className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-black/40 backdrop-blur-sm text-white text-2xl rounded-full border border-white/40 hover:bg-black/60 z-[110]"
+                    >
+                      ×
+                    </button>
+
+                    {/* Email sending part */}
+                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/40 z-[110]">
+                      <input
+                        type="email"
+                        value={recipientEmail}
+                        onChange={(e) => setRecipientEmail(e.target.value)}
+                        placeholder="받는 사람 이메일"
+                        className="w-[180px] md:w-[200px] text-sm bg-transparent outline-none text-white placeholder-white/60"
+                      />
+                      <button
+                        onClick={handleSendPostcard}
+                        disabled={isMailSending}
+                        className="text-sm px-3 py-1.5 rounded-full bg-emerald-500 text-white hover:bg-emerald-400 disabled:bg-slate-500 disabled:cursor-wait"
+                      >
+                        {isMailSending ? "전송중..." : "보내기"}
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {!isBackside && (
 <div
   className="
@@ -1215,7 +1180,7 @@ textAlpha={styles.pathAlpha}
       onClick={preview.onClick}
       className="rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60"
     >
-      엽서 미리보기
+      엽서 전송하기
     </button>
 
   </div>
@@ -1246,11 +1211,11 @@ textAlpha={styles.pathAlpha}
     <div
       className="
         text-slate-50
-        w-[340px] h-[450px]
+        w-[420px] h-[450px]
         md:w-[400px] md:h-auto
         md:px-4 py-6
         translate-y-[130px]
-        -trasnslate-x-[5px] md:-trasnslate-x-[5px]
+        flex flex-col items-center
       "
       style={{
         background: "rgba(255, 255, 255, 0.40)",
@@ -1261,12 +1226,12 @@ textAlpha={styles.pathAlpha}
     >
 
       {/* 타이틀 */}
-      <p className="text-[18px] md:text-[20px] text-white font-normal mb-3 pl-5">
+      <p className="w-[270px] md:w-[330px] text-left text-[18px] md:text-[20px] text-white font-normal mb-2">
         메세지를 작성하세요
       </p>
 
       {/* To 영역 */}
-      <div className="flex items-center gap-2 text-sm text-white/70 mb-3 pl-5">
+      <div className="flex items-center gap-2 text-sm text-white/70 mb-2 md:mb-5 md:translate-x-[-11px] px-4">
         <img src="/icons/To_white.svg" alt="To" className="w-[20px] h-[21px] md:w-[30px] md:h-[28px]" />
 
         <div className="relative">
@@ -1278,7 +1243,8 @@ textAlpha={styles.pathAlpha}
             className="
               px-3 py-2
               w-[260px]
-              text-[18px] font-normal
+              md:text-[16px] font-normal
+              text-[14px]
               text-white/70 bg-transparent outline-none border-0
               placeholder:text-white/70
             "
@@ -1291,15 +1257,16 @@ textAlpha={styles.pathAlpha}
     md:w-[290px]     /* md 이상에서 290px */
     h-[1px] 
     opacity-100
+    md:top-[42px]
+    top-[33px]
   "
-  style={{ top: "42px" }}
 />
         </div>
       </div>
 
 
       {/* 텍스트 + 정렬 버튼 */}
-      <div className="flex flex-col mb-3 pl-5">
+      <div className="flex flex-col">
 
         {/* 정렬 버튼 */}
         <div className="flex items-center gap-2 bg-[#CECECE] px-2 h-[30px] w-[270px] md:w-[330px]">
@@ -1325,18 +1292,18 @@ textAlpha={styles.pathAlpha}
             bg-white resize-none outline-none
             text-[18px] leading-tight text-black
             placeholder:text-slate-500
-            px-3 py-2
+            px-2 py-2
           "
           style={{ textAlign }}
         />
       </div>
 
       {/* From 영역 */}
-      <div className="flex items-center gap-2 text-sm text-white/70 pl-5">
+      <div className="flex items-center gap-2 text-sm text-white/70 px-4 mt-4">
         <img
           src="/icons/From_white.svg"
           alt="From"
-          className="w-[68px] h-[28px]"
+          className="md:w-[68px] md:h-[28px] w-[43px] h-[17px]"
         />
 
         <div className="relative">
@@ -1347,7 +1314,8 @@ textAlpha={styles.pathAlpha}
             autoComplete="off"
             className="
               px-3 
-              text-[18px]
+              md:text-[16px]
+              text-[14px]
               font-normal text-white/70
               bg-transparent outline-none
               placeholder:text-white/70
@@ -1363,8 +1331,9 @@ textAlpha={styles.pathAlpha}
     md:w-[250px]     /* md 이상에서 290px */
     h-[1px] 
     opacity-100
+    md:top-[33px]
+    top-[25px]
   "
-  style={{ top: "35px" }}
 />
         </div>
       </div>
@@ -1402,7 +1371,7 @@ textAlpha={styles.pathAlpha}
       onClick={preview.onClick}
       className="rounded-full border border-white px-3 py-1.5 font-light text-white hover:border-white/60"
     >
-      엽서 미리보기
+      엽서 전송하기
     </button>
 
   </div>
