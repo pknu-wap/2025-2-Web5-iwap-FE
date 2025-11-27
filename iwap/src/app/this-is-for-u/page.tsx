@@ -808,7 +808,7 @@ const handleSendPostcard = async () => {
     errors.push("엽서 앞면을 변환해주세요.");
   }
   if (backSketches.length === 0 && !textCanvasMessage.trim()) {
-    errors.push("엽서 뒷면에 내용이 필요합니다.");
+    errors.push("엽서 뒷면을 변환해주세요.");
   }
 
   if (errors.length > 0) {
