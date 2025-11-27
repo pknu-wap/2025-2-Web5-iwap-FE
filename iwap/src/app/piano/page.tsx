@@ -35,6 +35,7 @@ export default function VoiceToPiano() {
   const {
     isRecording,
     audioUrl,
+    audioFile,
     startRecording,
     stopRecording,
     setAudioFromFile,
@@ -518,6 +519,7 @@ export default function VoiceToPiano() {
       >
         <PianoBackendManager
           audioUrl={audioUrl}
+          audioFile={audioFile}
           onMidiEvent={handleMidi}
           onStatusChange={setStatus}
           onTransportReady={handleTransportReady}

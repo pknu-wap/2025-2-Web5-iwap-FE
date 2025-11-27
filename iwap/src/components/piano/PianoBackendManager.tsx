@@ -27,6 +27,7 @@ export type MidiReadyPayload = ConversionContext & {
 
 type PianoBackendManagerProps = {
   audioUrl: string | null;
+  audioFile: File | null;
   onMidiEvent: (event: { type: "on" | "off"; note: number }) => void;
   onStatusChange?: (status: string) => void;
   onTransportReady?: (
@@ -63,6 +64,7 @@ const describeFetchError = (err: unknown) => {
 
 export default function PianoBackendManager({
   audioUrl,
+  audioFile,
   onMidiEvent,
   onStatusChange,
   onTransportReady,
@@ -70,7 +72,7 @@ export default function PianoBackendManager({
   onMidiReady,
 }: PianoBackendManagerProps) {
   useEffect(() => {
-    if (!audioUrl) return;
+    if (!audioUrl || !audioFile) return;
 
     let isCancelled = false;
     const activeMidiNotes = new Set<number>();
@@ -247,22 +249,11 @@ export default function PianoBackendManager({
       try {
         onStatusChange?.("오디오 업로드 및 변환 중...");
 
-        const response = await fetch(audioUrl);
-        const blob = await response.blob();
-        
-        let extension = "mp3";
-        if (blob.type.includes("wav")) extension = "wav";
-        else if (blob.type.includes("mpeg") || blob.type.includes("mp3")) extension = "mp3";
-        else if (blob.type.includes("webm")) extension = "webm";
-        else if (blob.type.includes("mp4")) extension = "mp4";
-        else if (blob.type.includes("aac")) extension = "aac";
-        else if (blob.type.includes("ogg")) extension = "ogg";
-        else if (blob.type.includes("flac")) extension = "flac";
-        
-        const file = new File([blob], `voice.${extension}`, { type: blob.type });
+        // [수정] fetch(audioUrl) 제거
+        // 이미 가지고 있는 audioFile을 바로 사용 -> 메모리 부족(Crash) 방지
 
         const formData = new FormData();
-        formData.append("voice", file);
+        formData.append("voice", audioFile); // <--- File 객체 직접 사용
 
         const uploadRes = await fetch(getBackendUrl("/api/piano"), {
           method: "POST",
@@ -315,6 +306,7 @@ export default function PianoBackendManager({
     };
   }, [
     audioUrl,
+    audioFile,
     onMidiEvent,
     onStatusChange,
     onTransportReady,
