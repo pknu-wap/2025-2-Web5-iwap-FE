@@ -805,7 +805,7 @@ const handleSendPostcard = async () => {
     errors.push("메시지를 입력해야 합니다.");
   }
   if (frontSketches.length === 0) {
-    errors.push("엽서 앞면에 그림을 그려야 합니다.");
+    errors.push("엽서 앞면을 변환해주세요.");
   }
   if (backSketches.length === 0 && !textCanvasMessage.trim()) {
     errors.push("엽서 뒷면에 내용이 필요합니다.");
@@ -904,9 +904,10 @@ const handleSendPostcard = async () => {
   }, [handleStart, handleStop, handleTextToFourier, isPlaying, phase]);
 
   const handleToggleSide = useCallback(() => {
+    handleConfirmSketches();
     handleStop();
     setPhase(isBackside ? "front-draw" : "back-write");
-  }, [handleStop, isBackside]);
+  }, [handleStop, isBackside, handleConfirmSketches]);
 
   const handleEditAction = useCallback(() => {
     handleStop();

@@ -421,7 +421,7 @@ export function ProjectIntroModal({
       onClick={onClose}
     >
       <div
-        className="w-full max-w-5xl cursor-pointer translate-x-[90px]"
+        className={`w-full max-w-5xl cursor-pointer ${projects.includes("piano") ? "translate-x-[90px]" : ""}`}
         onClick={(e) => {
           e.stopPropagation();
           onClose();
