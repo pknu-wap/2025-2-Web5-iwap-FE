@@ -73,31 +73,37 @@ export function useRecorder() {
         }
       };
 
-      // 5. 녹음 종료 이벤트 핸들러 (파일 생성)
-      recorder.onstop = () => {
-        const recordedMimeType = recorder.mimeType || mimeType || "audio/webm";
-        const extension = getExtension(recordedMimeType);
-        
-        // Blob 생성
-        const blob = new Blob(chunksRef.current, { type: recordedMimeType });
-        
-        // File 객체 생성 (서버 전송용)
-        const file = new File(
-          [blob],
-          `recording-${Date.now()}.${extension}`,
-          { type: recordedMimeType }
-        );
-
-        const url = URL.createObjectURL(blob);
-        
-        // 상태 업데이트 순서 보장
-        setAudioUrl(url);
-        setAudioFile(file);
-        
-        // 스트림 트랙 종료 (브라우저 상단 녹음 아이콘 제거)
+      // [핵심 수정] onstop 핸들러 안정화
+      recorder.onstop = async () => {
+        // 1. 하드웨어(마이크) 트랙을 가장 먼저 중지 (리소스 해제)
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
+        }
+
+        // 2. Safari 메모리 정리를 위해 아주 짧은 지연 시간 부여
+        await new Promise(resolve => setTimeout(resolve, 100));
+
+        const recordedMimeType = recorder.mimeType || mimeType || "audio/webm";
+        const extension = getExtension(recordedMimeType);
+        
+        try {
+          // 3. Blob 생성
+          const blob = new Blob(chunksRef.current, { type: recordedMimeType });
+          
+          // 4. File 생성
+          const file = new File(
+            [blob],
+            `recording-${Date.now()}.${extension}`,
+            { type: recordedMimeType }
+          );
+
+          const url = URL.createObjectURL(blob);
+          
+          setAudioUrl(url);
+          setAudioFile(file);
+        } catch (error) {
+          console.error("Blob creation failed", error);
         }
       };
 

@@ -301,10 +301,15 @@ export default function PianoBackendManager({
       }
     };
 
-    void performConversion();
+    // [핵심 수정] 즉시 실행하지 않고 500ms 지연 후 실행 (Debounce)
+    // 모바일에서 화면 전환 렌더링과 무거운 업로드 작업이 겹치는 것을 방지
+    const uploadTimer = setTimeout(() => {
+      void performConversion();
+    }, 500);
 
     return () => {
       isCancelled = true;
+      clearTimeout(uploadTimer);
       disposeTransport();
       onTransportReset?.();
     };
