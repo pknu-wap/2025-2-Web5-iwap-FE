@@ -20,6 +20,8 @@ type GraffitiToolbarMobileProps = {
   rotate?: boolean;
   desktopDevMobile?: boolean;
   onSaveWithVideo: () => void;
+  showEraser?: boolean;
+  showSceneSave?: boolean;
 };
 
 export default function GraffitiToolbarMobile({
@@ -41,6 +43,8 @@ export default function GraffitiToolbarMobile({
   rotate = false,
   desktopDevMobile = false,
   onSaveWithVideo,
+  showEraser = true,
+  showSceneSave = true,
 }: GraffitiToolbarMobileProps) {
   const [showPalette, setShowPalette] = useState(false);
   const [showSaveMenu, setShowSaveMenu] = useState(false);
@@ -200,7 +204,13 @@ export default function GraffitiToolbarMobile({
           </button>
           <div className="relative" ref={saveMenuRef}>
             <button
-              onClick={() => setShowSaveMenu((prev) => !prev)}
+              onClick={() => {
+                if (showSceneSave) {
+                  setShowSaveMenu((prev) => !prev);
+                } else {
+                  onSave();
+                }
+              }}
               aria-label="Save options"
             className="
               hover:opacity-80 transition
@@ -366,18 +376,20 @@ export default function GraffitiToolbarMobile({
                 onClick={openColorPicker}
               />
 
-                            <button
-                type="button"
-                aria-pressed={isEraserSelected}
-                className={`h-[28px] flex items-center justify-center hover:opacity-75 transition`}
-                onClick={() => onBrushColorChange(ERASER_TOKEN)}
-              >
-                <img
-                  src="/icons/eraser_white.svg"
-                  alt="eraser"
-                  className="w-[32px] h-[32px]"
-                />
-              </button>
+              {showEraser && (
+                <button
+                  type="button"
+                  aria-pressed={isEraserSelected}
+                  className={`h-[28px] flex items-center justify-center hover:opacity-75 transition`}
+                  onClick={() => onBrushColorChange(ERASER_TOKEN)}
+                >
+                  <img
+                    src="/icons/eraser_white.svg"
+                    alt="eraser"
+                    className="w-[32px] h-[32px]"
+                  />
+                </button>
+              )}
               
               <div className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded-full border border-white">
                 <span className="text-[12px] text-white">HEX</span>
