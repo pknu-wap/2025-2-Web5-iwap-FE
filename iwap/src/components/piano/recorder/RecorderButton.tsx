@@ -1,7 +1,5 @@
 "use client";
-
 import { useState, useEffect } from "react";
-import * as Tone from "tone"; // [추가] Tone.js 임포트
 import WavingAnimation from "./WavingAnimation";
 import { useTheme } from "@/components/theme/ThemeProvider";
 
@@ -20,7 +18,6 @@ export default function RecorderButton({
   const [isPreppingRecording, setIsPreppingRecording] = useState(false);
 
   useEffect(() => {
-    // window 객체 안전하게 접근
     if (typeof window !== "undefined") {
       const handleResize = () => setIsMobile(window.innerWidth < 768);
       handleResize();
@@ -57,22 +54,9 @@ export default function RecorderButton({
     }
   };
 
-  // [핵심 수정] 녹음 정지 핸들러
-  const handleStop = async () => {
+  const handleStop = () => {
     setIsPreppingRecording(false);
-    
-    // iOS Safari Crash 방지: 
-    // 사용자의 명시적인 인터랙션(클릭) 내에서 AudioContext를 미리 깨워둡니다.
-    // 이렇게 하면 나중에 비동기(백엔드 응답) 시점에 소리를 재생해도 브라우저가 차단하지 않습니다.
-    try {
-      if (Tone.context.state !== "running") {
-        await Tone.start();
-        console.log("AudioContext resumed on interaction");
-      }
-    } catch (e) {
-      console.warn("Failed to start Tone context on stop:", e);
-    }
-
+    // [중요] Tone.start() 제거됨 - iOS 크래시 방지
     stopRecording();
   };
 
@@ -83,7 +67,6 @@ export default function RecorderButton({
 
   return (
     <div className="relative flex flex-col items-center justify-center pb-28 ">
-      {/* 녹음 준비/시작 버튼 */}
       {!showRecordingUI ? (
         <button
           onClick={handlePrimaryClick}
@@ -136,7 +119,6 @@ export default function RecorderButton({
           </svg>
         </button>
       ) : (
-        // 녹음 중 정지 버튼
         <div
           onClick={handleStop}
           className="relative w-[130px] h-[130px] md:w-[170px] md:h-[170px] rounded-full bg-gradient-to-b from-[#d9d9d9] to-[#a2a2a2] flex items-center justify-center cursor-pointer"
@@ -195,7 +177,6 @@ export default function RecorderButton({
         </div>
       )}
 
-      {/* 진행 막대 */}
       {isRecording && (
         <div className="absolute top-full left-1/2 -translate-x-1/2 flex flex-col items-center -mt-12">
           <div className="w-[200px] md:w-[550px] h-[7px] md:h-[12px] bg-gray-200 rounded-full overflow-hidden">
@@ -204,9 +185,11 @@ export default function RecorderButton({
               style={{ width: `${(elapsed % 60) * (100 / 60)}%` }}
             />
           </div>
-          <p 
-            className={`text-sm font-medium tracking-wide ${theme === 'dark' ? 'text-white' : 'text-black'}`}
-            style={{ transform: 'translateX(-1px)' }}
+          <p
+            className={`text-sm font-medium tracking-wide ${
+              theme === "dark" ? "text-white" : "text-black"
+            }`}
+            style={{ transform: "translateX(-1px)" }}
           >
             {formatTime(elapsed)}
           </p>

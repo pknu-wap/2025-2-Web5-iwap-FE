@@ -27,7 +27,7 @@ export type MidiReadyPayload = ConversionContext & {
 
 type PianoBackendManagerProps = {
   audioUrl: string | null;
-  audioFile: File | null;
+  audioFile: File | null; // [추가]
   onMidiEvent: (event: { type: "on" | "off"; note: number }) => void;
   onStatusChange?: (status: string) => void;
   onTransportReady?: (
@@ -72,6 +72,7 @@ export default function PianoBackendManager({
   onMidiReady,
 }: PianoBackendManagerProps) {
   useEffect(() => {
+    // audioFile도 있어야 실행
     if (!audioUrl || !audioFile) return;
 
     let isCancelled = false;
@@ -161,9 +162,8 @@ export default function PianoBackendManager({
       });
 
       const midi = new Midi(midiArray);
-      
-      // [수정 포인트] RecorderButton에서 이미 start()를 호출했으므로, 
-      // 여기서는 상태 체크 후 필요시에만 안전하게 호출
+
+      // 안전하게 Tone.start 확인
       if (Tone.context.state !== 'running') {
         try {
           await Tone.start();
@@ -178,7 +178,6 @@ export default function PianoBackendManager({
 
       disposeTransport();
       
-      // MIDI Note Scheduling
       midi.tracks.forEach((track) => {
         track.notes.forEach((note) => {
           const midiNum = note.midi;
@@ -215,9 +214,8 @@ export default function PianoBackendManager({
         duration,
         start: async () => {
           if (isCancelled) return;
-          // 여기서도 start 체크
           if (Tone.context.state !== 'running') {
-            await Tone.start().catch(() => {});
+             await Tone.start().catch(() => {});
           }
           if (Tone.Transport.state !== "started") {
             Tone.Transport.start();
@@ -247,13 +245,11 @@ export default function PianoBackendManager({
 
     const performConversion = async () => {
       try {
-        onStatusChange?.("오디오 업로드 및 변환 중...");
+        onStatusChange?.("서버로 전송 중...");
 
-        // [수정] fetch(audioUrl) 제거
-        // 이미 가지고 있는 audioFile을 바로 사용 -> 메모리 부족(Crash) 방지
-
+        // [최적화] fetch(audioUrl) 대신 prop으로 받은 File 직접 사용
         const formData = new FormData();
-        formData.append("voice", audioFile); // <--- File 객체 직접 사용
+        formData.append("voice", audioFile);
 
         const uploadRes = await fetch(getBackendUrl("/api/piano"), {
           method: "POST",
@@ -272,7 +268,7 @@ export default function PianoBackendManager({
           throw new Error("서버로부터 작업 ID를 받지 못했습니다.");
         }
 
-        onStatusChange?.("결과 다운로드 중...");
+        onStatusChange?.("AI가 피아노로 변환 중...");
         
         const midiRes = await pollForFile(
           getBackendUrl(`/api/piano/midi/${encodeURIComponent(taskId)}`)
@@ -292,8 +288,7 @@ export default function PianoBackendManager({
       }
     };
 
-    // [핵심 수정] 즉시 실행하지 않고 500ms 지연 후 실행 (Debounce)
-    // 모바일에서 화면 전환 렌더링과 무거운 업로드 작업이 겹치는 것을 방지
+    // [ESLint 수정] const로 선언
     const uploadTimer = setTimeout(() => {
       void performConversion();
     }, 500);
@@ -306,7 +301,7 @@ export default function PianoBackendManager({
     };
   }, [
     audioUrl,
-    audioFile,
+    audioFile, // 의존성 추가
     onMidiEvent,
     onStatusChange,
     onTransportReady,
