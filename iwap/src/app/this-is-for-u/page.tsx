@@ -1068,7 +1068,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
                   className={
                     phase === "back-write" || phase === "preview"
                       ? "hidden"
-                      : "relative flex-shrink-0 mx-auto w-[320px] h-[200px] md:w-[600px] md:h-[375px] border border-white/30 overflow-hidden"
+                      : "relative flex-shrink-0 w-[320px] h-[200px] md:w-[600px] md:h-[375px] border border-white/30 overflow-hidden"
                   }
                 >
                   <div
