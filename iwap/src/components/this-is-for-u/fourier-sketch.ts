@@ -35,6 +35,8 @@ export type FourierSketchController = {
     pathWidth: number;
     startDelay: number;
   }[];
+  undo: () => void;
+  redo: () => void;
   resize: () => void;
   cleanup: () => void;
 };
@@ -74,6 +76,8 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
   ) => void = () => {};
   let getFourierCoefficientsFn: () => FourierCoefficient[][] = () => [];
   let getOriginalSketchesFn: FourierSketchController["getOriginalSketches"] = () => [];
+  let undoFn: () => void = () => {};
+  let redoFn: () => void = () => {};
   let resizeFn: () => void = () => {};
 
   const controller: FourierSketchController = {
@@ -96,6 +100,8 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
     },
     getFourierCoefficients: () => getFourierCoefficientsFn(),
     getOriginalSketches: () => getOriginalSketchesFn(),
+    undo: () => undoFn(),
+    redo: () => redoFn(),
     resize: () => {
       resizeFn();
     },
@@ -138,6 +144,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
       let drawing: p5.Vector[] = [];
       const pendingSketches: FourierSketch[] = [];
       const activeSketches: FourierSketch[] = [];
+      const redoStack: FourierSketch[] = [];
       let state: "idle" | "drawing" | "pending" | "fourier" = "idle";
       // Playback speed (lower -> slower, higher -> faster)
       const SHARED_DT = 0.15;
@@ -262,10 +269,35 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         return current;
       };
 
+      const undo = () => {
+        if (pendingSketches.length > 0) {
+          const undone = pendingSketches.pop();
+          if (undone) {
+            redoStack.push(undone);
+          }
+        } else if (activeSketches.length > 0) {
+          const undone = activeSketches.pop();
+          if (undone) {
+            redoStack.push(undone);
+          }
+        }
+      };
+
+      const redo = () => {
+        if (redoStack.length > 0) {
+          const redone = redoStack.pop();
+          if (redone) {
+            // For simplicity, always push to pending. It can be confirmed again.
+            pendingSketches.push(redone);
+          }
+        }
+      };
+
       const clearSketches = () => {
         drawing = [];
         pendingSketches.length = 0;
         activeSketches.length = 0;
+        redoStack.length = 0;
         sharedTime = 0;
         maxStartDelay = 0;
         state = "idle";
@@ -273,6 +305,8 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
 
       const confirmSketches = () => {
         if (!pendingSketches.length && !activeSketches.length) return;
+        
+        redoStack.length = 0;
 
         if (pendingSketches.length) {
           // Restart paths so previous traces do not linger between confirmations
@@ -306,6 +340,8 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
 
       clearSketchesFn = clearSketches;
       confirmSketchesFn = confirmSketches;
+      undoFn = undo;
+      redoFn = redo;
       startPlaybackFn = () => {
         if (pendingSketches.length) {
           confirmSketches();
@@ -344,7 +380,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
       };
       getFourierCoefficientsFn = getFourierCoefficients;
       getOriginalSketchesFn = () =>
-        activeSketches.map((sketch) => ({
+        [...activeSketches, ...pendingSketches].map((sketch) => ({
           points: sketch.preview.map((v) => ({ x: v.x, y: v.y })),
           pathColor: sketch.pathColor,
           pathAlpha: sketch.pathAlpha,
@@ -447,6 +483,8 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
           state = pendingSketches.length > 0 ? "pending" : "idle";
           return;
         }
+
+        redoStack.length = 0;
 
         const nextFourier = dft(drawing);
         if (nextFourier.length) {
