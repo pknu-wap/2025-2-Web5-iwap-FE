@@ -137,8 +137,9 @@ const [phase, setPhase] = useState<Phase>("front-draw");
   // const [previewSide, setPreviewSide] = useState<"front" | "back">("front");
   const canSendPostcard =
     frontSketches.length > 0 || backSketches.length > 0 || textCanvasMessage.trim().length > 0;
-  const sendButtonClass = `rounded-full bg-emerald-500 px-4 py-2 font-semibold uppercase tracking-wide text-white transition hover:bg-emerald-500/80${
-    canSendPostcard ? "" : " opacity-50 cursor-not-allowed"
+  const sendButtonClass = `rounded-full bg-emerald-500 px-4 py-2 font-semibold uppercase tracking-wide text-white transition hover:bg-emerald-500/80${ 
+    canSendPostcard ? "" : " opacity-50 cursor-not-allowed" 
+    
   }`;
   
 
@@ -338,7 +339,7 @@ const [phase, setPhase] = useState<Phase>("front-draw");
     const payload = {
       exportedAt: new Date().toISOString(),
       backgroundColor: styles.backgroundColor,
-      recipientName,
+      recipientEmail,
       senderName,
       message: textCanvasMessage,
       tokens: tokenWords,
@@ -415,11 +416,31 @@ const [phase, setPhase] = useState<Phase>("front-draw");
 
   const isDarkBg = styles.backgroundColor === "#0F172A" || styles.backgroundColor === "#000000";
 
+  const handleSendClick = () => {
+  // 1) 애니메이션 즉시 발동
+  handleSendAnim();       
+
+  // 2) 메일 전송은 기다리지 않고 바로 시작 (애니메이션과 병렬)
+  handleSendPostcard();    
+};
+
+
   useEffect(() => {
     if (isBackside || isPreview) {
       handleStop();
     }
   }, [isBackside, isPreview, handleStop]);
+
+  useEffect(() => {
+    if (isPreview) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'auto';
+    }
+    return () => {
+      document.body.style.overflow = 'auto';
+    };
+  }, [isPreview]);
 
   const handleBackgroundChange = useCallback((color: string) => {
     setStyles((prev) => ({
@@ -1150,8 +1171,8 @@ const { startStop, toggleSide, edit, preview } = getButtons();
     <button
       onClick={edit.onClick}
       disabled={edit.disabled}
-      className={`rounded-full border border-white/30 px-3 py-1.5 font-light text-white ${
-        edit.disabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/60"
+      className={`rounded-full border border-white/30 px-3 py-1.5 font-light text-white ${ 
+        edit.disabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/60" 
       }`}
     >
       수정
@@ -1217,9 +1238,9 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
         <div className="relative">
           <input
-            value={recipientName}
-            onChange={(e) => setRecipientName(e.target.value)}
-            placeholder="받는 사람 이름"
+            value={recipientEmail}
+            onChange={(e) => setRecipientEmail(e.target.value)}
+            placeholder="보내는 사람 이름"
             autoComplete="off"
             className="
               px-3 py-2
@@ -1346,8 +1367,8 @@ const { startStop, toggleSide, edit, preview } = getButtons();
     <button
       onClick={edit.onClick}
       disabled={edit.disabled}
-      className={`rounded-full border border-white px-3 py-1.5 font-light text-white ${
-        edit.disabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/60"
+      className={`rounded-full border border-white px-3 py-1.5 font-light text-white ${ 
+        edit.disabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/60" 
       }`}
     >
       수정
@@ -1364,107 +1385,129 @@ const { startStop, toggleSide, edit, preview } = getButtons();
     </div>
   </div>
 )}
+
 {isPreview && (
-        <div className="relative w-full">
-          <div className="flex flex-col md:flex-row gap-8 justify-center items-start">
-            {/* Previews */}
-            <div className="flex flex-col gap-6 items-center">
-              {frontSketches && (
-                <div>
-                  <h3 className="text-lg text-white mb-2 text-center font-semibold">앞면</h3>
-                  <div className="w-[400px] h-[250px] object-contain border-1 border-white/30">
-                    <FrontPreview
-                      frontSketches={frontSketches}
-                      frontPreviewPng={null}
-                      backgroundColor={styles.backgroundColor}
-                    />
-                  </div>
-                </div>
-              )}
-              {backPreviewPng && (
-                <div>
-                  <h3 className="text-lg text-white mb-2 text-center font-semibold">뒷면</h3>
-                  <img src={backPreviewPng} alt="Postcard Back Preview" className="w-[400px] h-[250px] object-contain border-1 border-white/30" />
-                </div>
-              )}
-            </div>
+  <div className="relative w-full md:scale-90 scale-80">
+    <div
+      className="
+        absolute top-0
+        md:left-1/2 md:-translate-x-1/2
+        md:-translate-y-[360px] -translate-y-[300px]
+        w-[80vw]
+        z-40 md:w-[500px] md:h-[852px]
 
-            {/* Desktop Color Palette */}
-            <div className="hidden md:flex flex-col gap-[5px] pt-10">
-              {BACKGROUND_COLORS.map((color) => {
-                const isActive = styles.backgroundColor === color;
-                return (
-                  <button
-                    key={color}
-                    type="button"
-                    onClick={() => handleBackgroundChange(color)}
-                    className={`w-[56px] h-[26px] border border-white transition ${isActive ? "opacity-70" : "opacity-100 hover:opacity-100"}`}
-                    style={{ backgroundColor: color }}
-                    aria-label={`Set background to ${color}`}
-                  />
-                );
-              })}
-            </div>
+        grid place-items-start
+        p-6
+      "
+      style={{
+        background: "rgba(255, 255, 255, 0.40)",
+        border: "1px solid #FFF",
+        backdropFilter: "blur(2px)",
+        WebkitBackdropFilter: "blur(2px)",
+      }}
+    >
+      {/* 제목 */}
+      <p className="w-[270px] md:w-[330px] text-left text-[18px] md:text-[20px] text-white font-normal md:translate-x-[20px]">
+        메일 주소를 작성하세요
+      </p>
 
-            {/* Form */}
-            <div className="flex flex-col justify-center w-full md:w-[320px] gap-4">
-                {/* Mobile Color Palette */}
-              <div className="flex flex-row justify-center gap-2.5 md:hidden">
-                {BACKGROUND_COLORS.map((color) => {
-                  const isActive = styles.backgroundColor === color;
-                  return (
-                    <button
-                      key={color}
-                      type="button"
-                      onClick={() => handleBackgroundChange(color)}
-                      className={`w-11 h-7 border border-white/30 transition ${isActive ? 'ring-1 ring-white' : 'hover:opacity-80'}`}
-                      style={{ backgroundColor: color }}
-                      aria-label={`Set background to ${color}`}
-                    />
-                  );
-                })}
-              </div>
-              <div>
-                <label htmlFor="recipientEmail" className="block text-sm font-medium text-white/90 mb-2">받는 사람 이메일</label>
-                <input
-                  id="recipientEmail"
-                  type="email"
-                  value={recipientEmail}
-                  onChange={(e) => setRecipientEmail(e.target.value)}
-                  placeholder="email@example.com"
-                  className="w-full bg-black/30 border border-white/30 rounded-md text-white p-2 placeholder:text-white/50 outline-none focus:ring-2 focus:ring-emerald-400"
-                />
-              </div>
-              <div>
-                <label htmlFor="senderNamePreview" className="block text-sm font-medium text-white/90 mb-2">보내는 사람 이름</label>
-                <input
-                  id="senderNamePreview"
-                  type="text"
-                  value={senderName}
-                  className="w-full bg-black/30 border border-white/30 rounded-md text-white/70 p-2 outline-none"
-                  readOnly
-                />
-              </div>
+      {/* To 영역 */}
+      <div className="flex items-center gap-2 text-sm text-white/70 px-1 -translate-y-[30px] md:translate-x-[20px]">
+        <img
+          src="/icons/To_white.svg"
+          alt="To"
+          className="w-[20px] h-[21px] md:w-[30px] md:h-[28px]"
+        />
 
-              <button
-                onClick={handleSendPostcard}
-                disabled={isMailSending || !isValidEmail(recipientEmail)}
-                className="w-full rounded-full bg-emerald-500 px-4 py-3 font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isMailSending ? "전송 중..." : "엽서 전송하기"}
-              </button>
+        <div className="relative">
+          <input
+            id="recipientEmail"
+            type="email"
+            value={recipientEmail}
+            onChange={(e) => setRecipientEmail(e.target.value)}
+            placeholder="받는 사람 메일"
+            autoComplete="off"
+            className="
+              px-3
+              w-[220px] md:w-[290px]
+              md:text-[16px] text-[14px]
+              font-normal
+              text-white/70 bg-transparent outline-none border-0
+              placeholder:text-white/70
+            "
+          />
+
+          {/* 밑줄 */}
+          <div
+            className="
+              absolute left-0 bg-white
+              w-[220px] md:w-[290px]
+              h-[1px]
+              opacity-100
+              md:top-[34px]
+              top-[28px]
+            "
+          />
+        </div>
+<button
+  onClick={handleSendClick}
+  disabled={isMailSending || !isValidEmail(recipientEmail)}
+  className="
+    flex items-center justify-center
+    ml-1
+    w-[28px] h-[28px]
+    md:w-[34px] md:h-[34px]
+    hover:bg-white/20 transition
+    disabled:opacity-40 disabled:cursor-not-allowed
+  "
+>
+  <img src="/icons/Send.svg" className="w-[16px] md:w-[20px]" />
+</button>
+
+
+      </div>
+
+      {/* 엽서 미리보기 영역 */}
+      <div className="flex flex-col gap-6 items-center w-full -translate-y-[50px]">
+        {frontSketches && (
+          <div>
+            <div className="w-[400px] h-[250px] object-contain border-1 border-white/30">
+              <FrontPreview
+                frontSketches={frontSketches}
+                frontPreviewPng={null}
+                backgroundColor={styles.backgroundColor}
+              />
             </div>
           </div>
+        )}
 
-          <button
-            onClick={handleClosePreview}
-            className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 border border-white/30 text-white text-xl flex items-center justify-center hover:bg-white/20"
-            aria-label="Close Preview"
-          >
-            &times;
-          </button>
-        </div>
-      )}
+        {backPreviewPng && (
+          <div>
+            <img
+              src={backPreviewPng}
+              alt="Postcard Back Preview"
+              className="w-[400px] h-[250px] object-contain border-1 border-white/30"
+            />
+          </div>
+        )}
+      </div>
+          {/* 닫기 버튼 */}
+<button
+  onClick={handleClosePreview}
+  className="
+    px-5
+    rounded-full
+    bg-white/10 border border-white/30
+    text-white text-sm
+    hover:bg-white/20
+    transition -translate-y-[80px] translate-x-[20px]
+  "
+>
+  수정하러 가기
+</button>
+    </div>
+  </div>
+)}
         </div>
       </FullScreenView>
       {showOriginalPreview && (
@@ -1526,7 +1569,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
         isSending={isSending}
         sendStage={sendStage}
         frontSketches={frontSketches}
-        recipientName={recipientEmail}
+        recipientEmail={recipientEmail}
         senderName={senderName}
         textCanvasMessage={textCanvasMessage}
         tokenWords={tokenWords}
