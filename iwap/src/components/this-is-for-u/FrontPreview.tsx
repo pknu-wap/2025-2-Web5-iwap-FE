@@ -17,7 +17,7 @@ export function FrontPreview({
 }) {
   return (
     <div
-      className="w-full h-full border border-white/30 flex items-center justify-center p-4 relative"
+      className="w-full h-full flex items-center justify-center relative"
       style={{ backgroundColor: backgroundColor ?? "#000000" }}
     >
       <Image
@@ -51,7 +51,7 @@ export function FrontPreview({
         <img
           src={frontPreviewPng}
           alt="Front PNG"
-          className="max-w-600 max-h-375 object-contain"
+          className="object-contain"
         />
       ) : (
         <span className="text-white/60 text-sm">No front preview</span>
