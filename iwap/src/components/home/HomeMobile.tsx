@@ -210,7 +210,6 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
           style={{
             color: paletteEntry.color,
             fontWeight: paletteEntry.weight,
-            minWidth: "0.05ch",
           }}
         >
           {char}
@@ -244,7 +243,6 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
         transforms.push(`rotate(${rotationDegrees}deg)`);
 
         const style: CSSProperties = {
-          minWidth: "0.75ch",
           transformOrigin: "center bottom",
           transition:
             "transform 1200ms ease, top 1200ms ease, left 1200ms ease, opacity 600ms ease",
@@ -302,7 +300,6 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
       if (isHighlight) {
         const style: CSSProperties = {
           color: "#ffffff",
-          minWidth: "0.05ch",
           transition:
             "transform 1100ms ease, top 1100ms ease, left 1100ms ease, opacity 600ms ease",
         };
@@ -351,7 +348,7 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
         <span
           key={identifierKey}
           className={className}
-          style={{ color: "#ffffff", minWidth: "0.05ch" }}
+          style={{ color: "#ffffff" }}
         >
           {char}
         </span>

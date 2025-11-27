@@ -804,6 +804,32 @@ const handleSendPostcard = async () => {
 
   setIsMailSending(true);
 
+  // Helper to convert data URL to Blob
+  const dataURLtoBlob = (dataurl: string): Blob | null => {
+    const arr = dataurl.split(',');
+    if (arr.length < 2) return null;
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) return null;
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  };
+
+  // Get PNGs from state and convert
+  const frontPngBlob = frontPreviewPng ? dataURLtoBlob(frontPreviewPng) : null;
+  const backPngBlob = backPreviewPng ? dataURLtoBlob(backPreviewPng) : null;
+
+  if (!frontPngBlob || !backPngBlob) {
+    alert("미리보기 이미지를 찾을 수 없습니다. 다시 시도해주세요.");
+    setIsMailSending(false);
+    return;
+  }
+
   // 애니메이션을 재생 상태로 만들어야 Fourier가 움직임
   frontController?.startPlayback();
   backController?.startPlayback();
@@ -823,6 +849,16 @@ const handleSendPostcard = async () => {
 
   formData.append("sender", senderName);
   formData.append("message", textCanvasMessage);
+
+  // Append PNG files
+  formData.append(
+    "frontPng",
+    new File([frontPngBlob], "front.png", { type: "image/png" })
+  );
+  formData.append(
+    "backPng",
+    new File([backPngBlob], "back.png", { type: "image/png" })
+  );
 
   // webm 그대로 보내야 FastAPI가 처리 가능
   formData.append(
@@ -1008,8 +1044,8 @@ const { startStop, toggleSide, edit, preview } = getButtons();
           }}
         ></div>
 
-        <div className="relative z-90 flex flex-col items-center gap-6 md:mt-16 w-[90vw] max-w-[1200px] mx-auto px-2">
-              <div className="relative flex flex-col md:flex-row items-center gap-4 w-full justify-center translate-y-[40px]">
+        <div className="relative z-90 flex flex-col items-center gap-6 md:mt-16 w-[90vw] max-w-[1200px] px-2">
+              <div className="flex flex-col md:flex-row items-center gap-4 w-full justify-center translate-y-[40px]">
                 {/* Mobile background palette */}
                 {!isBackside && !isPreview && (
                   <div className="flex flex-row justify-center gap-2.5 md:hidden">
@@ -1032,100 +1068,19 @@ const { startStop, toggleSide, edit, preview } = getButtons();
                   className={
                     phase === "back-write" || phase === "preview"
                       ? "hidden"
-                      : "relative flex-shrink-0 w-[320px] h-[200px] md:w-[600px] md:h-[375px] border border-white/30 overflow-hidden"
+                      : "relative flex-shrink-0 mx-auto w-[320px] h-[200px] md:w-[600px] md:h-[375px] border border-white/30 overflow-hidden"
                   }
                 >
                   <div
                     ref={frontContainerRef}
-                    className={isPreview || isBackside ? "hidden" : "absolute inset-0"}
+                    className={isBackside ? "hidden" : "absolute inset-0"}
                     style={{ backgroundColor: styles.backgroundColor }}
                   />
                   <div
                     ref={backContainerRef}
-                    className={!isPreview && phase === "back-fourier" ? "absolute inset-0" : "hidden"}
+                    className={phase === "back-fourier" ? "absolute inset-0" : "hidden"}
                     style={{ backgroundColor: styles.backgroundColor }}
                   />
-                  {isPreview && (
-  <div className="absolute inset-0 z-[100] pointer-events-auto">
-
-    {previewSide === "front" ? (
-      <FrontPreview
-        frontPreviewPng={frontPreviewPng}
-        frontSketches={frontSketches}
-        backgroundColor={styles.backgroundColor}
-      />
-    ) : (
-      <BackPreview
-        backPreviewPng={backPreviewPng}
-        messageText={textCanvasMessage.trim()}
-  recipientName={recipientName}
-        backgroundColor={styles.backgroundColor}
-textAlign={textAlign}
-textColor={styles.pathColor}
-textAlpha={styles.pathAlpha}
-      />
-    )}
-
-    <button
-      onClick={handleClosePreview}
-      className="
-        absolute top-2 right-2
-        w-8 h-8 flex items-center justify-center
-        bg-black/40 backdrop-blur-sm text-white rounded-full
-        border border-white/40 hover:bg-black/60
-      "
-    >
-      ×
-    </button>
-
-    <button
-      onClick={handlePreviewToggleSide}
-      className="
-        absolute bottom-2 right-2
-        px-3 py-1 text-xs text-white rounded-full border border-white/40
-        bg-black/30 hover:bg-black/50
-      "
-    >
-      {previewSide === "front" ? "Show back" : "Show front"}
-    </button>
-{/* ⬇ 새로 추가: 메일 전송 버튼 */}
-    {/* 이메일 입력 영역 */}
-<div
-  className="
-    absolute bottom-2 left-2
-    flex items-center gap-2
-    bg-black/40 backdrop-blur-sm
-    px-3 py-2 rounded-lg
-    border border-white/40
-  "
->
-  <input
-    type="email"
-    value={recipientEmail}
-    onChange={(e) => setRecipientEmail(e.target.value)}
-    placeholder="받는 사람 이메일"
-    className="
-      w-[150px]
-      text-[10px] md:text-xs
-      bg-transparent outline-none text-white placeholder-white/60
-    "
-  />
-
-  <button
-    onClick={handleSendPostcard}
-    className="
-      text-[10px] md:text-xs
-      px-2 py-1 rounded-full
-      bg-emerald-500 text-white
-      hover:bg-emerald-400
-    "
-  >
-    보내기
-  </button>
-</div>
-  </div>
-)}
-
                   {!readyAction && (
                     <div className="absolute inset-0 flex items-center justify-center text-xs uppercase tracking-[0.4em] text-white/60">
                       Loading...
@@ -1204,7 +1159,7 @@ textAlpha={styles.pathAlpha}
       onClick={preview.onClick}
       className="rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60"
     >
-      엽서 미리보기
+      엽서 전송하기
     </button>
 
   </div>
@@ -1235,11 +1190,11 @@ textAlpha={styles.pathAlpha}
     <div
       className="
         text-slate-50
-        w-[340px] h-auto
+        w-[420px] h-[450px]
         md:w-[400px] md:h-auto
         md:px-4 py-6
         translate-y-[130px]
-        -trasnslate-x-[5px] md:-trasnslate-x-[5px]
+        flex flex-col items-center
       "
       style={{
         background: "rgba(255, 255, 255, 0.40)",
@@ -1250,12 +1205,12 @@ textAlpha={styles.pathAlpha}
     >
 
       {/* 타이틀 */}
-      <p className="text-[18px] md:text-[20px] text-white font-normal mb-3 pl-5">
+      <p className="w-[270px] md:w-[330px] text-left text-[18px] md:text-[20px] text-white font-normal mb-2">
         메세지를 작성하세요
       </p>
 
       {/* To 영역 */}
-      <div className="flex items-center gap-2 text-sm text-white/70 mb-3 pl-5">
+      <div className="flex items-center gap-2 text-sm text-white/70 mb-2 md:mb-5 md:translate-x-[-11px] px-4">
         <img src="/icons/To_white.svg" alt="To" className="w-[20px] h-[21px] md:w-[30px] md:h-[28px]" />
 
         <div className="relative">
@@ -1267,7 +1222,8 @@ textAlpha={styles.pathAlpha}
             className="
               px-3 py-2
               w-[260px]
-              text-[18px] font-normal
+              md:text-[16px] font-normal
+              text-[14px]
               text-white/70 bg-transparent outline-none border-0
               placeholder:text-white/70
             "
@@ -1280,15 +1236,16 @@ textAlpha={styles.pathAlpha}
     md:w-[290px]     /* md 이상에서 290px */
     h-[1px] 
     opacity-100
+    md:top-[42px]
+    top-[33px]
   "
-  style={{ top: "42px" }}
 />
         </div>
       </div>
 
 
       {/* 텍스트 + 정렬 버튼 */}
-      <div className="flex flex-col mb-3 pl-5">
+      <div className="flex flex-col">
 
         {/* 정렬 버튼 */}
         <div className="flex items-center gap-2 bg-[#CECECE] px-2 h-[30px] w-[270px] md:w-[330px]">
@@ -1304,28 +1261,33 @@ textAlpha={styles.pathAlpha}
         </div>
 
         {/* 텍스트 박스 */}
-        <textarea
-          value={textCanvasMessage}
-          onChange={(e) => setTextCanvasMessage(e.target.value)}
-          maxLength={10}
-          className="
-            w-[270px] h-[200px]
-            md:w-[330px] md:h-[240px]
-            bg-white resize-none outline-none
-            text-[18px] leading-tight text-black
-            placeholder:text-slate-500
-            px-3 py-2
-          "
-          style={{ textAlign }}
-        />
+        <div className="relative">
+          <textarea
+            value={textCanvasMessage}
+            onChange={(e) => setTextCanvasMessage(e.target.value)}
+            maxLength={10}
+            className="
+              w-[270px] h-[200px]
+              md:w-[330px] md:h-[240px]
+              bg-white resize-none outline-none
+              text-[18px] leading-tight text-black
+              placeholder:text-slate-500
+              px-2 py-2
+            "
+            style={{ textAlign }}
+          />
+          <div className="absolute bottom-2 right-2 text-xs text-slate-400">
+            {textCanvasMessage.length}/10
+          </div>
+        </div>
       </div>
 
       {/* From 영역 */}
-      <div className="flex items-center gap-2 text-sm text-white/70 pl-5">
+      <div className="flex items-center gap-2 text-sm text-white/70 px-4 mt-4">
         <img
           src="/icons/From_white.svg"
           alt="From"
-          className="w-[68px] h-[28px]"
+          className="md:w-[68px] md:h-[28px] w-[43px] h-[17px]"
         />
 
         <div className="relative">
@@ -1336,7 +1298,8 @@ textAlpha={styles.pathAlpha}
             autoComplete="off"
             className="
               px-3 
-              text-[18px]
+              md:text-[16px]
+              text-[14px]
               font-normal text-white/70
               bg-transparent outline-none
               placeholder:text-white/70
@@ -1352,15 +1315,16 @@ textAlpha={styles.pathAlpha}
     md:w-[250px]     /* md 이상에서 290px */
     h-[1px] 
     opacity-100
+    md:top-[33px]
+    top-[25px]
   "
-  style={{ top: "35px" }}
 />
         </div>
       </div>
 
       {/* 버튼 영역 */}
   <div
-  className="z-30 flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-[14px] text-slate-200 z-90 translate-y-[32px] md:translate-y-[42px]"
+  className="z-30 flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-[14px] text-slate-200 z-90 translate-y-[20px] md:translate-y-[42px]"
 >
 
     <button
@@ -1391,7 +1355,7 @@ textAlpha={styles.pathAlpha}
       onClick={preview.onClick}
       className="rounded-full border border-white px-3 py-1.5 font-light text-white hover:border-white/60"
     >
-      엽서 미리보기
+      엽서 전송하기
     </button>
 
   </div>
@@ -1400,6 +1364,72 @@ textAlpha={styles.pathAlpha}
 )}
         </div>
       </FullScreenView>
+      {isPreview && (
+        <div className="fixed inset-0 z-[1100] flex flex-col items-center justify-center gap-4 p-4 bg-black/80 backdrop-blur-lg">
+          <div className="relative w-full max-w-4xl bg-slate-900/80 border border-white/20 rounded-xl p-6">
+            <h2 className="text-2xl font-bold text-white text-center mb-6">엽서 미리보기 및 전송</h2>
+            
+            <div className="flex flex-col md:flex-row gap-8 justify-center">
+                {/* Previews */}
+                <div className="flex flex-col gap-6 items-center">
+                    {frontPreviewPng && (
+                        <div>
+                            <h3 className="text-lg text-white mb-2 text-center font-semibold">앞면</h3>
+                            <img src={frontPreviewPng} alt="Postcard Front Preview" className="w-[400px] h-[250px] object-contain border-2 border-white/30 rounded-md" />
+                        </div>
+                    )}
+                    {backPreviewPng && (
+                         <div>
+                            <h3 className="text-lg text-white mb-2 text-center font-semibold">뒷면</h3>
+                            <img src={backPreviewPng} alt="Postcard Back Preview" className="w-[400px] h-[250px] object-contain border-2 border-white/30 rounded-md" />
+                        </div>
+                    )}
+                </div>
+      
+                {/* Form */}
+                <div className="flex flex-col justify-center gap-6 p-6 bg-white/10 rounded-lg w-full md:w-[320px]">
+                    <div>
+                        <label htmlFor="recipientEmail" className="block text-sm font-medium text-white/90 mb-2">받는 사람 이메일</label>
+                        <input
+                            id="recipientEmail"
+                            type="email"
+                            value={recipientEmail}
+                            onChange={(e) => setRecipientEmail(e.target.value)}
+                            placeholder="email@example.com"
+                            className="w-full bg-black/30 border border-white/30 rounded-md text-white p-2 placeholder:text-white/50 outline-none focus:ring-2 focus:ring-emerald-400"
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="senderNamePreview" className="block text-sm font-medium text-white/90 mb-2">보내는 사람 이름</label>
+                        <input
+                            id="senderNamePreview"
+                            type="text"
+                            value={senderName}
+                            className="w-full bg-black/30 border border-white/30 rounded-md text-white/70 p-2 outline-none"
+                            readOnly
+                        />
+                    </div>
+      
+                    <button
+                        onClick={handleSendPostcard}
+                        disabled={isMailSending || !isValidEmail(recipientEmail)}
+                        className="w-full rounded-full bg-emerald-500 px-4 py-3 font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isMailSending ? "전송 중..." : "엽서 전송하기"}
+                    </button>
+                </div>
+            </div>
+      
+            <button
+              onClick={handleClosePreview}
+              className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 border border-white/30 text-white text-xl flex items-center justify-center hover:bg-white/20"
+              aria-label="Close Preview"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
       {showOriginalPreview && (
         <div className="fixed inset-0 z-[1200] bg-black/70 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="relative w-full max-w-6xl bg-slate-900/85 border border-white/10 rounded-xl shadow-2xl p-6 flex flex-col gap-4">
