@@ -118,7 +118,7 @@ export default function MidiPlayerBar({
         className="pointer-events-auto w-full max-w-2xl flex flex-col items-center p-4 text-white"
       >
         {/* transport controls */}
-        <div className="flex items-center gap-6 mb-2">
+        <div className="flex items-center gap-6 -mb-4">
           {onRewind ? (
             <button
               type="button"
@@ -191,8 +191,8 @@ export default function MidiPlayerBar({
           border-radius: 9999px;
           background: linear-gradient(
             to right,
-            #9D9DC5 var(--value, 0%),
-            rgba(157, 157, 197, 0.2) var(--value, 0%)
+            #FFFFFF var(--value, 0%),
+            rgba(255, 255, 255, 0.3) var(--value, 0%)
           );
         }
         input[type="range"]::-webkit-slider-thumb {
@@ -200,7 +200,7 @@ export default function MidiPlayerBar({
           width: 4px;
           height: 16px;
           border-radius: 15px;
-          background: #9D9DC5;
+          background: #FFFFFF;
           margin-top: -6px;
           cursor: pointer;
         }
@@ -209,15 +209,15 @@ export default function MidiPlayerBar({
           border-radius: 9999px;
           background: linear-gradient(
             to right,
-            #9D9DC5 var(--value, 0%),
-            rgba(157, 157, 197, 0.2) var(--value, 0%)
+            #FFFFFF var(--value, 0%),
+            rgba(255, 255, 255, 0.3) var(--value, 0%)
           );
         }
         input[type="range"]::-moz-range-thumb {
           width: 4px;
           height: 16px;
           border-radius: 15px;
-          background: #9D9DC5;
+          background: #FFFFFF;
           cursor: pointer;
         }
       `}</style>
