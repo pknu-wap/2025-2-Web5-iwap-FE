@@ -1112,11 +1112,7 @@ textAlpha={styles.pathAlpha}
   // phase === "preview" ||
   phase === "back-fourier") && (
   <div
-  className={
-    phase === "back-write"
-      ? "flex flex-wrap items-center justify-center gap-3 text-xs text-slate-200 z-90 translate-y-[180px]"
-      : "flex flex-wrap items-center justify-center gap-3 text-xs text-slate-200 z-90 translate-y-[52px]"
-  }
+  className="flex flex-wrap items-center justify-center gap-3 text-xs text-slate-200 z-90 translate-y-[52px]"
 >
 
     <button
