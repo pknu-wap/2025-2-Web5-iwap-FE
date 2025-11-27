@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ERASER_TOKEN } from "./constants";
+
+export const ERASER_TOKEN = "__ERASER__";
 
 type GraffitiToolbarProps = {
   colorPalette: string[];
@@ -18,6 +19,8 @@ type GraffitiToolbarProps = {
   onClear: () => void;
   onSave: () => void;
   onSaveWithVideo: () => void;
+  showEraser?: boolean;
+  showSceneSave?: boolean;
 };
 
 export default function GraffitiToolbar({
@@ -37,6 +40,8 @@ export default function GraffitiToolbar({
   onClear,
   onSave,
   onSaveWithVideo,
+  showEraser = true,
+  showSceneSave = true,
 }: GraffitiToolbarProps) {
   const normalizedPendingColor = pendingCustomColor?.toLowerCase();
   const isPendingDuplicate =
@@ -184,7 +189,7 @@ export default function GraffitiToolbar({
               rounded-full translate-y-[4px]
             "
             style={{
-              backgroundImage: "url('/icons/rainbow.svg')",
+              backgroundImage: "url('/icons/rainbow_color.svg')",
               backgroundSize: "cover",
               backgroundPosition: "center",
               backgroundRepeat: "no-repeat",
@@ -321,18 +326,20 @@ export default function GraffitiToolbar({
       </div>
 
       <div className="flex items-center gap-2">
-        <button
-          type="button"
-          aria-pressed={isEraserSelected}
-          className={`h-[32px] flex items-center justify-center hover:opacity-75 transition`}
-          onClick={() => onBrushColorChange(ERASER_TOKEN)}
-        >
-          <img
-            src="/icons/eraser.svg"
-            alt="eraser"
-            className="w-[32px] h-[32px]"
-          />
-        </button>
+        {showEraser && (
+          <button
+            type="button"
+            aria-pressed={isEraserSelected}
+            className={`h-[32px] flex items-center justify-center hover:opacity-75 transition`}
+            onClick={() => onBrushColorChange(ERASER_TOKEN)}
+          >
+            <img
+              src="/icons/eraser_white.svg"
+              alt="eraser"
+              className="w-[32px] h-[32px]"
+            />
+          </button>
+        )}
 
         <button
           onClick={onClear}
@@ -347,7 +354,13 @@ export default function GraffitiToolbar({
         </button>
         <div className="relative" ref={saveMenuRef}>
           <button
-            onClick={() => setShowSaveMenu((prev) => !prev)}
+            onClick={() => {
+              if (showSceneSave) {
+                setShowSaveMenu((prev) => !prev);
+              } else {
+                onSave();
+              }
+            }}
             className="
               w-[90px] h-[35px]
               rounded-[3px] text-[#294393] text-[18px] font-semibold
@@ -360,12 +373,12 @@ export default function GraffitiToolbar({
             aria-expanded={showSaveMenu}
           >
             <img
-              src="/icons/download_b.svg"
+              src="/icons/download_black.svg"
               alt="download"
               className="w-[18px] h-[18px] block group-hover:hidden"
             />
             <img
-              src="/icons/download.svg"
+              src="/icons/download_white.svg"
               alt="download hover"
               className="w-[18px] h-[18px] hidden group-hover:block"
             />

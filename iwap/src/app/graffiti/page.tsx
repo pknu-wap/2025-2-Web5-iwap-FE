@@ -8,24 +8,13 @@ import {
   type CSSProperties,
 } from "react";
 import PageHeader from "@/components/ui/PageHeader";
-import GraffitiToolbar from "@/components/graffiti/GraffitiToolbar";
+import GraffitiToolbar, { ERASER_TOKEN } from "@/components/graffiti/GraffitiToolbar";
 import GraffitiToolbarMobile from "@/components/graffiti/GraffitiToolbarMobile";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
-import { ERASER_TOKEN } from "@/components/graffiti/constants";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 type RunningMode = "IMAGE" | "VIDEO";
 type Landmark = { x: number; y: number; z: number };
-
-/* ---------------- 배경 스타일 (예전 Graffiti 스타일) ---------------- */
-const pageBackgroundStyle = {
-  backgroundImage: `
-    linear-gradient(to bottom, rgba(13, 17, 19, 0), #090223),
-    url('/images/instrument_background.jpg')
-  `,
-  backgroundSize: "cover",
-  backgroundPosition: "center",
-  backgroundAttachment: "fixed",
-};
 
 /* ---------------- 공통 유틸 ---------------- */
 function dist3(a: Landmark, b: Landmark) {
@@ -174,6 +163,7 @@ function detectGesture(hands: Landmark[][]): Gesture {
 const COLOR_PALETTE = ["#FA4051", "#FDD047","#2FB665", "#FFFFFF", "#000000"];
 
 export default function HandLandmarkerPage() {
+  const { theme } = useTheme();
   const [isReady, setIsReady] = useState(false);
   const [isWebcamRunning, setIsWebcamRunning] = useState(false);
   const [facingMode, setFacingMode] = useState<"user" | "environment">("user");
@@ -293,6 +283,16 @@ export default function HandLandmarkerPage() {
     }, 450);
     return () => window.clearTimeout(finishTimer);
   }, [overlayExpanding]);
+
+  // Auto-dismiss camera prompt after 3 seconds
+  useEffect(() => {
+    if (showCameraPrompt) {
+      const timer = setTimeout(() => {
+        handleIntroReady();
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [showCameraPrompt, handleIntroReady]);
 
   const handleFingerAnimationComplete = useCallback(() => {
     if (!introFinished || fingerAnimationDone) return;
@@ -960,9 +960,19 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
     void startWebcam(facingMode);
   }, [facingMode, isReady, isWebcamRunning, startWebcam]);
 
+  /* ---------------- 배경 스타일 ---------------- */
+  const pageBackgroundStyle = {
+    backgroundImage: theme === 'dark'
+      ? `linear-gradient(to bottom, rgba(16, 6, 70, 0), rgba(16, 6, 70, 0.5)), url('/images/bg-dark/graffiti_dark.webp')`
+      : `linear-gradient(to bottom, rgba(16, 6, 70, 0), rgba(16, 6, 70, 0.5)), url('/images/bg-light/graffiti_light.webp')`,
+    backgroundSize: "cover",
+    backgroundPosition: "center",
+    backgroundAttachment: "fixed",
+  };
+
   /* ---------------- JSX (예전 Graffiti 디자인 + 새 기능) ---------------- */
   return (
-    <div className="relative w-full h-dvh text-slate-50" style={pageBackgroundStyle}>
+    <div className={`relative w-full h-dvh ${theme === 'dark' ? 'text-slate-50' : 'text-black'}`} style={pageBackgroundStyle}>
       <ProjectIntroModal projects={["graffiti"]} open={showIntro} onClose={handleModalClose} />
       {/* 모바일 가로 전용 헤더 */}
       {!showIntro && isMobileLandscape && (
@@ -983,6 +993,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
               isAbsolute={false}
               titleClassName="text-[22px] font-semibold"
               subtitleClassName="text-[11px]"
+              darkBackground={theme === 'dark'}
             />
           </div>
         </div>
@@ -1001,6 +1012,7 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                       padding="p-0"
                       titleClassName="-translate-x-[10px]"
                       subtitleClassName="-translate-x-[10px]"
+                      darkBackground={theme === 'dark'}
                     />
                   </div>
                 </div>
@@ -1025,20 +1037,20 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
               <button
                 type="button"
                 onClick={handleIntroReady}
-                className="
+                className={`
                   pointer-events-auto
                   w-[275px] h-[100px]
                   md:w-[500px] md:h-[100px]
                   rounded-[84px]
                   border border-white
                   bg-white/60 backdrop-blur-[4px]
-                  shadow-[0_0_50px_20px_rgba(0,0,0,0.25)]
                   flex flex-col items-center justify-center
                   text-center
                   cursor-pointer
                   transition
                   focus-visible:outline focus-visible:outline-2 focus-visible:outline-white
-                "
+                  animate-shadow-pulse
+                `}
               >
                 <span className="hidden md:block text-black text-[20px]">
                   손동작 인식을 위해 카메라 접근을 허용해주세요.
@@ -1077,12 +1089,12 @@ smoothPointRef.current = newSmoothPoints; // ← 추가
                   <div className="relative w-[200px] h-[180px] flex items-center justify-center">
                     <div className="relative w-full h-full">
                       <img
-                        src="/icons/Vector1.png"
+                        src="/icons/vector_1.png"
                         alt="Hand shape 1"
                         className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_0_4.6px_#fff] pointer-events-none -translate-x-[30px] translate-y-[8px] vector-highlight"
                       />
                       <img
-                        src="/icons/Vector2.png"
+                        src="/icons/vector_2.png"
                         alt="Hand shape 2"
                         className="absolute inset-0 w-full h-full object-contain drop-shadow-[0_0_4.6px_#fff] pointer-events-none translate-x-[120px] -translate-y-[6px] vector-highlight-2"
                       />

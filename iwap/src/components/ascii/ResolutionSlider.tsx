@@ -53,7 +53,7 @@ export default function ResolutionSlider({
       className={`relative flex-1 h-8 flex items-center touch-none ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
     >
       <div className="relative w-full h-1.5">
-        <div className="w-full h-full bg-zinc-400 rounded-full" />
+        <div className="w-full h-full bg-white/30 rounded-full" />
         <div
           className="absolute top-0 left-0 h-full bg-white rounded-full"
           style={{ width: `${progressPercent}%` }}

@@ -4,6 +4,7 @@ import Image from 'next/image';
 import React, { useRef, useEffect, useState, useMemo, useCallback } from 'react';
 import PageHeader from '@/components/ui/PageHeader';
 import ProgressBar from './ProgressBar';
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 type Point = [number, number];
 
@@ -38,6 +39,7 @@ const PauseIcon = () => (
 
 // --- MAIN COMPONENT ---
 export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, nailCount }: StringArtDisplayProps) {
+  const { theme } = useTheme();
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameId = useRef<number | null>(null);
   
@@ -244,68 +246,79 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
 
   // --- 렌더링 ---
   const backgroundStyle = {
-    backgroundImage: "url('/images/string_background.png')",
+    backgroundImage: theme === 'dark'
+      ? `linear-gradient(to bottom, rgba(98, 144, 153, 0), rgba(98, 144, 153, 0.5)), url('/images/bg-dark/string_dark.webp')`
+      : `linear-gradient(to bottom, rgba(98, 144, 153, 0), rgba(98, 144, 153, 0.5)), url('/images/bg-light/string_light.webp')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
   };
 
   return (
-    <div className="w-full h-full" style={backgroundStyle}>
-      <div className="w-full h-full flex flex-col p-4 sm:p-8">
+    <div className="w-full h-dvh flex items-center justify-center" style={backgroundStyle}>
+      <div 
+        className="flex flex-col w-full p-4 sm:p-8"
+        style={{ 
+            width: 'min(100%, calc(100dvh - 180px))',
+            maxWidth: '600px'
+        }}
+      >
         
-        <div className="flex-1 w-full grid place-items-center overflow-hidden min-h-0">
-          <div className="w-fit">
-            <PageHeader
-              title="Str!ng"
-              subtitle="선들로 이미지를 표현"
-              onClose={onClose}
-              isAbsolute={false}
-              padding="p-0 pb-8"
+        <div className="w-full z-10 mb-2">
+          <PageHeader
+            title="Str!ng"
+            subtitle="선들로 이미지를 표현"
+            onClose={onClose}
+            isAbsolute={false}
+            padding="p-0"
+            darkBackground={theme === 'dark'}
+          />
+        </div>
+
+        <div className="w-full aspect-square relative bg-white p-2 shadow-lg z-0">
+            <canvas
+              ref={canvasRef}
+              width={CANVAS_WIDTH}
+              height={CANVAS_HEIGHT}
+              className="w-full h-full object-contain block"
             />
-            <div className="bg-white p-2 shadow-lg relative">
-              <canvas
-                ref={canvasRef}
+            {overlayImage && colorImageUrl && (
+              <Image
+                src={colorImageUrl}
+                alt="Color Overlay"
                 width={CANVAS_WIDTH}
                 height={CANVAS_HEIGHT}
-                className="max-w-full max-h-full object-contain"
+                className="absolute top-2 left-2 pointer-events-none transition-opacity duration-500"
+                style={{
+                  opacity: isComplete ? 1 : 0,
+                  transform: `scale(${overlayScale})`,
+                  mixBlendMode: 'overlay',
+                  width: 'calc(100% - 16px)',
+                  height: 'calc(100% - 16px)',
+                  objectFit: 'contain'
+                }}
               />
-              {overlayImage && colorImageUrl && (
-                <Image
-                  src={colorImageUrl}
-                  alt="Color Overlay"
-                  width={CANVAS_WIDTH}
-                  height={CANVAS_HEIGHT}
-                  className="absolute top-2 left-2 pointer-events-none transition-opacity duration-500"
-                  style={{
-                    opacity: isComplete ? 1 : 0,
-                    transform: `scale(${overlayScale})`,
-                    mixBlendMode: 'overlay',
-                  }}
-                />
-              )}
-            </div>
-          </div>
+            )}
         </div>
 
         {/* --- 애니메이션 컨트롤러 --- */}
-        <div className="shrink-0 w-full max-w-3xl mx-auto mt-4 flex flex-col items-center justify-center gap-y-2">
-          <div className="w-full h-[62px] flex items-center justify-center -translate-x-4 gap-x-4 px-4 z-20">
+        <div className="shrink-0 w-full mt-4 flex flex-col items-center justify-center gap-y-2 z-20">
+          <div className="w-full h-[62px] flex items-center justify-center gap-x-4 px-0">
               <button 
                 onClick={handlePlayPause} 
-                className="p-2 rounded-full text-white hover:bg-white/20 transition-colors"
+                className="p-2 rounded-full text-white hover:bg-white/20 transition-colors shrink-0"
                 aria-label={isPlaying ? "Pause" : "Play"}
               >
                 {isPlaying ? <PauseIcon /> : <PlayIcon />}
               </button>
               
-              <div className="flex-1 flex items-center relative h-full">
-                  <span className="absolute -top-1 left-0 text-white text-sm font-mono select-none">
+              <div className="flex-1 flex items-center relative h-full min-w-0">
+                  <span className="absolute -top-1 left-0 text-white text-sm font-mono">
                       {currentIndex} / {totalCoordinates > 0 ? totalCoordinates - 1 : 0}
                   </span>
 
                   <div 
-                      className="w-3 h-3 bg-white rounded-full z-10 cursor-pointer"
+                      className="w-3 h-3 bg-white rounded-full z-10 cursor-pointer shrink-0"
                       onClick={handleRewindClick}
                   />
 
@@ -321,7 +334,7 @@ export default function StringArtDisplay({ coordinates, onClose, colorImageUrl, 
                   </div>
 
                   <div 
-                      className="w-3 h-3 bg-white rounded-full z-10 cursor-pointer"
+                      className="w-3 h-3 bg-white rounded-full z-10 cursor-pointer shrink-0"
                       onClick={handleFastForwardClick}
                   />
               </div>

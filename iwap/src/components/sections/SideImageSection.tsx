@@ -120,7 +120,7 @@ export default function SideImageSection({
                   style={{ letterSpacing: "-1.4px" }}
                 >
                   <span>{imageOverlay}</span>
-                  <img src="/icons/rightrvector.svg" alt="" className="w-[96px] h-[22px] sm:w-[130px] sm:h-[28px] md:w-[160px] md:h-[32px]" />
+                  <img src="/icons/right_vector_white.svg" alt="" className="w-[96px] h-[22px] sm:w-[130px] sm:h-[28px] md:w-[160px] md:h-[32px]" />
                 </div>
               </div>
             )}

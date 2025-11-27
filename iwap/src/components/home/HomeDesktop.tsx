@@ -41,8 +41,9 @@ export default function HomeDesktop({ isDarkTheme }: HomeDesktopProps) {
 
     updateRect();
     window.addEventListener("resize", updateRect);
+    
     return () => window.removeEventListener("resize", updateRect);
-  }, []);
+  }, [router]);
 
   const handleLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
@@ -63,16 +64,16 @@ export default function HomeDesktop({ isDarkTheme }: HomeDesktopProps) {
   };
 
   return (
-    <main className="relative w-full h-dvh overflow-hidden select-none">
+    <main className="relative w-full h-dvh overflow-hidden">
       <Image
-        src="/images/home_background.jpg"
+        src="/images/home/home_light.webp"
         alt="Background Light"
         fill
         priority
         className={`object-cover ${isDarkTheme ? "hidden" : "block"}`}
       />
       <Image
-        src="/images/home-black_background.jpg"
+        src="/images/home/home_dark.webp"
         alt="Background Dark"
         fill
         priority

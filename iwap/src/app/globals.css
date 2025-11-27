@@ -1,18 +1,8 @@
 @import "tailwindcss";
-/* @import "@/styles/lightswind.css"; */
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
-}
-
-.dark {
-  color-scheme: dark;
-}
-
-.dark body {
-  --background: #0a0a0a;
-  --foreground: #ededed;
 }
 
 @theme inline {
@@ -22,16 +12,21 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
   background: var(--background);
   color: var(--foreground);
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea {
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+img {
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 
 .slider-no-scrollbar {
@@ -401,5 +396,21 @@ body {
 
 .graffiti-intro-zoom {
   animation: graffiti-intro-zoom 900ms ease-in-out forwards;
+}
+
+@keyframes shadow-pulse {
+  0% {
+    box-shadow: 0 0 50px 20px rgba(255, 255, 255, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 60px 30px rgba(55, 55, 55, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 50px 20px rgba(255, 255, 255, 0.1);
+  }
+}
+
+.animate-shadow-pulse {
+  animation: shadow-pulse 2s infinite;
 }
 

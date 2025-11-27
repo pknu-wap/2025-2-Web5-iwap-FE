@@ -95,7 +95,7 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
         timerRef.current = null;
       }
     };
-  }, [phase]);
+  }, [phase, router]);
 
   // After the first animation reaches final, keep vertical for ~2s then switch to horizontal
   useEffect(() => {
@@ -360,16 +360,16 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
   };
 
   return (
-    <main className="relative h-dvh w-full select-none overflow-hidden">
+    <main className="relative h-dvh w-full overflow-hidden">
       <Image
-        src="/images/home_background.jpg"
+        src="/images/home/home_light.webp"
         alt="Background Light"
         fill
         priority
         className={`object-cover ${isDarkTheme ? "hidden" : "block"}`}
       />
       <Image
-        src="/images/home-black_background.jpg"
+        src="/images/home/home_dark.webp"
         alt="Background Dark"
         fill
         priority
@@ -379,14 +379,18 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
       <div
         className={`pointer-events-none absolute inset-0 bg-gradient-to-b ${
           isDarkTheme
-            ? "from-transparent via-white/10 to-white/60"
+            ? "from-transparent via-black/10 to-black/60"
             : "from-transparent via-white/15 to-white/70"
         }`}
       />
 
-      {/* Intensified white gradient overlay during fly-out */}
+      {/* Intensified gradient overlay during fly-out */}
       <div
-        className={`pointer-events-none absolute inset-0 bg-gradient-to-b from-white/20 via-white/100 to-white transition-opacity duration-700 ${
+        className={`pointer-events-none absolute inset-0 bg-gradient-to-b ${
+          isDarkTheme
+            ? "from-black/20 via-black/100 to-black"
+            : "from-white/20 via-white/100 to-white"
+        } transition-opacity duration-700 ${
           leaving ? "opacity-100" : "opacity-0"
         }`}
       />

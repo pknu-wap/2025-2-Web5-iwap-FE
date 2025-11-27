@@ -23,11 +23,11 @@ export default function CloseButton({
   darkBackground = true, // 기본값: 어두운 배경(즉, 흰색 아이콘)
 }: CloseButtonProps) {
   const router = useRouter();
-  const [iconSrc, setIconSrc] = useState("/icons/close.svg");
+  const [iconSrc, setIconSrc] = useState("/icons/close_white.svg");
 
   useEffect(() => {
     // 배경이 밝으면 검정색 아이콘으로 전환
-    setIconSrc(darkBackground ? "/icons/close.svg" : "/icons/close_black.svg");
+    setIconSrc(darkBackground ? "/icons/close_white.svg" : "/icons/close_black.svg");
   }, [darkBackground]);
 
   const handleClick = () => {

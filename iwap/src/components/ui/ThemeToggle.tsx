@@ -9,32 +9,32 @@ export default function ThemeToggle({
   className?: string;
 }) {
   const { theme, toggleTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => setMounted(true), []);
 
   const isDark = theme === "dark";
 
-  const knobPositionClass =
-    mounted && isDark ? "translate-x-8" : "translate-x-0";
+  const knobPositionClass = isDark ? "translate-x-8" : "translate-x-0";
 
   return (
     <button
       type="button"
       onClick={toggleTheme}
-      className={`relative h-8 w-16 rounded-full bg-black/5 transition-colors duration-300 hover:bg-black/10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black dark:border-white/20 dark:bg-white/10 dark:hover:bg-white/20 ${className}`}
+      className={`relative h-8 w-16 rounded-full transition-colors duration-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black ${
+        isDark
+          ? "border-white/20 bg-white/10 hover:bg-white/20"
+          : "bg-black/5 hover:bg-black/10"
+      } ${className}`}
       aria-label="Toggle dark mode"
     >
       <span
-        className={`absolute top-1 left-1 inline-flex h-6 w-6 items-center justify-center rounded-full bg-white shadow transition-transform duration-300 dark:bg-neutral-500 ${knobPositionClass}`}
+        className={`absolute top-1 left-1 inline-flex h-6 w-6 items-center justify-center rounded-full shadow transition-transform duration-300 ${
+          isDark ? "bg-neutral-500" : "bg-white"
+        } ${knobPositionClass}`}
       >
-        {mounted ? (
-          isDark ? (
-            <MoonIcon className="h-4 w-4 text-yellow-300" />
-          ) : (
-            <SunIcon className="h-4 w-4 text-yellow-500" />
-          )
-        ) : null}
+        {isDark ? (
+          <MoonIcon className="h-4 w-4 text-yellow-300" />
+        ) : (
+          <SunIcon className="h-4 w-4 text-yellow-500" />
+        )}
       </span>
     </button>
   );

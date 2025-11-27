@@ -2,13 +2,14 @@
 
 import type { ReactNode } from "react";
 import SideImageSection from "./SideImageSection";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 export type ProjectKey = "inside" | "this-is-for-u" | "piano" | "ascii" | "string" | "graffiti" | "facial";
 
 const SECTION_DATA: Record<
   ProjectKey,
   {
-    imageSrc: string;
+    imageSrc: { light: string; dark: string };
     imageAlt: string;
     imageOverlayLeft: string;
     overlayLeftClassName: string;
@@ -25,7 +26,10 @@ const SECTION_DATA: Record<
   }
 > = {
   inside: {
-    imageSrc: "/images/inside_background.jpg",
+    imageSrc: {
+      light: "/images/bg-light/inside_light.webp",
+      dark: "/images/bg-dark/inside_dark.webp",
+    },
     imageAlt: "!nside background",
     imageOverlayLeft: "!nside",
     overlayLeftClassName: "-translate-x-[35px] -translate-y-[35px] md:!-translate-x-[62px] md:-translate-y-[95px]",
@@ -47,9 +51,9 @@ const SECTION_DATA: Record<
         <span>기계가 세상을 ‘본다’는 것이 무엇인지 탐구합니다.</span>
         <br />
         <br />
-        <span>사용자는 화면 위에서 숫자를 그리면, 인공지능의 내부 feature</span>
+        <span>사용자는 화면 위에서 숫자를 그리면, 인공지능의 내부</span>
         <br />
-        <span> map이 실시간으로 나타나며</span>
+        <span>feature map이 실시간으로 나타나며</span>
         <br />
         <span>기계의 시각적 사고 과정을 체험할 수 있습니다.</span>
       </>
@@ -66,16 +70,19 @@ const SECTION_DATA: Record<
         <span>기계가 세상을 ‘본다’는 것이 무엇인지 탐구합니다.</span>
         <br />
         <br />
-        <span>사용자는 화면 위에서 숫자를 그리면,</span>
+        <span>사용자는 화면 위에서 숫자를 그리면, 인공지능의</span>
         <br />
-        <span> 인공지능의 내부 featuremap이 실시간으로 나타나며</span>
+        <span>내부 feature map이 실시간으로 나타나며</span>
         <br />
         <span>기계의 시각적 사고 과정을 체험할 수 있습니다.</span>
       </>
     ),
   },
   "this-is-for-u": {
-    imageSrc: "/images/this-is-for-u_background.jpg",
+    imageSrc: {
+      light: "/images/bg-light/this-is-for-u_light.webp",
+      dark: "/images/bg-dark/this-is-for-u_dark.webp",
+    },
     imageAlt: "This-is-for-u background",
     imageOverlayLeft: "Th!s !s for u",
     overlayLeftClassName: "md:-translate-y-[28px] md:-translate-x-[147px] -translate-y-[6px] -translate-x-[82px]",
@@ -123,7 +130,10 @@ const SECTION_DATA: Record<
     ),
   },
   piano: {
-    imageSrc: "/images/Piano_Landing.png",
+    imageSrc: {
+      light: "/images/bg-light/piano_light.webp",
+      dark: "/images/bg-dark/piano_dark.webp",
+    },
     imageAlt: "Piano background",
     imageOverlayLeft: "P!ano",
     overlayLeftClassName: "md:-translate-x-14 md:-translate-y-[95px] -translate-x-[30px] -translate-y-[35px]",
@@ -175,16 +185,19 @@ const SECTION_DATA: Record<
     ),
   },
   ascii: {
-    imageSrc: "/images/ascii_background.jpg",
+    imageSrc: {
+      light: "/images/bg-light/ascii_light.webp",
+      dark: "/images/bg-dark/ascii_dark.webp",
+    },
     imageAlt: "ascii background",
-    imageOverlayLeft: "Asci!",
+    imageOverlayLeft: "ASCi!",
     overlayLeftClassName: "md:-translate-x-[46px] md:-translate-y-[80px] -translate-x-[26px] -translate-y-[40px]",
     imageOverlayRight: "04",
     side: "left",
     badgeText: "Vision",
     textAlign: "left",
     badgeAlign: "left",
-    heading: "04  Asci!",
+    heading: "04  ASCi!",
     body: (
       <>
         <span className="relative inline-block after:content-[''] after:absolute after:inset-x-0 after:bottom-0 after:h-[22px] after:bg-[rgba(157,157,197,0.39)] after:-z-10 relative z-10">
@@ -219,7 +232,10 @@ const SECTION_DATA: Record<
     ),
   },
   string: {
-    imageSrc: "/images/string_background.jpg",
+    imageSrc: {
+      light: "/images/bg-light/string_light.webp",
+      dark: "/images/bg-dark/string_dark.webp",
+    },
     imageAlt: "string background",
     imageOverlayLeft: "Str!ng",
     overlayLeftClassName: "md:-translate-x-14 md:-translate-y-[75px] -translate-x-[32px] -translate-y-[35px]",
@@ -264,7 +280,10 @@ const SECTION_DATA: Record<
     ),
   },
   graffiti: {
-    imageSrc: "/images/instrument_background.jpg",
+    imageSrc: {
+      light: "/images/bg-light/graffiti_light.webp",
+      dark: "/images/bg-dark/graffiti_dark.webp",
+    },
     imageAlt: "graffiti background",
     imageOverlayLeft: "Graff!ti",
     overlayLeftClassName: "-translate-y-[40px] -translate-x-[40px] md:-translate-y-[100px] md:-translate-x-[75px]",
@@ -298,7 +317,10 @@ const SECTION_DATA: Record<
     ),
   },
   facial: {
-    imageSrc: "/images/string_background.jpg",
+    imageSrc: {
+      light: "/images/bg-light/facial_light.webp",
+      dark: "/images/bg-dark/facial_dark.webp",
+    },
     imageAlt: "facial background",
     imageOverlayLeft: "Fac!al",
     overlayLeftClassName: "md:-translate-x-[46px] md:-translate-y-[80px] -translate-x-[26px] -translate-y-[40px]",
@@ -351,6 +373,7 @@ interface ProjectIntroSectionsProps {
 }
 
 export default function ProjectIntroSections({ projects, className = "" }: ProjectIntroSectionsProps) {
+  const { theme } = useTheme();
   return (
     <div className={className}>
       {projects.map((key) => {
@@ -359,7 +382,7 @@ export default function ProjectIntroSections({ projects, className = "" }: Proje
           <SideImageSection
             key={key}
             id={key}
-            imageSrc={section.imageSrc}
+            imageSrc={section.imageSrc[theme]}
             imageAlt={section.imageAlt}
             imageOverlay="시작하기"
             imageOverlayLeft={section.imageOverlayLeft}
@@ -394,7 +417,7 @@ export function ProjectIntroModal({
   if (!open) return null;
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm px-4 text-white"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4 text-white"
       onClick={onClose}
     >
       <div

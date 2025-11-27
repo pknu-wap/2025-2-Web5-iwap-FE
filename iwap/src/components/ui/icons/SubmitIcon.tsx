@@ -2,5 +2,5 @@
 import Image from 'next/image';
 
 export default function SubmitIcon() {
-  return <Image src="/icons/submit.svg" alt="Submit" width={24} height={24} />;
+  return <Image src="/icons/submit_black.svg" alt="Submit" width={24} height={24} />;
 }

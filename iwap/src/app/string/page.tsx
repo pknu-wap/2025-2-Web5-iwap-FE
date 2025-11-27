@@ -8,10 +8,12 @@ import StringArtDisplay from "@/components/string/StringArtDisplay";
 import UndoIcon from "@/components/ui/icons/UndoIcon";
 import SubmitIcon from "@/components/ui/icons/SubmitIcon";
 import { ProjectIntroModal } from "@/components/sections/ProjectIntroSections";
+import { useTheme } from "@/components/theme/ThemeProvider";
 
 import { processImageToStringArt } from "@/components/string/StringArtProcessor";
 
 export default function StringArtPage() {
+  const { theme } = useTheme();
   const [hasMounted, setHasMounted] = useState(false);
   const [view, setView] = useState<'upload' | 'loading' | 'visualize'>('upload');
   const [error, setError] = useState<string | null>(null);
@@ -24,8 +26,37 @@ export default function StringArtPage() {
   const [nailCount, setNailCount] = useState<number>(0);
   const [isCameraOpen, setIsCameraOpen] = useState(false);
   const imageUploaderRef = useRef<ImageUploaderHandles>(null);
+  const [loadingMessage, setLoadingMessage] = useState("변환 중... (약 2분 소요)");
 
   useEffect(() => { setHasMounted(true); }, []);
+
+  useEffect(() => {
+    if (view !== 'loading') return;
+
+    let elapsed = 0;
+    let currentTimeText = "약 2분 소요";
+    setLoadingMessage(`변환 중 (${currentTimeText}).`);
+
+    const interval = setInterval(() => {
+      elapsed += 1;
+      const remaining = 120 - elapsed;
+
+      if (remaining === 90) {
+        currentTimeText = "약 1분 30초 소요";
+      } else if (remaining === 60) {
+        currentTimeText = "약 1분 소요";
+      } else if (remaining === 30) {
+        currentTimeText = "약 30초 소요";
+      } else if (remaining === 15) {
+        currentTimeText = "곧 완료됩니다";
+      }
+
+      const dots = ".".repeat((elapsed % 3) + 1);
+      setLoadingMessage(`변환 중 (${currentTimeText})${dots}`);
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [view]);
 
   const handleConversion = useCallback(async () => {
     if (!sourceImage) return;
@@ -64,8 +95,11 @@ export default function StringArtPage() {
     }
   }, [previewUrl, colorImageUrl]);
 
+  // --- Styles ---
   const pageBackgroundStyle = {
-    backgroundImage: `linear-gradient(to bottom, rgba(13, 17, 19, 0), #98B9C2), url('/images/string_background.jpg')`,
+    backgroundImage: theme === 'dark'
+      ? `linear-gradient(to bottom, rgba(98, 144, 153, 0), rgba(98, 144, 153, 0.5)), url('/images/bg-dark/string_dark.webp')`
+      : `linear-gradient(to bottom, rgba(98, 144, 153, 0), rgba(98, 144, 153, 0.5)), url('/images/bg-light/string_light.webp')`,
     backgroundSize: 'cover',
     backgroundPosition: 'center',
     backgroundAttachment: 'fixed',
@@ -75,7 +109,37 @@ export default function StringArtPage() {
 
   const renderContent = () => {
     if (view === 'loading') {
-      return <LoadingIndicator text="변환 중..." />;
+      return (
+        <div className="relative w-full h-full">
+          <LoadingIndicator text={loadingMessage} className={theme === 'dark' ? 'text-white' : 'text-zinc-900'} />
+          <div className="absolute inset-0 z-30 flex items-center justify-center pointer-events-none">
+            <button
+              type="button"
+              onClick={() => window.open('/slides', '_blank')}
+              className={`
+                pointer-events-auto
+                w-auto h-auto
+                px-6 py-3
+                md:px-8 md:py-4
+                rounded-full
+                border border-gray-600
+                bg-white/30 backdrop-blur-[4px]
+                flex flex-col items-center justify-center
+                text-center
+                cursor-pointer
+                transition
+                focus-visible:outline focus-visible:outline-2 focus-visible:outline-white
+                animate-shadow-pulse
+                mt-32
+              `}
+            >
+              <span className="text-black text-[16px] md:text-[20px] font-semibold">
+                다른 프로젝트 탐색하고 오기
+              </span>
+            </button>
+          </div>
+        </div>
+      );
     }
     // 'upload' view
     return (
@@ -118,8 +182,6 @@ export default function StringArtPage() {
             id="string-art-uploader"
             onFileSelect={handleFileSelect}
             previewUrl={previewUrl}
-            title="이미지 선택"
-            subtitle="파일을 드래그하거나 클릭하여 선택"
             onCameraStateChange={setIsCameraOpen}
           />
         </div>
@@ -134,7 +196,7 @@ export default function StringArtPage() {
         open={showIntro}
         onClose={() => setShowIntro(false)}
       />
-      <div className="relative w-full h-dvh md:h-[calc(100dvh-60px)]" style={pageBackgroundStyle}>
+      <div className={`relative w-full h-dvh md:h-[calc(100dvh-60px)] ${theme === 'dark' ? 'text-white' : 'text-black'}`} style={pageBackgroundStyle}>
       {error && (
         <p className="absolute top-4 left-1/2 -translate-x-1/2 text-red-500 bg-black/50 p-2 rounded z-30 text-center">
           {error}
@@ -154,10 +216,19 @@ export default function StringArtPage() {
       ) : (
         <div className="w-full h-full flex translate-x-5 md:translate-x-0 items-center justify-center p-4 sm:p-8">
           <div className="flex flex-col w-full max-w-lg max-h-full aspect-5/6 relative">
-            <div className="w-[90%] md:w-full h-[90%] md:h-full pt-[100px]">
-              <PageHeader title="Str!ng" subtitle="선들로 이미지를 표현" goBack={true} padding='p-0' closeButtonClassName="-translate-x-6 md:translate-x-0"/>
+            <div className="w-[90%] md:w-full h-[90%] md:h-full pt-[100px] relative">
+              <PageHeader 
+                title="Str!ng" 
+                subtitle="선들로 이미지를 표현" 
+                goBack={true} 
+                padding='p-0' 
+                darkBackground={theme === 'dark'}
+              />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
-                <h3 className="-translate-y-3 -translate-x-3 md:translate-y-0 md:translate-x-0 font-semibold text-white shrink-0" style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}>
+                <h3 
+                  className="-translate-y-3 -translate-x-3 md:translate-y-0 md:translate-x-0 font-semibold shrink-0" 
+                  style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}
+                >
                   이미지를 업로드하세요
                 </h3>
                 <div className="relative min-h-0 scale-[1.1] md:scale-[1]">
