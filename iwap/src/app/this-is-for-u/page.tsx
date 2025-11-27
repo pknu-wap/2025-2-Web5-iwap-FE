@@ -685,6 +685,13 @@ const handleTextToFourier = useCallback(async () => {
   textCanvasMessage,
 ]);
 
+  useEffect(() => {
+    if (phase === "back-fourier" && backController) {
+      // 캔버스가 표시된 후 실제 크기에 맞게 리사이즈
+      setTimeout(() => backController.resize(), 0);
+    }
+  }, [phase, backController]);
+
   const handleGoToBackside = useCallback(() => {
     handleConfirmSketches();
     handleStop();
@@ -1007,7 +1014,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
                     style={{ backgroundColor: styles.backgroundColor }}
                   />
                   {isPreview && (
-  <div className="absolute inset-0 z-[2000] pointer-events-auto">
+  <div className="absolute inset-0 z-[100] pointer-events-auto">
 
     {previewSide === "front" ? (
       <FrontPreview
@@ -1053,11 +1060,12 @@ textAlpha={styles.pathAlpha}
     <button
       onClick={handleSendPostcard}
       className="
-        absolute bottom-2 left-2
-        px-4 py-2 rounded-full
-        bg-emerald-500 text-white
-        border border-white/40
-        hover:bg-emerald-600
+        text-[10px]
+    absolute bottom-2 left-2
+    px-2 py-1 rounded-full
+    bg-emerald-500 text-white
+    border border-white/40
+    hover:bg-emerald-200
       "
     >
       메일로 보내기
@@ -1112,7 +1120,7 @@ textAlpha={styles.pathAlpha}
   // phase === "preview" ||
   phase === "back-fourier") && (
   <div
-  className="flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-xs text-slate-200 z-90 translate-y-[32px] md:translate-y-[52px]"
+  className="z-30 flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-xs text-slate-200 z-90 translate-y-[32px] md:translate-y-[52px]"
 >
 
     <button
@@ -1161,7 +1169,7 @@ textAlpha={styles.pathAlpha}
     </div>
 
     {/* 모바일 */}
-    <div className="block md:hidden w-full -translate-x-[8px] translate-y-[90px]">
+    <div className="block md:hidden w-full -translate-x-[8px] translate-y-[90px] z-[100]">
       <GraffitiToolbarMobile {...toolbarProps} />
     </div>
   </>

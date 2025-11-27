@@ -35,6 +35,7 @@ export type FourierSketchController = {
     pathWidth: number;
     startDelay: number;
   }[];
+  resize: () => void;
   cleanup: () => void;
 };
 
@@ -73,6 +74,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
   ) => void = () => {};
   let getFourierCoefficientsFn: () => FourierCoefficient[][] = () => [];
   let getOriginalSketchesFn: FourierSketchController["getOriginalSketches"] = () => [];
+  let resizeFn: () => void = () => {};
 
   const controller: FourierSketchController = {
     updateStyles,
@@ -94,6 +96,9 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
     },
     getFourierCoefficients: () => getFourierCoefficientsFn(),
     getOriginalSketches: () => getOriginalSketchesFn(),
+    resize: () => {
+      resizeFn();
+    },
     cleanup() {
       isCleanedUp = true;
       if (instance) {
@@ -411,11 +416,14 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         p.noFill();
       };
 
-      p.windowResized = () => {
+      const handleResize = () => {
         const { width: w, height: h } = getCanvasSize();
         p.resizeCanvas(w, h);
         p.background(styles.backgroundColor ?? "#000000");
       };
+
+      p.windowResized = handleResize;
+      resizeFn = handleResize;
 
       p.mousePressed = () => {
         if (!isMouseInsideCanvas(p)) return;

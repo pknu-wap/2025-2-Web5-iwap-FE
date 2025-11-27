@@ -210,7 +210,7 @@ export default function GraffitiToolbar({
                 backdrop-blur-[4px]
                 px-4 py-3
                 space-y-3
-                z-[80]
+                z-[999]
               "
             >
               <div className="flex items-center gap-2">
