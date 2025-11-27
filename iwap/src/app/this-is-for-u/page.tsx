@@ -122,6 +122,8 @@ const [phase, setPhase] = useState<Phase>("front-draw");
   const [backPreviewPng, setBackPreviewPng] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [sendStage, setSendStage] = useState<"idle" | "insert" | "closing" | "closed">("idle");
+  const [isMailSending, setIsMailSending] = useState(false);
+  const [lastSentTime, setLastSentTime] = useState<number | null>(null);
   const isBackside = phase === "back-write" || phase === "back-fourier";
   const isPreview = phase === "preview";
   const [previewSide, setPreviewSide] = useState<"front" | "back">("front");
@@ -775,6 +777,17 @@ const handleClosePreview = () => {
   }
 };
 const handleSendPostcard = async () => {
+  if (isMailSending) {
+    alert("메일 전송이 이미 진행 중입니다.");
+    return;
+  }
+
+  if (lastSentTime && Date.now() - lastSentTime < 30000) {
+    const remaining = Math.ceil((30000 - (Date.now() - lastSentTime)) / 1000);
+    alert(`메일을 다시 보내려면 ${remaining}초 더 기다려주세요.`);
+    return;
+  }
+
   const frontCanvas = frontContainerRef.current?.querySelector("canvas");
   const backCanvas = backContainerRef.current?.querySelector("canvas");
   const errors: string[] = [];
@@ -802,6 +815,8 @@ const handleSendPostcard = async () => {
     alert(`다음 문제를 해결해주세요:\n- ${errors.join("\n- ")}`);
     return;
   }
+
+  setIsMailSending(true);
 
   // 애니메이션을 재생 상태로 만들어야 Fourier가 움직임
   frontController?.startPlayback();
@@ -850,10 +865,12 @@ const handleSendPostcard = async () => {
     }
 
     alert("메일 전송 완료!");
-
+    setLastSentTime(Date.now());
   } catch (err) {
     console.error(err);
     alert("메일 전송 중 오류");
+  } finally {
+    setIsMailSending(false);
   }
 };
 
