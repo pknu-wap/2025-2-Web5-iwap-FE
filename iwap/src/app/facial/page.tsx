@@ -31,7 +31,7 @@ export default function FacialPage() {
         open={showIntro}
         onClose={() => setShowIntro(false)}
       />
-      <div className="w-full h-full flex translate-x-5 md:translate-x-0 items-center justify-center p-4 sm:p-8 overflow-y-auto">
+      <div className="w-full h-full flex translate-x-5 md:translate-x-0 items-center justify-center p-4 sm:p-8 overflow-hidden">
         <div className="flex flex-col w-full max-w-lg relative min-h-0">
           <div className="w-[90%] md:w-full pt-0 flex flex-col gap-4">
             <PageHeader

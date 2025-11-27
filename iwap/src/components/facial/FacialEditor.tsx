@@ -74,8 +74,8 @@ export default function FacialEditor() {
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-center relative gap-6">
-      <div className="relative w-full aspect-square flex items-center justify-center">
+    <div className="w-full flex flex-col items-center justify-center relative gap-2 md:gap-6">
+      <div className="relative w-full max-h-[calc(100dvh-320px)] aspect-square flex items-center justify-center">
         {isInitialLoading && !processedImageUrl ? (
           <LoadingIndicator text="이미지 준비 중..." className={theme === 'dark' ? 'text-white' : 'text-zinc-900'} />
         ) : processedImageUrl ? (
