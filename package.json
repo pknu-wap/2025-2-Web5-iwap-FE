@@ -4,7 +4,6 @@
     "@types/json-schema": "^7.0.15"
   },
   "dependencies": {
-    "framer-motion": "^12.23.24",
-    "lamejs": "^1.2.1"
+    "framer-motion": "^12.23.24"
   }
 }

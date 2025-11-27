@@ -38,7 +38,6 @@
     "plotly.js": "^3.1.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "react-plotly.js": "^2.6.0",
     "react-resize-detector": "^12.3.0",
     "siriwave": "^2.4.0",
     "svg-pathdata": "^8.0.0",
