@@ -1,53 +1,44 @@
 import { useEffect, useRef, useState } from "react";
+// @ts-ignore
+import * as lamejs from 'lamejs';
 
-// Helper to write string to DataView
-function writeString(view: DataView, offset: number, string: string) {
-  for (let i = 0; i < string.length; i++) {
-    view.setUint8(offset + i, string.charCodeAt(i));
-  }
-}
-
-function floatTo16BitPCM(output: DataView, offset: number, input: Float32Array) {
-  for (let i = 0; i < input.length; i++, offset += 2) {
+function floatTo16BitPCM(input: Float32Array) {
+  const output = new Int16Array(input.length);
+  for (let i = 0; i < input.length; i++) {
     const s = Math.max(-1, Math.min(1, input[i]));
-    output.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+    output[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
   }
+  return output;
 }
 
-function encodeWAV(samples: Float32Array, sampleRate: number) {
-  const buffer = new ArrayBuffer(44 + samples.length * 2);
-  const view = new DataView(buffer);
+async function resampleToMono(audioBuffer: AudioBuffer, targetSampleRate: number): Promise<AudioBuffer> {
+    const offlineContext = new OfflineAudioContext(1, audioBuffer.duration * targetSampleRate, targetSampleRate);
+    const source = offlineContext.createBufferSource();
+    source.buffer = audioBuffer;
+    source.connect(offlineContext.destination);
+    source.start(0);
+    return offlineContext.startRendering();
+}
 
-  /* RIFF identifier */
-  writeString(view, 0, 'RIFF');
-  /* RIFF chunk length */
-  view.setUint32(4, 36 + samples.length * 2, true);
-  /* RIFF type */
-  writeString(view, 8, 'WAVE');
-  /* format chunk identifier */
-  writeString(view, 12, 'fmt ');
-  /* format chunk length */
-  view.setUint32(16, 16, true);
-  /* sample format (raw) */
-  view.setUint16(20, 1, true);
-  /* channel count */
-  view.setUint16(22, 1, true);
-  /* sample rate */
-  view.setUint32(24, sampleRate, true);
-  /* byte rate (sample rate * block align) */
-  view.setUint32(28, sampleRate * 2, true);
-  /* block align (channel count * bytes per sample) */
-  view.setUint16(32, 2, true);
-  /* bits per sample */
-  view.setUint16(34, 16, true);
-  /* data chunk identifier */
-  writeString(view, 36, 'data');
-  /* data chunk length */
-  view.setUint32(40, samples.length * 2, true);
+function encodeMP3(samples: Int16Array, sampleRate: number) {
+  const buffer: Int8Array[] = [];
+  const mp3encoder = new lamejs.Mp3Encoder(1, sampleRate, 64); // Mono, sampleRate, 64kbps
+  const blockSize = 1152;
 
-  floatTo16BitPCM(view, 44, samples);
+  for (let i = 0; i < samples.length; i += blockSize) {
+    const sampleChunk = samples.subarray(i, i + blockSize);
+    const mp3buf = mp3encoder.encodeBuffer(sampleChunk);
+    if (mp3buf.length > 0) {
+      buffer.push(mp3buf);
+    }
+  }
 
-  return new Blob([view], { type: "audio/wav" });
+  const mp3buf = mp3encoder.flush();
+  if (mp3buf.length > 0) {
+    buffer.push(mp3buf);
+  }
+
+  return new Blob(buffer, { type: "audio/mp3" });
 }
 
 export function useRecorder() {
@@ -133,25 +124,30 @@ export function useRecorder() {
         }
 
         try {
-            // Convert to WAV
+            // Convert to MP3
             const arrayBuffer = await blob.arrayBuffer();
             const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
             const audioContext = new AudioContext();
             
             try {
-                const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-                const pcmData = audioBuffer.getChannelData(0);
-                const sampleRate = audioBuffer.sampleRate;
+                const decodedBuffer = await audioContext.decodeAudioData(arrayBuffer);
                 
-                const wavBlob = encodeWAV(pcmData, sampleRate);
-                const wavFile = new File([wavBlob], `voice-${Date.now()}.wav`, { type: "audio/wav" });
+                // Downsample to 22050Hz to reduce load and file size
+                const targetSampleRate = 22050;
+                const resampledBuffer = await resampleToMono(decodedBuffer, targetSampleRate);
                 
-                assignAudioFile(wavFile);
+                const pcmData = resampledBuffer.getChannelData(0);
+                const int16Data = floatTo16BitPCM(pcmData);
+                
+                const mp3Blob = encodeMP3(int16Data, targetSampleRate);
+                const mp3File = new File([mp3Blob], `voice-${Date.now()}.mp3`, { type: "audio/mp3" });
+                
+                assignAudioFile(mp3File);
             } finally {
                 audioContext.close();
             }
         } catch (e) {
-            console.error("WAV conversion failed, falling back to original format", e);
+            console.error("MP3 conversion failed, falling back to original format", e);
             let ext = "webm";
             if (blob.type.includes("mp4")) ext = "mp4";
             else if (blob.type.includes("aac")) ext = "aac";
