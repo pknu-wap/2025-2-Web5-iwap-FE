@@ -133,9 +133,7 @@ export default function PianoBackendManager({
       let downloadFilename = `piano-${downloadBaseName}.mid`;
       const mp3Filename = `piano-${downloadBaseName}.mp3`;
 
-      // Try to fetch MP3 if available
       try {
-        // 백엔드 API 변경: Query param -> Path param
         const mp3Res = await fetch(
           getBackendUrl(`/api/piano/mp3/${encodeURIComponent(taskId)}`)
         );
@@ -161,7 +159,16 @@ export default function PianoBackendManager({
       });
 
       const midi = new Midi(midiArray);
-      await Tone.start();
+      
+      // [수정 포인트] RecorderButton에서 이미 start()를 호출했으므로, 
+      // 여기서는 상태 체크 후 필요시에만 안전하게 호출
+      if (Tone.context.state !== 'running') {
+        try {
+          await Tone.start();
+        } catch (err) {
+          console.warn("BackendManager: Tone.start fallback failed", err);
+        }
+      }
       
       const ctx = Tone.getContext();
       ctx.lookAhead = 0.2; 
@@ -169,6 +176,7 @@ export default function PianoBackendManager({
 
       disposeTransport();
       
+      // MIDI Note Scheduling
       midi.tracks.forEach((track) => {
         track.notes.forEach((note) => {
           const midiNum = note.midi;
@@ -179,13 +187,14 @@ export default function PianoBackendManager({
             if (isCancelled) return;
             if (activeMidiNotes.size < MAX_POLY) {
               activeMidiNotes.add(midiNum);
+              onMidiEvent({ type: "on", note: midiNum });
+              
+              Tone.Transport.scheduleOnce(() => {
+                if (isCancelled) return;
+                activeMidiNotes.delete(midiNum);
+                onMidiEvent({ type: "off", note: midiNum });
+              }, start + duration);
             }
-            onMidiEvent({ type: "on", note: midiNum });
-            Tone.Transport.scheduleOnce(() => {
-              if (isCancelled) return;
-              activeMidiNotes.delete(midiNum);
-              onMidiEvent({ type: "off", note: midiNum });
-            }, start + duration);
           }, start);
         });
       });
@@ -194,7 +203,6 @@ export default function PianoBackendManager({
         (max, track) => Math.max(max, ...track.notes.map((n) => n.time + n.duration)), 0
       );
 
-      // 재생이 끝까지 완료되면 자동으로 멈추고 처음으로 되돌아감
       Tone.Transport.schedule(() => {
         Tone.Transport.stop();
         Tone.Transport.seconds = 0;
@@ -205,7 +213,10 @@ export default function PianoBackendManager({
         duration,
         start: async () => {
           if (isCancelled) return;
-          await Tone.start();
+          // 여기서도 start 체크
+          if (Tone.context.state !== 'running') {
+            await Tone.start().catch(() => {});
+          }
           if (Tone.Transport.state !== "started") {
             Tone.Transport.start();
           }
@@ -239,8 +250,7 @@ export default function PianoBackendManager({
         const response = await fetch(audioUrl);
         const blob = await response.blob();
         
-        // Determine extension based on MIME type
-        let extension = "mp3"; // Default to mp3
+        let extension = "mp3";
         if (blob.type.includes("wav")) extension = "wav";
         else if (blob.type.includes("mpeg") || blob.type.includes("mp3")) extension = "mp3";
         else if (blob.type.includes("webm")) extension = "webm";
@@ -251,11 +261,9 @@ export default function PianoBackendManager({
         
         const file = new File([blob], `voice.${extension}`, { type: blob.type });
 
-
         const formData = new FormData();
         formData.append("voice", file);
 
-        // 백엔드가 동기적으로 처리하므로 바로 결과를 기다립니다.
         const uploadRes = await fetch(getBackendUrl("/api/piano"), {
           method: "POST",
           body: formData,
@@ -267,7 +275,6 @@ export default function PianoBackendManager({
         }
 
         const data = await uploadRes.json();
-        // 백엔드 응답 키: task_id 또는 request_id
         const taskId = data.task_id || data.request_id;
 
         if (!taskId) {
@@ -276,8 +283,6 @@ export default function PianoBackendManager({
 
         onStatusChange?.("결과 다운로드 중...");
         
-        // Fetch MIDI result directly
-        // 백엔드 API 변경: Query param -> Path param
         const midiRes = await pollForFile(
           getBackendUrl(`/api/piano/midi/${encodeURIComponent(taskId)}`)
         );
@@ -290,8 +295,6 @@ export default function PianoBackendManager({
         await processMidiData(midiArray, taskId);
 
       } catch (err) {
-        if (err instanceof Error) {
-        }
         if (!isCancelled) {
           onStatusChange?.(describeFetchError(err));
         }
