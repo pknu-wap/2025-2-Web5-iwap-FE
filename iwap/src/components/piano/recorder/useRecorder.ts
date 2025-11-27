@@ -1,3 +1,4 @@
+// useRecorder.ts
 import { useState, useRef, useCallback, useEffect } from "react";
 
 export function useRecorder() {
@@ -52,13 +53,8 @@ export function useRecorder() {
       chunksRef.current = [];
 
       // 1. 마이크 권한 요청
-      // [Modified] 모바일 Safari 튕김 방지를 위한 옵션 (echoCancellation 등)
       const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true,
-        } 
+        audio: true
       });
       streamRef.current = stream;
 
