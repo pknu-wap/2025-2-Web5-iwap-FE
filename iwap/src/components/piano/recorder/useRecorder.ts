@@ -38,7 +38,7 @@ function encodeMP3(samples: Int16Array, sampleRate: number) {
     buffer.push(mp3buf);
   }
 
-  return new Blob(buffer, { type: "audio/mp3" });
+  return new Blob(buffer as unknown as BlobPart[], { type: "audio/mp3" });
 }
 
 export function useRecorder() {
