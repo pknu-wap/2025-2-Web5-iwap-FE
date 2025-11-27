@@ -442,7 +442,7 @@ const [phase, setPhase] = useState<Phase>("front-draw");
     });
   }, [brushColor, styles.backgroundColor]);
 
-const handleRestoreFront = () => {
+const handleRestoreFront = useCallback(() => {
   if (!frontController || !frontSketches.length) return;
   frontController.stopPlayback();
   setIsPlaying(false);
@@ -457,7 +457,7 @@ const handleRestoreFront = () => {
     });
   });
   // confirmSketches() 호출하지 않음 → fourier 모드로 안 넘어감
-};
+}, [frontController, frontSketches]);
 
 
 
@@ -824,12 +824,6 @@ const handleSendPostcard = async () => {
   const frontPngBlob = frontPreviewPng ? dataURLtoBlob(frontPreviewPng) : null;
   const backPngBlob = backPreviewPng ? dataURLtoBlob(backPreviewPng) : null;
 
-  if (!frontPngBlob || !backPngBlob) {
-    alert("미리보기 이미지를 찾을 수 없습니다. 다시 시도해주세요.");
-    setIsMailSending(false);
-    return;
-  }
-
   // 애니메이션을 재생 상태로 만들어야 Fourier가 움직임
   frontController?.startPlayback();
   backController?.startPlayback();
@@ -837,6 +831,24 @@ const handleSendPostcard = async () => {
   // webm으로 캡처 — 브라우저는 mp4 불가능
   const frontVideoBlob = await canvasToMp4(frontCanvas, 3000);
   const backVideoBlob = await canvasToMp4(backCanvas, 3000);
+
+  const MIN_VIDEO_SIZE = 1024; // 1KB, 비어있는 webm 파일 헤더 크기보다 큰 값
+  if (
+    !frontPngBlob ||
+    frontPngBlob.size === 0 ||
+    !backPngBlob ||
+    backPngBlob.size === 0 ||
+    !frontVideoBlob ||
+    frontVideoBlob.size < MIN_VIDEO_SIZE ||
+    !backVideoBlob ||
+    backVideoBlob.size < MIN_VIDEO_SIZE
+  ) {
+    alert("엽서 파일(이미지/비디오) 생성에 실패했거나 영상이 비어있습니다. 다시 시도해주세요.");
+    setIsMailSending(false);
+    frontController?.stopPlayback();
+    backController?.stopPlayback();
+    return;
+  }
 
   const formData = new FormData();
   formData.append("templateId", "this-is-for-u");
@@ -852,21 +864,21 @@ const handleSendPostcard = async () => {
 
   // Append PNG files
   formData.append(
-    "frontPng",
+    "frontCard",
     new File([frontPngBlob], "front.png", { type: "image/png" })
   );
   formData.append(
-    "backPng",
+    "backCard",
     new File([backPngBlob], "back.png", { type: "image/png" })
   );
 
   // webm 그대로 보내야 FastAPI가 처리 가능
   formData.append(
-    "frontMp4",
+    "frontVideo",
     new File([frontVideoBlob], "front.webm", { type: "video/webm" })
   );
   formData.append(
-    "backMp4",
+    "backVideo",
     new File([backVideoBlob], "back.webm", { type: "video/webm" })
   );
 
@@ -1087,25 +1099,15 @@ const { startStop, toggleSide, edit, preview } = getButtons();
                     </div>
                   )}
                 </div>
-                {!isBackside && (
-<div
-  className="
-    hidden md:flex
-    flex-col gap-[5px]
-    absolute
-    translate-y-[97px] left-1/2 ml-80
-  "
-  style={
-    isPreview
-      ? {
-          top: "50%",
-          transform: "translate(0px, -180px)", // 원하는 위치로 조정
-          zIndex: 3000,
-        }
-      : undefined
-  }
->
-
+                {!isBackside && !isPreview && (
+                  <div
+                    className="
+                      hidden md:flex
+                      flex-col gap-[5px]
+                      absolute
+                      translate-y-[97px] left-1/2 ml-80
+                    "
+                  >
                     {BACKGROUND_COLORS.map((color) => {
                       const isActive = styles.backgroundColor === color;
                       return (
@@ -1364,59 +1366,96 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 )}
 {isPreview && (
         <div className="relative w-full">
-          <h2 className="text-2xl font-bold text-white text-center mb-6">엽서 미리보기 및 전송</h2>
-          
-          <div className="flex flex-col md:flex-row gap-8 justify-center">
-              {/* Previews */}
-              <div className="flex flex-col gap-6 items-center">
-                  {frontPreviewPng && (
-                      <div>
-                          <h3 className="text-lg text-white mb-2 text-center font-semibold">앞면</h3>
-                          <img src={frontPreviewPng} alt="Postcard Front Preview" className="w-[400px] h-[250px] object-contain border-2 border-white/30 rounded-md" />
-                      </div>
-                  )}
-                  {backPreviewPng && (
-                       <div>
-                          <h3 className="text-lg text-white mb-2 text-center font-semibold">뒷면</h3>
-                          <img src={backPreviewPng} alt="Postcard Back Preview" className="w-[400px] h-[250px] object-contain border-2 border-white/30 rounded-md" />
-                      </div>
-                  )}
-              </div>
-    
-              {/* Form */}
-              <div className="flex flex-col justify-center gap-6 p-6 bg-white/10 rounded-lg w-full md:w-[320px]">
-                  <div>
-                      <label htmlFor="recipientEmail" className="block text-sm font-medium text-white/90 mb-2">받는 사람 이메일</label>
-                      <input
-                          id="recipientEmail"
-                          type="email"
-                          value={recipientEmail}
-                          onChange={(e) => setRecipientEmail(e.target.value)}
-                          placeholder="email@example.com"
-                          className="w-full bg-black/30 border border-white/30 rounded-md text-white p-2 placeholder:text-white/50 outline-none focus:ring-2 focus:ring-emerald-400"
-                      />
+          <div className="flex flex-col md:flex-row gap-8 justify-center items-start">
+            {/* Previews */}
+            <div className="flex flex-col gap-6 items-center">
+              {frontSketches && (
+                <div>
+                  <h3 className="text-lg text-white mb-2 text-center font-semibold">앞면</h3>
+                  <div className="w-[400px] h-[250px] object-contain border-1 border-white/30">
+                    <FrontPreview
+                      frontSketches={frontSketches}
+                      frontPreviewPng={null}
+                      backgroundColor={styles.backgroundColor}
+                    />
                   </div>
-                  <div>
-                      <label htmlFor="senderNamePreview" className="block text-sm font-medium text-white/90 mb-2">보내는 사람 이름</label>
-                      <input
-                          id="senderNamePreview"
-                          type="text"
-                          value={senderName}
-                          className="w-full bg-black/30 border border-white/30 rounded-md text-white/70 p-2 outline-none"
-                          readOnly
-                      />
-                  </div>
-    
+                </div>
+              )}
+              {backPreviewPng && (
+                <div>
+                  <h3 className="text-lg text-white mb-2 text-center font-semibold">뒷면</h3>
+                  <img src={backPreviewPng} alt="Postcard Back Preview" className="w-[400px] h-[250px] object-contain border-1 border-white/30" />
+                </div>
+              )}
+            </div>
+
+            {/* Desktop Color Palette */}
+            <div className="hidden md:flex flex-col gap-[5px] pt-10">
+              {BACKGROUND_COLORS.map((color) => {
+                const isActive = styles.backgroundColor === color;
+                return (
                   <button
-                      onClick={handleSendPostcard}
-                      disabled={isMailSending || !isValidEmail(recipientEmail)}
-                      className="w-full rounded-full bg-emerald-500 px-4 py-3 font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                      {isMailSending ? "전송 중..." : "엽서 전송하기"}
-                  </button>
+                    key={color}
+                    type="button"
+                    onClick={() => handleBackgroundChange(color)}
+                    className={`w-[56px] h-[26px] border border-white transition ${isActive ? "opacity-70" : "opacity-100 hover:opacity-100"}`}
+                    style={{ backgroundColor: color }}
+                    aria-label={`Set background to ${color}`}
+                  />
+                );
+              })}
+            </div>
+
+            {/* Form */}
+            <div className="flex flex-col justify-center w-full md:w-[320px] gap-4">
+                {/* Mobile Color Palette */}
+              <div className="flex flex-row justify-center gap-2.5 md:hidden">
+                {BACKGROUND_COLORS.map((color) => {
+                  const isActive = styles.backgroundColor === color;
+                  return (
+                    <button
+                      key={color}
+                      type="button"
+                      onClick={() => handleBackgroundChange(color)}
+                      className={`w-11 h-7 border border-white/30 transition ${isActive ? 'ring-1 ring-white' : 'hover:opacity-80'}`}
+                      style={{ backgroundColor: color }}
+                      aria-label={`Set background to ${color}`}
+                    />
+                  );
+                })}
               </div>
+              <div>
+                <label htmlFor="recipientEmail" className="block text-sm font-medium text-white/90 mb-2">받는 사람 이메일</label>
+                <input
+                  id="recipientEmail"
+                  type="email"
+                  value={recipientEmail}
+                  onChange={(e) => setRecipientEmail(e.target.value)}
+                  placeholder="email@example.com"
+                  className="w-full bg-black/30 border border-white/30 rounded-md text-white p-2 placeholder:text-white/50 outline-none focus:ring-2 focus:ring-emerald-400"
+                />
+              </div>
+              <div>
+                <label htmlFor="senderNamePreview" className="block text-sm font-medium text-white/90 mb-2">보내는 사람 이름</label>
+                <input
+                  id="senderNamePreview"
+                  type="text"
+                  value={senderName}
+                  className="w-full bg-black/30 border border-white/30 rounded-md text-white/70 p-2 outline-none"
+                  readOnly
+                />
+              </div>
+
+              <button
+                onClick={handleSendPostcard}
+                disabled={isMailSending || !isValidEmail(recipientEmail)}
+                className="w-full rounded-full bg-emerald-500 px-4 py-3 font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isMailSending ? "전송 중..." : "엽서 전송하기"}
+              </button>
+            </div>
           </div>
-    
+
           <button
             onClick={handleClosePreview}
             className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 border border-white/30 text-white text-xl flex items-center justify-center hover:bg-white/20"
