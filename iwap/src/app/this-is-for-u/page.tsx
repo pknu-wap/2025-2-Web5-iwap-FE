@@ -132,6 +132,8 @@ const [phase, setPhase] = useState<Phase>("front-draw");
   const backCanvas = backContainerRef.current?.querySelector("canvas");
   const [previewSize, setPreviewSize] = useState({ width: 600, height: 375 });
   const [recipientEmail, setRecipientEmail] = useState("");
+  const [sendAnimStage, setSendAnimStage] = useState("idle");
+
 
 
   // const [previewSide, setPreviewSide] = useState<"front" | "back">("front");
@@ -381,6 +383,8 @@ const [phase, setPhase] = useState<Phase>("front-draw");
     setPendingCustomColor(color);
   }, []);
 
+  
+
   const handleConfirmCustomColor = useCallback(() => {
     if (!pendingCustomColor) return;
     const normalized = pendingCustomColor.toLowerCase();
@@ -416,13 +420,13 @@ const [phase, setPhase] = useState<Phase>("front-draw");
 
   const isDarkBg = styles.backgroundColor === "#0F172A" || styles.backgroundColor === "#000000";
 
-  const handleSendClick = () => {
-  // 1) 애니메이션 즉시 발동
-  handleSendAnim();       
-
-  // 2) 메일 전송은 기다리지 않고 바로 시작 (애니메이션과 병렬)
-  handleSendPostcard();    
+const handleSendClick = () => {
+  setSendAnimStage("fadePreview");
+  setTimeout(() => setSendAnimStage("insert"), 600);
+  setTimeout(() => setSendAnimStage("closed"), 1500);
+  handleSendPostcard();
 };
+
 
 
   useEffect(() => {
@@ -1387,18 +1391,45 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 )}
 
 {isPreview && (
-  <div className="relative w-full md:scale-90 scale-80">
+  <div className="relative w-full md:scale-70 scale-80">
+
+    {/* open.svg — 맨 아래 */}
+    <img
+      src="/images/This-is-for-u/open.svg"
+      className="absolute translate-y-[15px] left-1/2 -translate-x-1/2 z-10
+                 w-[200px] md:w-[600px]"
+      alt="open"
+    />
+
+    {/* Preview 박스 (Fade Out 애니메이션 포함) */}
     <div
-      className="
+      className={`
         absolute top-0
         md:left-1/2 md:-translate-x-1/2
         md:-translate-y-[360px] -translate-y-[300px]
         w-[80vw]
-        z-40 md:w-[500px] md:h-[852px]
+        md:w-[500px] md:h-[820px]
+        z-20
 
-        grid place-items-start
-        p-6
-      "
+        flex flex-col items-start gap-6 p-6
+        transition-all duration-[600ms] ease-out
+
+        ${
+          sendAnimStage === "fadePreview"
+            ? "opacity-70"
+            : ""
+        }
+        ${
+          sendAnimStage === "insert"
+            ? "opacity-30"
+            : ""
+        }
+        ${
+          sendAnimStage === "closed"
+            ? "opacity-0"
+            : ""
+        }
+      `}
       style={{
         background: "rgba(255, 255, 255, 0.40)",
         border: "1px solid #FFF",
@@ -1406,13 +1437,14 @@ const { startStop, toggleSide, edit, preview } = getButtons();
         WebkitBackdropFilter: "blur(2px)",
       }}
     >
+
       {/* 제목 */}
-      <p className="w-[270px] md:w-[330px] text-left text-[18px] md:text-[20px] text-white font-normal md:translate-x-[20px]">
+      <p className="text-white text-[18px] md:text-[20px] font-normal ml-2">
         메일 주소를 작성하세요
       </p>
 
-      {/* To 영역 */}
-      <div className="flex items-center gap-2 text-sm text-white/70 px-1 -translate-y-[30px] md:translate-x-[20px]">
+      {/* To + Send 버튼 */}
+      <div className="flex items-center gap-2 text-sm text-white/70 ml-2 mt-[-10px]">
         <img
           src="/icons/To_white.svg"
           alt="To"
@@ -1437,77 +1469,99 @@ const { startStop, toggleSide, edit, preview } = getButtons();
             "
           />
 
-          {/* 밑줄 */}
           <div
             className="
               absolute left-0 bg-white
               w-[220px] md:w-[290px]
               h-[1px]
               opacity-100
-              md:top-[34px]
-              top-[28px]
+              md:top-[34px] top-[28px]
             "
           />
         </div>
-<button
-  onClick={handleSendClick}
-  disabled={isMailSending || !isValidEmail(recipientEmail)}
-  className="
-    flex items-center justify-center
-    ml-1
-    w-[28px] h-[28px]
-    md:w-[34px] md:h-[34px]
-    hover:bg-white/20 transition
-    disabled:opacity-40 disabled:cursor-not-allowed
-  "
->
-  <img src="/icons/Send.svg" className="w-[16px] md:w-[20px]" />
-</button>
 
-
+        <button
+          onClick={handleSendClick}
+          disabled={isMailSending || !isValidEmail(recipientEmail)}
+          className="
+            flex items-center justify-center
+            w-[28px] h-[28px] md:w-[34px] md:h-[34px]
+            hover:bg-white/20 transition
+            disabled:opacity-40 disabled:cursor-not-allowed
+          "
+        >
+          <img src="/icons/Send.svg" className="w-[16px] md:w-[20px]" />
+        </button>
       </div>
 
-      {/* 엽서 미리보기 영역 */}
-      <div className="flex flex-col gap-6 items-center w-full -translate-y-[50px]">
+      {/* 엽서 프리뷰 (open.svg 안으로 들어가는 애니메이션 포함) */}
+      <div
+        className={`
+          flex flex-col gap-6 items-center w-full -mt-4
+          transition-all duration-[900ms] ease-out
+
+          ${
+            sendAnimStage === "insert"
+              ? "translate-y-[250px]"
+              : ""
+          }
+          ${
+            sendAnimStage === "closed"
+              ? "translate-y-[300px]"
+              : ""
+          }
+        `}
+      >
         {frontSketches && (
-          <div>
-            <div className="w-[400px] h-[250px] object-contain border-1 border-white/30">
-              <FrontPreview
-                frontSketches={frontSketches}
-                frontPreviewPng={null}
-                backgroundColor={styles.backgroundColor}
-              />
-            </div>
+          <div className="border border-white/30 w-[400px] h-[250px]">
+            <FrontPreview
+              frontSketches={frontSketches}
+              frontPreviewPng={null}
+              backgroundColor={styles.backgroundColor}
+            />
           </div>
         )}
 
         {backPreviewPng && (
-          <div>
-            <img
-              src={backPreviewPng}
-              alt="Postcard Back Preview"
-              className="w-[400px] h-[250px] object-contain border-1 border-white/30"
-            />
-          </div>
+          <img
+            src={backPreviewPng}
+            alt="Postcard Back Preview"
+            className="w-[400px] h-[250px] border border-white/30 object-contain"
+          />
         )}
       </div>
-          {/* 닫기 버튼 */}
-<button
-  onClick={handleClosePreview}
-  className="
-    px-5
-    rounded-full
-    bg-white/10 border border-white/30
-    text-white text-sm
-    hover:bg-white/20
-    transition -translate-y-[80px] translate-x-[20px]
-  "
->
-  수정하러 가기
-</button>
+
+      {/* 수정하러 가기 */}
+      <button
+        onClick={handleClosePreview}
+        className="
+          mt-2 px-5 py-2 mx-auto
+          rounded-full
+          bg-white/10 border border-white/30
+          text-white text-sm hover:bg-white/20 transition
+        "
+      >
+        수정하러 가기
+      </button>
     </div>
+
+    {/* open2.svg — flap (닫히는 애니메이션 포함) */}
+    <img
+      src="/images/This-is-for-u/open2.svg"
+      className={`
+        absolute translate-y-1/2 left-1/2 -translate-x-1/2 z-30
+        w-[200px] md:w-[630px]
+        transition-transform duration-[700ms] ease-in-out origin-top
+
+        ${sendAnimStage === "insert" ? "rotate-x-[-45deg]" : ""}
+        ${sendAnimStage === "closed" ? "rotate-x-0" : ""}
+      `}
+      alt="open2"
+    />
   </div>
 )}
+
+
         </div>
       </FullScreenView>
       {showOriginalPreview && (
