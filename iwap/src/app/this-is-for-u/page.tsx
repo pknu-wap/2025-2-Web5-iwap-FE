@@ -267,26 +267,12 @@ const [phase, setPhase] = useState<Phase>("front-draw");
   }, [frontController, setBackSketches, setFrontSketches]);
 
   const handleUndo = useCallback(() => {
-    if (!frontController) return;
-    // Clear current in-controller sketches only
-    frontController.clearSketches();
-    setIsPlaying(false);
-    // Rehydrate previously locked front sketches so they don't disappear
-    if (frontSketches.length) {
-      frontSketches.forEach((sketch) => {
-        frontController.addCustomSketch(sketch.points, {
-          pathColor: sketch.pathColor,
-          pathAlpha: sketch.pathAlpha,
-          pathWidth: sketch.pathWidth,
-          startDelay: sketch.startDelay,
-        });
-      });
-      frontController.confirmSketches();
-      setActiveSketchCount(frontSketches.length);
-    } else {
-      setActiveSketchCount(0);
-    }
-  }, [frontController, frontSketches]);
+    frontController?.undo();
+  }, [frontController]);
+
+  const handleRedo = useCallback(() => {
+    frontController?.redo();
+  }, [frontController]);
 
   const handleDownloadJson = useCallback(() => {
     if (!frontController) return;
@@ -933,7 +919,7 @@ const handleSendPostcard = async () => {
       onConfirmCustomColor: handleConfirmCustomColor,
       onRemoveCustomColor: handleRemoveCustomColor,
       onUndo: handleUndo,
-      onRedo: handleConfirmSketches,
+      onRedo: handleRedo,
       onClear: handleClearSketches,
       onSave: handleSavePng,
       onSaveWithVideo: handleSavePng,
@@ -949,9 +935,9 @@ const handleSendPostcard = async () => {
       handleBrushColorChange,
       handleClearSketches,
       handleConfirmCustomColor,
-      handleConfirmSketches,
       handleCustomColorPick,
       handleUndo,
+      handleRedo,
       handleRemoveCustomColor,
       handleSizeChange,
       handleSavePng,
@@ -1229,7 +1215,7 @@ textAlpha={styles.pathAlpha}
     </div>
 
     {/* 모바일 */}
-    <div className="block md:hidden w-full -translate-x-[8px] translate-y-[90px] z-[100]">
+    <div className="block md:hidden w-full translate-y-[90px] z-[100] justify-center flex">
       <GraffitiToolbarMobile {...toolbarProps} />
     </div>
   </>
