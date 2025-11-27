@@ -576,6 +576,10 @@ const handleTextToFourier = useCallback(async () => {
   setIsTextProcessing(true);
 
   try {
+    const isMobile = window.innerWidth < 768;
+    const scale = isMobile ? 0.33 : 1.0;
+    const pathWidth = isMobile ? 0.8 : 1.2;
+
     // 1) 정확히 5글자씩 토큰 분할
     const tokens = text.match(/.{1,5}/g) ?? [];
 
@@ -592,7 +596,7 @@ const handleTextToFourier = useCallback(async () => {
 
       if (!contours.length) continue;
 
-      // width 계산
+      // width 계산 (스케일 미적용)
       let minX = Infinity;
       let maxX = -Infinity;
       contours.forEach((c) =>
@@ -611,7 +615,7 @@ const handleTextToFourier = useCallback(async () => {
     // 3) 5글자씩 2줄로 제한
     const lines: WordBundle[][] = [];
     for (let i = 0; i < bundles.length && lines.length < 2; i++) {
-      const lineIndex = Math.floor(i / 1); // 1토큰 = 1줄 (이미 토큰은 5글자)
+      const lineIndex = Math.floor(i / 1); // 1토큰 = 1줄
       if (!lines[lineIndex]) lines[lineIndex] = [];
       lines[lineIndex].push(bundles[i]);
     }
@@ -619,7 +623,7 @@ const handleTextToFourier = useCallback(async () => {
     // 4) Fourier 배치를 위해 이전 내용 제거
     backController.clearSketches();
 
-    const LINE_HEIGHT = 120;
+    const LINE_HEIGHT = 120; // 원본 좌표계 기준 라인 높이
     const totalLines = lines.length;
     const startY = -(totalLines - 1) * LINE_HEIGHT * 0.5;
 
@@ -631,7 +635,6 @@ const handleTextToFourier = useCallback(async () => {
       const y = startY + row * LINE_HEIGHT;
 
       line.forEach((bundle) => {
-        // 각 글자 → minX, minY 원점 이동 후 배치
         let minX = Infinity;
         let minY = Infinity;
         bundle.contours.forEach((c) =>
@@ -643,8 +646,8 @@ const handleTextToFourier = useCallback(async () => {
 
         const shifted = bundle.contours.map((c) =>
           c.map((p) => ({
-            x: (p.x - minX) + cursorX,
-            y: (p.y - minY) + y,
+            x: ((p.x - minX) + cursorX) * scale,
+            y: ((p.y - minY) + y) * scale,
           })),
         );
 
@@ -653,7 +656,7 @@ const handleTextToFourier = useCallback(async () => {
           backController.addCustomSketch(points, {
             pathColor: styles.pathColor,
             pathAlpha: styles.pathAlpha,
-            pathWidth: 1.2, // 얇게
+            pathWidth: pathWidth, // 스케일에 따라 조정된 두께
             startDelay: 0,
           });
         });
