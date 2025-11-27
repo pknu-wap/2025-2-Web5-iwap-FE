@@ -804,6 +804,32 @@ const handleSendPostcard = async () => {
 
   setIsMailSending(true);
 
+  // Helper to convert data URL to Blob
+  const dataURLtoBlob = (dataurl: string): Blob | null => {
+    const arr = dataurl.split(',');
+    if (arr.length < 2) return null;
+    const mimeMatch = arr[0].match(/:(.*?);/);
+    if (!mimeMatch) return null;
+    const mime = mimeMatch[1];
+    const bstr = atob(arr[1]);
+    let n = bstr.length;
+    const u8arr = new Uint8Array(n);
+    while (n--) {
+      u8arr[n] = bstr.charCodeAt(n);
+    }
+    return new Blob([u8arr], { type: mime });
+  };
+
+  // Get PNGs from state and convert
+  const frontPngBlob = frontPreviewPng ? dataURLtoBlob(frontPreviewPng) : null;
+  const backPngBlob = backPreviewPng ? dataURLtoBlob(backPreviewPng) : null;
+
+  if (!frontPngBlob || !backPngBlob) {
+    alert("미리보기 이미지를 찾을 수 없습니다. 다시 시도해주세요.");
+    setIsMailSending(false);
+    return;
+  }
+
   // 애니메이션을 재생 상태로 만들어야 Fourier가 움직임
   frontController?.startPlayback();
   backController?.startPlayback();
@@ -823,6 +849,16 @@ const handleSendPostcard = async () => {
 
   formData.append("sender", senderName);
   formData.append("message", textCanvasMessage);
+
+  // Append PNG files
+  formData.append(
+    "frontPng",
+    new File([frontPngBlob], "front.png", { type: "image/png" })
+  );
+  formData.append(
+    "backPng",
+    new File([backPngBlob], "back.png", { type: "image/png" })
+  );
 
   // webm 그대로 보내야 FastAPI가 처리 가능
   formData.append(
@@ -1051,63 +1087,6 @@ const { startStop, toggleSide, edit, preview } = getButtons();
                     </div>
                   )}
                 </div>
-                {isPreview && (
-                  <div className="fixed inset-0 z-[1000] pointer-events-auto flex flex-col items-center justify-center gap-4 p-4 bg-black/80 backdrop-blur-lg">
-
-                    {/* Front Preview */}
-                    <div className="relative w-[400px] max-w-[90vw] aspect-[8/5] flex-shrink-0" style={{ backgroundColor: styles.backgroundColor }}>
-                      <h3 className="absolute top-0 left-2 text-white text-sm bg-black/30 px-2 py-1 rounded-b-lg z-10">
-                        Front
-                      </h3>
-                      <FrontPreview
-                        frontPreviewPng={frontPreviewPng}
-                        backgroundColor={styles.backgroundColor}
-                      />
-                    </div>
-
-                    {/* Back Preview */}
-                    <div className="relative w-[400px] max-w-[90vw] aspect-[8/5] flex-shrink-0">
-                      <h3 className="absolute top-0 left-2 text-white text-sm bg-black/30 px-2 py-1 rounded-b-lg z-10">
-                        Back
-                      </h3>
-                      <BackPreview
-                        backPreviewPng={backPreviewPng}
-                        messageText={textCanvasMessage.trim()}
-                        recipientName={recipientName}
-                        backgroundColor={styles.backgroundColor}
-                        textAlign={textAlign}
-                        textColor={styles.pathColor}
-                        textAlpha={styles.pathAlpha}
-                      />
-                    </div>
-
-                    {/* Close Button */}
-                    <button
-                      onClick={handleClosePreview}
-                      className="absolute top-4 right-4 w-10 h-10 flex items-center justify-center bg-black/40 backdrop-blur-sm text-white text-2xl rounded-full border border-white/40 hover:bg-black/60 z-[110]"
-                    >
-                      ×
-                    </button>
-
-                    {/* Email sending part */}
-                    <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-2 bg-black/40 backdrop-blur-sm px-3 py-2 rounded-lg border border-white/40 z-[110]">
-                      <input
-                        type="email"
-                        value={recipientEmail}
-                        onChange={(e) => setRecipientEmail(e.target.value)}
-                        placeholder="받는 사람 이메일"
-                        className="w-[180px] md:w-[200px] text-sm bg-transparent outline-none text-white placeholder-white/60"
-                      />
-                      <button
-                        onClick={handleSendPostcard}
-                        disabled={isMailSending}
-                        className="text-sm px-3 py-1.5 rounded-full bg-emerald-500 text-white hover:bg-emerald-400 disabled:bg-slate-500 disabled:cursor-wait"
-                      >
-                        {isMailSending ? "전송중..." : "보내기"}
-                      </button>
-                    </div>
-                  </div>
-                )}
                 {!isBackside && (
 <div
   className="
@@ -1282,20 +1261,25 @@ const { startStop, toggleSide, edit, preview } = getButtons();
         </div>
 
         {/* 텍스트 박스 */}
-        <textarea
-          value={textCanvasMessage}
-          onChange={(e) => setTextCanvasMessage(e.target.value)}
-          maxLength={10}
-          className="
-            w-[270px] h-[200px]
-            md:w-[330px] md:h-[240px]
-            bg-white resize-none outline-none
-            text-[18px] leading-tight text-black
-            placeholder:text-slate-500
-            px-2 py-2
-          "
-          style={{ textAlign }}
-        />
+        <div className="relative">
+          <textarea
+            value={textCanvasMessage}
+            onChange={(e) => setTextCanvasMessage(e.target.value)}
+            maxLength={10}
+            className="
+              w-[270px] h-[200px]
+              md:w-[330px] md:h-[240px]
+              bg-white resize-none outline-none
+              text-[18px] leading-tight text-black
+              placeholder:text-slate-500
+              px-2 py-2
+            "
+            style={{ textAlign }}
+          />
+          <div className="absolute bottom-2 right-2 text-xs text-slate-400">
+            {textCanvasMessage.length}/10
+          </div>
+        </div>
       </div>
 
       {/* From 영역 */}
@@ -1380,6 +1364,72 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 )}
         </div>
       </FullScreenView>
+      {isPreview && (
+        <div className="fixed inset-0 z-[1100] flex flex-col items-center justify-center gap-4 p-4 bg-black/80 backdrop-blur-lg">
+          <div className="relative w-full max-w-4xl bg-slate-900/80 border border-white/20 rounded-xl p-6">
+            <h2 className="text-2xl font-bold text-white text-center mb-6">엽서 미리보기 및 전송</h2>
+            
+            <div className="flex flex-col md:flex-row gap-8 justify-center">
+                {/* Previews */}
+                <div className="flex flex-col gap-6 items-center">
+                    {frontPreviewPng && (
+                        <div>
+                            <h3 className="text-lg text-white mb-2 text-center font-semibold">앞면</h3>
+                            <img src={frontPreviewPng} alt="Postcard Front Preview" className="w-[400px] h-[250px] object-contain border-2 border-white/30 rounded-md" />
+                        </div>
+                    )}
+                    {backPreviewPng && (
+                         <div>
+                            <h3 className="text-lg text-white mb-2 text-center font-semibold">뒷면</h3>
+                            <img src={backPreviewPng} alt="Postcard Back Preview" className="w-[400px] h-[250px] object-contain border-2 border-white/30 rounded-md" />
+                        </div>
+                    )}
+                </div>
+      
+                {/* Form */}
+                <div className="flex flex-col justify-center gap-6 p-6 bg-white/10 rounded-lg w-full md:w-[320px]">
+                    <div>
+                        <label htmlFor="recipientEmail" className="block text-sm font-medium text-white/90 mb-2">받는 사람 이메일</label>
+                        <input
+                            id="recipientEmail"
+                            type="email"
+                            value={recipientEmail}
+                            onChange={(e) => setRecipientEmail(e.target.value)}
+                            placeholder="email@example.com"
+                            className="w-full bg-black/30 border border-white/30 rounded-md text-white p-2 placeholder:text-white/50 outline-none focus:ring-2 focus:ring-emerald-400"
+                        />
+                    </div>
+                    <div>
+                        <label htmlFor="senderNamePreview" className="block text-sm font-medium text-white/90 mb-2">보내는 사람 이름</label>
+                        <input
+                            id="senderNamePreview"
+                            type="text"
+                            value={senderName}
+                            className="w-full bg-black/30 border border-white/30 rounded-md text-white/70 p-2 outline-none"
+                            readOnly
+                        />
+                    </div>
+      
+                    <button
+                        onClick={handleSendPostcard}
+                        disabled={isMailSending || !isValidEmail(recipientEmail)}
+                        className="w-full rounded-full bg-emerald-500 px-4 py-3 font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                        {isMailSending ? "전송 중..." : "엽서 전송하기"}
+                    </button>
+                </div>
+            </div>
+      
+            <button
+              onClick={handleClosePreview}
+              className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 border border-white/30 text-white text-xl flex items-center justify-center hover:bg-white/20"
+              aria-label="Close Preview"
+            >
+              &times;
+            </button>
+          </div>
+        </div>
+      )}
       {showOriginalPreview && (
         <div className="fixed inset-0 z-[1200] bg-black/70 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="relative w-full max-w-6xl bg-slate-900/85 border border-white/10 rounded-xl shadow-2xl p-6 flex flex-col gap-4">
