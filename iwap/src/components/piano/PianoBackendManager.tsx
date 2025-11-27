@@ -243,10 +243,11 @@ export default function PianoBackendManager({
         let extension = "mp3"; // Default to mp3
         if (blob.type.includes("wav")) extension = "wav";
         else if (blob.type.includes("mpeg") || blob.type.includes("mp3")) extension = "mp3";
-        
-        if (blob.type.includes("webm")) {
-             throw new Error("WebM 형식은 지원되지 않습니다.");
-        }
+        else if (blob.type.includes("webm")) extension = "webm";
+        else if (blob.type.includes("mp4")) extension = "mp4";
+        else if (blob.type.includes("aac")) extension = "aac";
+        else if (blob.type.includes("ogg")) extension = "ogg";
+        else if (blob.type.includes("flac")) extension = "flac";
         
         const file = new File([blob], `voice.${extension}`, { type: blob.type });
 

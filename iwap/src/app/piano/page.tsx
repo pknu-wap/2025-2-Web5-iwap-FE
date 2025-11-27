@@ -181,10 +181,16 @@ export default function VoiceToPiano() {
       const allowedTypes = new Set([
         "audio/mpeg",
         "audio/wav",
+        "audio/webm",
+        "audio/mp4",
+        "audio/aac",
+        "audio/ogg",
+        "audio/flac",
+        "audio/x-m4a"
       ]);
 
       if (!allowedTypes.has(file.type)) {
-        setStatus("MP3, WAV 파일만 업로드할 수 있습니다.");
+        setStatus("지원되지 않는 오디오 형식입니다.");
         event.target.value = "";
         return;
       }
