@@ -226,13 +226,12 @@ export default function AsciiPage() {
               />
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 
-                  // [수정] Tailwind CSS 클래스를 표준에 맞게 수정합니다.
-                  className="font-semibold shrink-0 -translate-y-3 -translate-x-3"
+                  className="font-semibold shrink-0"
                   style={{ fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)' }}
                 >
                   이미지를 업로드하세요
                 </h3>
-                <div className="relative min-h-0 md:scale-[1] scale-[1.1]">
+                <div className="relative min-h-0 w-full h-full">
                   {renderContent()}
                 </div>
               </div>

@@ -191,8 +191,8 @@ export default function InsidePage() {
           <ImageGridLayers layersData={layersData} />
         </FullScreenView>
       ) : (
-        <div className="w-[90%] h-[90%] translate-x-5 md:translate-x-0 md:w-full md:h-full flex items-center justify-center p-4 sm:p-8">
-          <div className="flex flex-col w-full max-w-lg max-h-full aspect-[5/6] relative">
+        <div className="w-[90%] md:w-full h-[90%] md:h-full translate-x-5 md:translate-x-0 flex items-center justify-center p-4 sm:p-8">
+          <div className="flex flex-col w-full max-w-lg max-h-full aspect-5/6 relative">
             <div className="w-full h-full pt-[100px]">
               <PageHeader
                 title="!nside."
@@ -204,14 +204,14 @@ export default function InsidePage() {
               <div className="w-full h-full bg-white/40 border border-white backdrop-blur-[2px] p-[8%] grid grid-rows-[auto_1fr] gap-y-1">
                 <h3 
                   // 텍스트 색상 강제 적용
-                  className={`font-semibold translate -translate-y-3 -translate-x-3 ${theme === 'dark' ? "text-white" : "text-zinc-900"}`}
+                  className={`font-semibold shrink-0 ${theme === 'dark' ? "text-white" : "text-zinc-900"}`}
                   style={{
                     fontSize: 'clamp(1rem, 3.5vmin, 1.5rem)',
                   }}
                 >
                   숫자를 그려주세요
                 </h3>
-                <div className="relative min-h-0 md:scale-[1] scale-[1.1]">
+                <div className="relative min-h-0 w-full h-full">
                   {renderContent()}
                 </div>
               </div>
