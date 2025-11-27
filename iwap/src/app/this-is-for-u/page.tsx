@@ -69,6 +69,9 @@ const BACKGROUND_COLORS = ["#FFFFFF", "#FFFEF0", "#FEF2F2", "#DBEAFE", "#0F172A"
 const FONT_URL = "/fonts/static/Pretendard-Regular.otf";
 const PREVIEW_SIZE = { width: 600, height: 375 };
 
+const isValidEmail = (email: string) =>
+  /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
 export default function ThisIsForUPage() {
   const { theme } = useTheme();
   const [prevPhase, setPrevPhase] = useState<Phase | null>(null);
@@ -774,14 +777,29 @@ const handleClosePreview = () => {
 const handleSendPostcard = async () => {
   const frontCanvas = frontContainerRef.current?.querySelector("canvas");
   const backCanvas = backContainerRef.current?.querySelector("canvas");
+  const errors: string[] = [];
 
   if (!frontCanvas || !backCanvas) {
-    alert("캔버스를 찾을 수 없습니다.");
+    alert("예상치 못한 오류가 발생했습니다: 캔버스를 찾을 수 없습니다.");
     return;
   }
 
-  if (!recipientEmail.includes("@")) {
-    alert("기능 구현 중 입니다.");
+  // 필드 유효성 검사
+  if (!isValidEmail(recipientEmail)) {
+    errors.push("올바른 수신자 이메일이 필요합니다.");
+  }
+  if (!textCanvasMessage.trim()) {
+    errors.push("메시지를 입력해야 합니다.");
+  }
+  if (frontSketches.length === 0) {
+    errors.push("엽서 앞면에 그림을 그려야 합니다.");
+  }
+  if (backSketches.length === 0 && !textCanvasMessage.trim()) {
+    errors.push("엽서 뒷면에 내용이 필요합니다.");
+  }
+
+  if (errors.length > 0) {
+    alert(`다음 문제를 해결해주세요:\n- ${errors.join("\n- ")}`);
     return;
   }
 
@@ -1060,19 +1078,40 @@ textAlpha={styles.pathAlpha}
       {previewSide === "front" ? "Show back" : "Show front"}
     </button>
 {/* ⬇ 새로 추가: 메일 전송 버튼 */}
-    <button
-      onClick={handleSendPostcard}
-      className="
-        text-[10px]
+    {/* 이메일 입력 영역 */}
+<div
+  className="
     absolute bottom-2 left-2
-    px-2 py-1 rounded-full
-    bg-emerald-500 text-white
+    flex items-center gap-2
+    bg-black/40 backdrop-blur-sm
+    px-3 py-2 rounded-lg
     border border-white/40
-    hover:bg-emerald-200
-      "
-    >
-      메일로 보내기
-    </button>
+  "
+>
+  <input
+    type="email"
+    value={recipientEmail}
+    onChange={(e) => setRecipientEmail(e.target.value)}
+    placeholder="받는 사람 이메일"
+    className="
+      w-[150px]
+      text-[10px] md:text-xs
+      bg-transparent outline-none text-white placeholder-white/60
+    "
+  />
+
+  <button
+    onClick={handleSendPostcard}
+    className="
+      text-[10px] md:text-xs
+      px-2 py-1 rounded-full
+      bg-emerald-500 text-white
+      hover:bg-emerald-400
+    "
+  >
+    보내기
+  </button>
+</div>
   </div>
 )}
 
@@ -1206,7 +1245,7 @@ textAlpha={styles.pathAlpha}
 
       {/* To 영역 */}
       <div className="flex items-center gap-2 text-sm text-white/70 mb-3 pl-5">
-        <img src="/icons/To_white.svg" alt="To" className="w-[30px] h-[28px]" />
+        <img src="/icons/To_white.svg" alt="To" className="w-[20px] h-[21px] md:w-[30px] md:h-[28px]" />
 
         <div className="relative">
           <input
