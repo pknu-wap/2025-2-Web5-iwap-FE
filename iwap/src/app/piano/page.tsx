@@ -185,8 +185,7 @@ export default function VoiceToPiano() {
         "audio/mp4",
         "audio/aac",
         "audio/ogg",
-        "audio/flac",
-        "audio/x-m4a"
+        "audio/flac"
       ]);
 
       if (!allowedTypes.has(file.type)) {
@@ -554,7 +553,13 @@ export default function VoiceToPiano() {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="audio/mpeg,audio/wav"
+                      accept="audio/mpeg,
+                              audio/wav,
+                              audio/webm,
+                              audio/mp4,
+                              audio/aac,
+                              audio/ogg,
+                              audio/flac"
                       className="hidden"
                       onChange={handleFileSelected}
                     />
