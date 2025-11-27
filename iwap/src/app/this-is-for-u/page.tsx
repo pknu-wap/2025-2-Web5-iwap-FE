@@ -994,8 +994,8 @@ const { startStop, toggleSide, edit, preview } = getButtons();
         goBack={true}
         backgroundUrl={theme === 'dark' ? "/images/bg-dark/this-is-for-u_dark.webp" : "/images/bg-light/this-is-for-u_light.webp"}
         darkBackground={theme === 'dark'}
-        titleClassName="translate-y-[60px] translate-x-[9px] md:translate-x-0 md:translate-y-0 font-semibold"
-        subtitleClassName="translate-y-[60px] translate-x-[10px] md:translate-x-0 md:translate-y-0 font-semilight"
+        titleClassName="translate-y-[60px] md:translate-y-0 font-semibold"
+        subtitleClassName="translate-y-[60px] md:translate-y-0 font-semilight"
         closeButtonClassName="translate-y-[60px] md:translate-y-0"
       >
         <div
@@ -1008,26 +1008,33 @@ const { startStop, toggleSide, edit, preview } = getButtons();
           }}
         ></div>
 
-        <div className="relative z-90 flex flex-col items-center gap-6 md:mt-16 w-[90vw] max-w-[1200px] px-2">
-              <div className="flex flex-col md:flex-row items-center gap-6 w-full justify-center translate-y-[40px]">
+        <div className="relative z-90 flex flex-col items-center gap-6 md:mt-16 w-[90vw] max-w-[1200px] mx-auto px-2">
+              <div className="relative flex flex-col md:flex-row items-center gap-4 w-full justify-center translate-y-[40px]">
+                {/* Mobile background palette */}
+                {!isBackside && !isPreview && (
+                  <div className="flex flex-row justify-center gap-2.5 md:hidden">
+                    {BACKGROUND_COLORS.map((color) => {
+                      const isActive = styles.backgroundColor === color;
+                      return (
+                        <button
+                          key={color}
+                          type="button"
+                          onClick={() => handleBackgroundChange(color)}
+                          className={`w-11 h-7 border border-white/30 transition ${isActive ? 'ring-1 ring-white' : 'hover:opacity-80'}`}
+                          style={{ backgroundColor: color }}
+                          aria-label={`Set background to ${color}`}
+                        />
+                      );
+                    })}
+                  </div>
+                )}
                 <div
-  className={
-    phase === "back-write"
-      ? "hidden"
-      : "relative flex-shrink-0 mx-auto w-[320px] h-[200px] md:w-[600px] md:h-[375px] border border-white/30 overflow-hidden"
-  }
-  style={
-    isPreview
-      ? {
-          position: "absolute",
-          top: "30%",
-          left: "50%",
-          transform: "translate(-50%, -74%)",
-          zIndex: 2000,
-        }
-      : undefined
-  }
->
+                  className={
+                    phase === "back-write" || phase === "preview"
+                      ? "hidden"
+                      : "relative flex-shrink-0 w-[320px] h-[200px] md:w-[600px] md:h-[375px] border border-white/30 overflow-hidden"
+                  }
+                >
                   <div
                     ref={frontContainerRef}
                     className={isPreview || isBackside ? "hidden" : "absolute inset-0"}
@@ -1131,7 +1138,7 @@ textAlpha={styles.pathAlpha}
     hidden md:flex
     flex-col gap-[5px]
     absolute
-    translate-y-[97px] translate-x-[350px]
+    translate-y-[97px] left-1/2 ml-80
   "
   style={
     isPreview
