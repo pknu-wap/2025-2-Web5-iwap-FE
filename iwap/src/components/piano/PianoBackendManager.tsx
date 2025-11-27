@@ -27,7 +27,7 @@ export type MidiReadyPayload = ConversionContext & {
 
 type PianoBackendManagerProps = {
   audioUrl: string | null;
-  audioFile: File | null; // [추가]
+  audioFile: File | null;
   onMidiEvent: (event: { type: "on" | "off"; note: number }) => void;
   onStatusChange?: (status: string) => void;
   onTransportReady?: (
@@ -49,17 +49,15 @@ export const getBackendUrl = (path: string) => {
 
 const describeFetchError = (err: unknown) => {
   if (err instanceof TypeError) {
-    return "네트워크 연결 또는 백엔드 주소를 확인해주세요.";
+    return "네트워크 연결을 확인해주세요.";
   }
   if (err instanceof Error) {
     if (err.message.includes("413")) {
-      return "파일 용량이 너무 큽니다. (서버 제한 초과)";
+      return "파일 용량이 너무 큽니다.";
     }
-    if (err.message) {
-      return err.message;
-    }
+    return "일시적인 오류가 발생했습니다.";
   }
-  return `알 수 없는 오류가 발생했습니다. (${String(err)})`;
+  return "알 수 없는 오류가 발생했습니다.";
 };
 
 export default function PianoBackendManager({
@@ -72,7 +70,6 @@ export default function PianoBackendManager({
   onMidiReady,
 }: PianoBackendManagerProps) {
   useEffect(() => {
-    // audioFile도 있어야 실행
     if (!audioUrl || !audioFile) return;
 
     let isCancelled = false;
@@ -109,7 +106,7 @@ export default function PianoBackendManager({
             if (contentType && contentType.includes("application/json")) {
                 const clone = res.clone();
                 const text = await clone.text();
-                throw new Error(`Server returned JSON instead of MIDI: ${text.substring(0, 200)}`);
+                throw new Error(`JSON Retry: ${text.substring(0, 50)}`);
             }
             return res;
           }
@@ -117,13 +114,10 @@ export default function PianoBackendManager({
             await new Promise((resolve) => setTimeout(resolve, 1000));
             continue;
           }
-          throw new Error(`File fetch failed with status: ${res.status}`);
+          throw new Error(`Status: ${res.status}`);
         } catch (e) {
           if (isCancelled) throw e;
-          if (e instanceof Error && e.message.startsWith("Server returned JSON")) {
-              throw e;
-          }
-          console.warn("Polling error, retrying...", e);
+          console.warn("Polling retry...", e);
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
@@ -146,7 +140,7 @@ export default function PianoBackendManager({
           downloadFilename = mp3Filename;
         }
       } catch (mp3Error) {
-        console.warn("Failed to fetch MP3 conversion, falling back to MIDI.", mp3Error);
+        console.warn("MP3 fetch failed", mp3Error);
       }
 
       const conversionContext: ConversionContext = {
@@ -163,12 +157,11 @@ export default function PianoBackendManager({
 
       const midi = new Midi(midiArray);
 
-      // 안전하게 Tone.start 확인
       if (Tone.context.state !== 'running') {
         try {
           await Tone.start();
         } catch (err) {
-          console.warn("BackendManager: Tone.start fallback failed", err);
+          console.warn("Tone start failed", err);
         }
       }
       
@@ -245,9 +238,9 @@ export default function PianoBackendManager({
 
     const performConversion = async () => {
       try {
-        onStatusChange?.("서버로 전송 중...");
+        // [수정] 메시지 통일: "분석 중..."
+        onStatusChange?.("분석 중...");
 
-        // [최적화] fetch(audioUrl) 대신 prop으로 받은 File 직접 사용
         const formData = new FormData();
         formData.append("voice", audioFile);
 
@@ -257,25 +250,22 @@ export default function PianoBackendManager({
         });
 
         if (!uploadRes.ok) {
-           const errorText = await uploadRes.text();
-           throw new Error(`Upload failed: ${uploadRes.status} ${errorText}`);
+           throw new Error(`Upload failed: ${uploadRes.status}`);
         }
 
         const data = await uploadRes.json();
         const taskId = data.task_id || data.request_id;
 
         if (!taskId) {
-          throw new Error("서버로부터 작업 ID를 받지 못했습니다.");
+          throw new Error("작업 ID 없음");
         }
-
-        onStatusChange?.("AI가 피아노로 변환 중...");
         
         const midiRes = await pollForFile(
           getBackendUrl(`/api/piano/midi/${encodeURIComponent(taskId)}`)
         );
         
         if (!midiRes.ok) {
-          throw new Error("MIDI 파일을 받아오지 못했습니다.");
+          throw new Error("결과 파일 오류");
         }
 
         const midiArray = await midiRes.arrayBuffer();
@@ -288,7 +278,6 @@ export default function PianoBackendManager({
       }
     };
 
-    // [ESLint 수정] const로 선언
     const uploadTimer = setTimeout(() => {
       void performConversion();
     }, 500);
@@ -301,7 +290,7 @@ export default function PianoBackendManager({
     };
   }, [
     audioUrl,
-    audioFile, // 의존성 추가
+    audioFile, 
     onMidiEvent,
     onStatusChange,
     onTransportReady,
