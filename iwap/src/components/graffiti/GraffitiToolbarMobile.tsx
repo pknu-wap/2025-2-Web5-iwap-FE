@@ -391,8 +391,8 @@ export default function GraffitiToolbarMobile({
                 </button>
               )}
               
-              <div className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded-full border border-white">
-                <span className="text-[12px] text-white">HEX</span>
+              <div className="flex items-center gap-2 bg-white/10 px-2 py-1 rounded-full border border-[#9e9e9e]">
+                <span className="text-[12px] text-[#9e9e9e]">HEX</span>
                 <input
                   type="text"
                   value={fallbackHex}
@@ -404,7 +404,7 @@ export default function GraffitiToolbarMobile({
                 />
                 <button
                   type="button"
-                  className="h-[30px] px-2 rounded-full border border-white text-[12px] text-white disabled:opacity-40"
+                  className="h-[30px] px-2 rounded-full border border-[#9e9e9e]/80 text-[#9e9e9e] disabled:opacity-40"
                   onClick={() => {
                     const trimmed = fallbackHex.trim();
                     if (!isValidHex(trimmed)) return;
@@ -426,8 +426,8 @@ export default function GraffitiToolbarMobile({
                 disabled={showDeleteAction ? false : confirmDisabled}
                 className="
                 h-[32px] px-3
-                rounded-full border border-white
-                text-[12px] text-white transition
+                rounded-full border border-[#9e9e9e]
+                text-[12px] text-[#9e9e9e] transition
                 disabled:opacity disabled:cursor-not-allowed
               "
               >
@@ -436,10 +436,10 @@ export default function GraffitiToolbarMobile({
             </div>
 
             <div className="flex items-center justify-center gap-3 w-full pointer-events-auto">
-              <p className="text-[16px] text-white font-light">size</p>
+              <p className="text-[16px] text-[#9e9e9e] font-light">size</p>
               <div className="relative h-[26px] flex-1">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="h-[4px] w-full rounded-full bg-white/20" />
+                  <div className="h-[4px] w-full rounded-full bg-[#9e9e9e]" />
                 </div>
                 <div
                   className="absolute left-0 top-1/2 h-[4px] rounded-full bg-white"
@@ -464,7 +464,7 @@ export default function GraffitiToolbarMobile({
                   className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
                 />
               </div>
-              <span className="text-[12px] text-white/70 w-10 text-right">
+              <span className="text-[12px] text-[#9e9e9e] w-10 text-right">
                 {brushSize}
               </span>
             </div>

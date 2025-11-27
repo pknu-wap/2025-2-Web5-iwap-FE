@@ -219,8 +219,8 @@ export default function GraffitiToolbar({
                   onClick={openColorPicker}
                   className="
                     h-[26px] px-3
-                    rounded-full border border-white/40
-                    text-[12px] text-white
+                    rounded-full border border-[#9e9e9e]/80
+                    text-[12px] text-[#9e9e9e]
                     hover:bg-white/10 transition
                   "
                 >
@@ -236,9 +236,9 @@ export default function GraffitiToolbar({
                   disabled={showDeleteAction ? false : confirmDisabled}
                   className="
                     h-[26px] px-3
-                    rounded-full border border-white/40
-                    text-[12px] text-white transition
-                    disabled:opacity-40 disabled:cursor-not-allowed
+                    rounded-full border border-[#9e9e9e]/80
+                    text-[12px] text-[#9e9e9e] transition
+                    disabled:cursor-not-allowed
                     hover:bg-white/10
                   "
                 >

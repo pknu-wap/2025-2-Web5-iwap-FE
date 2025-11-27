@@ -1236,7 +1236,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
     md:w-[290px]     /* md 이상에서 290px */
     h-[1px] 
     opacity-100
-    md:top-[42px]
+    md:top-[34px]
     top-[33px]
   "
 />
@@ -1315,7 +1315,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
     md:w-[250px]     /* md 이상에서 290px */
     h-[1px] 
     opacity-100
-    md:top-[33px]
+    md:top-[27px]
     top-[25px]
   "
 />
@@ -1362,74 +1362,72 @@ const { startStop, toggleSide, edit, preview } = getButtons();
     </div>
   </div>
 )}
-        </div>
-      </FullScreenView>
-      {isPreview && (
-        <div className="fixed inset-0 z-[1100] flex flex-col items-center justify-center gap-4 p-4 bg-black/80 backdrop-blur-lg">
-          <div className="relative w-full max-w-4xl bg-slate-900/80 border border-white/20 rounded-xl p-6">
-            <h2 className="text-2xl font-bold text-white text-center mb-6">엽서 미리보기 및 전송</h2>
-            
-            <div className="flex flex-col md:flex-row gap-8 justify-center">
-                {/* Previews */}
-                <div className="flex flex-col gap-6 items-center">
-                    {frontPreviewPng && (
-                        <div>
-                            <h3 className="text-lg text-white mb-2 text-center font-semibold">앞면</h3>
-                            <img src={frontPreviewPng} alt="Postcard Front Preview" className="w-[400px] h-[250px] object-contain border-2 border-white/30 rounded-md" />
-                        </div>
-                    )}
-                    {backPreviewPng && (
-                         <div>
-                            <h3 className="text-lg text-white mb-2 text-center font-semibold">뒷면</h3>
-                            <img src={backPreviewPng} alt="Postcard Back Preview" className="w-[400px] h-[250px] object-contain border-2 border-white/30 rounded-md" />
-                        </div>
-                    )}
-                </div>
-      
-                {/* Form */}
-                <div className="flex flex-col justify-center gap-6 p-6 bg-white/10 rounded-lg w-full md:w-[320px]">
-                    <div>
-                        <label htmlFor="recipientEmail" className="block text-sm font-medium text-white/90 mb-2">받는 사람 이메일</label>
-                        <input
-                            id="recipientEmail"
-                            type="email"
-                            value={recipientEmail}
-                            onChange={(e) => setRecipientEmail(e.target.value)}
-                            placeholder="email@example.com"
-                            className="w-full bg-black/30 border border-white/30 rounded-md text-white p-2 placeholder:text-white/50 outline-none focus:ring-2 focus:ring-emerald-400"
-                        />
-                    </div>
-                    <div>
-                        <label htmlFor="senderNamePreview" className="block text-sm font-medium text-white/90 mb-2">보내는 사람 이름</label>
-                        <input
-                            id="senderNamePreview"
-                            type="text"
-                            value={senderName}
-                            className="w-full bg-black/30 border border-white/30 rounded-md text-white/70 p-2 outline-none"
-                            readOnly
-                        />
-                    </div>
-      
-                    <button
-                        onClick={handleSendPostcard}
-                        disabled={isMailSending || !isValidEmail(recipientEmail)}
-                        className="w-full rounded-full bg-emerald-500 px-4 py-3 font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        {isMailSending ? "전송 중..." : "엽서 전송하기"}
-                    </button>
-                </div>
-            </div>
-      
-            <button
-              onClick={handleClosePreview}
-              className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 border border-white/30 text-white text-xl flex items-center justify-center hover:bg-white/20"
-              aria-label="Close Preview"
-            >
-              &times;
-            </button>
+{isPreview && (
+        <div className="relative w-full">
+          <h2 className="text-2xl font-bold text-white text-center mb-6">엽서 미리보기 및 전송</h2>
+          
+          <div className="flex flex-col md:flex-row gap-8 justify-center">
+              {/* Previews */}
+              <div className="flex flex-col gap-6 items-center">
+                  {frontPreviewPng && (
+                      <div>
+                          <h3 className="text-lg text-white mb-2 text-center font-semibold">앞면</h3>
+                          <img src={frontPreviewPng} alt="Postcard Front Preview" className="w-[400px] h-[250px] object-contain border-2 border-white/30 rounded-md" />
+                      </div>
+                  )}
+                  {backPreviewPng && (
+                       <div>
+                          <h3 className="text-lg text-white mb-2 text-center font-semibold">뒷면</h3>
+                          <img src={backPreviewPng} alt="Postcard Back Preview" className="w-[400px] h-[250px] object-contain border-2 border-white/30 rounded-md" />
+                      </div>
+                  )}
+              </div>
+    
+              {/* Form */}
+              <div className="flex flex-col justify-center gap-6 p-6 bg-white/10 rounded-lg w-full md:w-[320px]">
+                  <div>
+                      <label htmlFor="recipientEmail" className="block text-sm font-medium text-white/90 mb-2">받는 사람 이메일</label>
+                      <input
+                          id="recipientEmail"
+                          type="email"
+                          value={recipientEmail}
+                          onChange={(e) => setRecipientEmail(e.target.value)}
+                          placeholder="email@example.com"
+                          className="w-full bg-black/30 border border-white/30 rounded-md text-white p-2 placeholder:text-white/50 outline-none focus:ring-2 focus:ring-emerald-400"
+                      />
+                  </div>
+                  <div>
+                      <label htmlFor="senderNamePreview" className="block text-sm font-medium text-white/90 mb-2">보내는 사람 이름</label>
+                      <input
+                          id="senderNamePreview"
+                          type="text"
+                          value={senderName}
+                          className="w-full bg-black/30 border border-white/30 rounded-md text-white/70 p-2 outline-none"
+                          readOnly
+                      />
+                  </div>
+    
+                  <button
+                      onClick={handleSendPostcard}
+                      disabled={isMailSending || !isValidEmail(recipientEmail)}
+                      className="w-full rounded-full bg-emerald-500 px-4 py-3 font-semibold text-white transition hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                      {isMailSending ? "전송 중..." : "엽서 전송하기"}
+                  </button>
+              </div>
           </div>
+    
+          <button
+            onClick={handleClosePreview}
+            className="absolute top-4 right-4 h-9 w-9 rounded-full bg-white/10 border border-white/30 text-white text-xl flex items-center justify-center hover:bg-white/20"
+            aria-label="Close Preview"
+          >
+            &times;
+          </button>
         </div>
       )}
+        </div>
+      </FullScreenView>
       {showOriginalPreview && (
         <div className="fixed inset-0 z-[1200] bg-black/70 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="relative w-full max-w-6xl bg-slate-900/85 border border-white/10 rounded-xl shadow-2xl p-6 flex flex-col gap-4">
