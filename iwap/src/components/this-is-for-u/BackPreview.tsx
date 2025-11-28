@@ -1,44 +1,51 @@
 /* eslint-disable @next/next/no-img-element */
-import React from "react";
+import React, { forwardRef } from "react";
 
-export function BackPreview({
-  backPreviewPng,
-  messageText,      // 본문
-  recipientName,
-  backgroundColor,
-  textAlign,
-  textColor,
-  textAlpha,
-}: {
-  backPreviewPng: string | null;
-  messageText?: string,      // 본문
-  recipientName?: string,
-  backgroundColor?: string;
-textAlign: "left" | "center" | "right";
-textColor: string;
-textAlpha: number;
-}) {
-  const cardBackground = backgroundColor ?? "#000000";
-  const useWhite = cardBackground === "#0F172A" || cardBackground === "#000000";
+export const BackPreview = forwardRef(
+  (
+    {
+      backPreviewPng,
+      messageText, // 본문
+      recipientName,
+      backgroundColor,
+      textAlign,
+      textColor,
+      textAlpha,
+      senderName, // Add senderName to props
+    }: {
+      backPreviewPng: string | null;
+      messageText?: string; // 본문
+      recipientName?: string;
+      backgroundColor?: string;
+      textAlign: "left" | "center" | "right";
+      textColor: string;
+      textAlpha: number;
+      senderName?: string; // Add senderName to props type
+    },
+    ref: React.Ref<HTMLDivElement>
+  ) => {
+    const cardBackground = backgroundColor ?? "#000000";
+    const useWhite = cardBackground === "#0F172A" || cardBackground === "#000000";
 
-  return (
-    <div
-      className="w-full h-full relative flex flex-col gap-2 p-6"
-      style={{ backgroundColor: cardBackground }}
-    >
+    return (
+      <div
+        ref={ref}
+        className="w-full h-full relative flex flex-col gap-2 p-6"
+        style={{ backgroundColor: cardBackground }}
+      >
       <img
         src={useWhite ? "/icons/Postcard_white.svg" : "/icons/Postcard_black.svg"}
         alt="Postcard Background"
-        className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 w-[100px]"
+        className="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 w-[80px]"
       />
 
 <div className="flex items-start gap-2">
   <img
     src={useWhite ? "/icons/To_white.svg" : "/icons/To_black.svg"}
     alt="To"
-    className="w-7"
+    className="md:w-6 w-4 md:translate-y-0 translate-y-3"
   />
-  <div className="text-white flex-1 text-left text-sm whitespace-pre-wrap">
+  <div className={`${useWhite ? "text-white" : "text-black"} flex-1 text-left text-sm whitespace-pre-wrap md:translate-y-0 translate-y-2`}>
     {recipientName || "받는 사람"}
   </div>
 </div>
@@ -58,20 +65,23 @@ textAlpha: number;
       {messageText}
     </p>
   ) : (
-    <span className="text-white/70 text-sm">No back preview</span>
+    <span className="text-white/70 md:text-sm text-[5px]">No back preview</span>
   )}
 </div>
 
 
       <div className="absolute bottom-4 right-4 flex items-end justify-end gap-2 w-full max-w-[200px]">
-        <span className="text-white text-xs mr-auto">{new Date().toLocaleDateString()}</span>
-        <img src="/icons/PostcardStamp.svg" alt="Stamp" className="w-10" />
-        <img
-          src={useWhite ? "/icons/From_white.svg" : "/icons/From_black.svg"}
-          alt="From"
-          className="w-[69px]"
-        />
+        {/* <span className="text-white text-xs mr-auto">{new Date().toLocaleDateString()}</span> */}
+        <img src="/icons/PostcardStamp.svg" alt="Stamp" className="md:w-10 w-7 md:translate-x-[70px] md:-translate-y-[170px] translate-x-[70px] -translate-y-[100px]" />
+        <div className="flex items-center">
+          <img
+            src={useWhite ? "/icons/From_white.svg" : "/icons/From_black.svg"}
+            alt="From"
+            className="md:w-[50px] w-[40px] -translate-x-[50px]"
+          />
+          <span className={`${useWhite ? "text-white" : "text-black"} text-sm -translate-x-[30px]`}>{senderName || "보내는 사람"}</span>
+        </div>
       </div>
     </div>
   );
-}
+});

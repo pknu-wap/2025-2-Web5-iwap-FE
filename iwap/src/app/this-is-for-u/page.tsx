@@ -11,6 +11,7 @@ import { SendAnimation } from "@/components/this-is-for-u/SendAnimation";
 import { FrontPreview } from "@/components/this-is-for-u/FrontPreview";
 import { BackPreview } from "@/components/this-is-for-u/BackPreview";
 import { textToContours, type TextContour } from "@/components/this-is-for-u/textToContours";
+import html2canvas from "html2canvas";
 
 /* ===========================
    INTERNAL PREVIEW COMPONENTS
@@ -78,6 +79,7 @@ export default function ThisIsForUPage() {
 
   const frontContainerRef = useRef<HTMLDivElement | null>(null);
   const backContainerRef = useRef<HTMLDivElement | null>(null);
+  const backPreviewDivRef = useRef<HTMLDivElement | null>(null);
   const frontInitRef = useRef(false);
   const backInitRef = useRef(false);
   const colorPickerRef = useRef<HTMLInputElement | null>(null);
@@ -771,34 +773,72 @@ const handleTextToFourier = useCallback(async () => {
     return canvas.toDataURL("image/png");
   }, []);
 
-const handleShowPreview = useCallback(() => {
+const handleShowPreview = useCallback(async () => {
   storeBackSketches();
 
-  const frontCanvas = frontContainerRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
-  const backCanvas = backContainerRef.current?.querySelector("canvas") as HTMLCanvasElement | null;
+  const prevEpicycleVisibility = styles.showEpicycles;
+  const prevEpicycleAlpha = styles.epicycleAlpha;
 
-  // 기본 front 기준
-  const base = frontCanvas ?? backCanvas;
+  setStyles((prev) => ({
+    ...prev,
+    showEpicycles: false,
+    epicycleAlpha: 0,
+  }));
+  frontController?.updateStyles({ showEpicycles: false, epicycleAlpha: 0 });
+  backController?.updateStyles({ showEpicycles: false, epicycleAlpha: 0 });
 
-  if (base) {
-    setPreviewSize({ width: base.width, height: base.height });
-  }
+  requestAnimationFrame(() => {
+    setTimeout(async () => { // Ensure repaint before capturing
+      const frontPng = captureCanvasDataUrl(frontContainerRef.current);
 
-  const frontPng = captureCanvasDataUrl(frontContainerRef.current);
-  const backPng = captureCanvasDataUrl(backContainerRef.current);
+      let backPng: string | null = null;
+      if (backPreviewDivRef.current) {
+        try {
+          const canvas = await html2canvas(backPreviewDivRef.current, {
+            backgroundColor: styles.backgroundColor,
+            useCORS: true, // If any images are loaded from external sources
+          });
+          console.log("Generated backPng (html2canvas):", backPng.substring(0, 100) + "..."); // Log first 100 chars
+        } catch (error) {
+          console.error("Error capturing back preview with html2canvas:", error);
+          // Fallback to canvas capture if html2canvas fails, or set to null
+          backPng = captureCanvasDataUrl(backContainerRef.current);
+        }
+      } else {
+        // Fallback if ref is not available for some reason
+        backPng = captureCanvasDataUrl(backContainerRef.current);
+      }
 
-  setFrontPreviewPng(frontPng);
-  setBackPreviewPng(backPng);
+      console.log("Recipient Email (before html2canvas capture):", recipientEmail);
+      console.log("Sender Name (before html2canvas capture):", senderName);
 
-  setShowPngPreview(true);
-  handleStop();
-  setPrevPhase(phase);
-  setPhase("preview");
+      setFrontPreviewPng(frontPng);
+      setBackPreviewPng(backPng);
+
+      setShowPngPreview(true);
+      handleStop();
+      setPrevPhase(phase);
+      setPhase("preview");
+
+      // Restore original epicycle settings
+      setStyles((prev) => ({
+        ...prev,
+        showEpicycles: prevEpicycleVisibility,
+        epicycleAlpha: prevEpicycleAlpha,
+      }));
+      frontController?.updateStyles({ showEpicycles: prevEpicycleVisibility, epicycleAlpha: prevEpicycleAlpha });
+      backController?.updateStyles({ showEpicycles: prevEpicycleVisibility, epicycleAlpha: prevEpicycleAlpha });
+    }, 0);
+  });
 }, [
   phase,
   captureCanvasDataUrl,
   handleStop,
-  storeBackSketches
+  storeBackSketches,
+  frontController,
+  backController,
+  styles.showEpicycles,
+  styles.epicycleAlpha,
 ]);
 
 
@@ -841,7 +881,12 @@ const handleSendPostcard = async () => {
   if (frontSketches.length === 0) {
     errors.push("엽서 앞면을 변환해주세요.");
   }
-  if (backSketches.length === 0 && !textCanvasMessage.trim()) {
+  // MODIFIED VALIDATION: If text is present but not Fourier transformed,
+  // either warn the user or auto-transform it.
+  if (textCanvasMessage.trim().length > 0 && backSketches.length === 0) {
+    errors.push("뒷면 메시지를 변환해주세요 (변환 시작 버튼 클릭).");
+  }
+  if (backSketches.length === 0 && !textCanvasMessage.trim()) { // Original logic for empty back
     errors.push("엽서 뒷면을 변환해주세요.");
   }
 
@@ -872,13 +917,33 @@ const handleSendPostcard = async () => {
   const frontPngBlob = frontPreviewPng ? dataURLtoBlob(frontPreviewPng) : null;
   const backPngBlob = backPreviewPng ? dataURLtoBlob(backPreviewPng) : null;
 
-  // 애니메이션을 재생 상태로 만들어야 Fourier가 움직임
-  frontController?.startPlayback();
-  backController?.startPlayback();
+  // Temporarily hide epicycles for video capture
+  const prevEpicycleVisibility = styles.showEpicycles;
+  const prevEpicycleAlpha = styles.epicycleAlpha;
+
+  setStyles((prev) => ({
+    ...prev,
+    showEpicycles: false,
+    epicycleAlpha: 0,
+  }));
+  frontController?.updateStyles({ showEpicycles: false, epicycleAlpha: 0 });
+  backController?.updateStyles({ showEpicycles: false, epicycleAlpha: 0 });
+
+  // Give a moment for the canvas to repaint
+  await new Promise((resolve) => setTimeout(resolve, 50));
 
   // webm으로 캡처 — 브라우저는 mp4 불가능
   const frontVideoBlob = await canvasToMp4(frontCanvas, 3000);
   const backVideoBlob = await canvasToMp4(backCanvas, 3000);
+
+  // Restore original epicycle settings
+  setStyles((prev) => ({
+    ...prev,
+    showEpicycles: prevEpicycleVisibility,
+    epicycleAlpha: prevEpicycleAlpha,
+  }));
+  frontController?.updateStyles({ showEpicycles: prevEpicycleVisibility, epicycleAlpha: prevEpicycleAlpha });
+  backController?.updateStyles({ showEpicycles: prevEpicycleVisibility, epicycleAlpha: prevEpicycleAlpha });
 
   const MIN_VIDEO_SIZE = 1024; // 1KB, 비어있는 webm 파일 헤더 크기보다 큰 값
   if (
@@ -1273,7 +1338,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
           <input
             value={recipientEmail}
             onChange={(e) => setRecipientEmail(e.target.value)}
-            placeholder="보내는 사람 이름"
+            placeholder="받는 사람 이름"
             autoComplete="off"
             className="
               px-3 py-2
@@ -1593,9 +1658,11 @@ const { startStop, toggleSide, edit, preview } = getButtons();
       `}
     >
       <BackPreview
+        ref={backPreviewDivRef}
         backPreviewPng={backPreviewPng}
         messageText={textCanvasMessage}
         recipientName={recipientName}
+        senderName={senderName}
         backgroundColor={styles.backgroundColor}
         textAlign={textAlign}
         textColor={styles.pathColor}
@@ -1622,7 +1689,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
       <button
         onClick={handleClosePreview}
         className={`
-          absolute z-50
+          absolute z-[100]
           left-1/2 -translate-x-1/2
           bottom-10
           px-5 py-2
