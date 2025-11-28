@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import PianoKey from "./PianoKey";
+import PianoDefs from "./PianoDefs"; // [추가]
 import {
   createPianoLayout,
   WHITE_KEY_COUNT_DESKTOP,
@@ -81,7 +82,12 @@ export default function Piano({ activeNotes }: { activeNotes: Set<number> }) {
   );
 
   return (
-    <div className="relative" style={{ width: `${width}px`, height: `${height}px` }}>
+    // [최적화] GPU 가속을 위해 translateZ(0) 추가
+    <div className="relative" style={{ width: `${width}px`, height: `${height}px`, transform: "translateZ(0)" }}>
+      
+      {/* [추가] 필터 정의를 한 번만 로드 */}
+      <PianoDefs />
+
       {/* White keys */}
       {whites.map(({ midi, x, y }) => (
         <div key={`w-${midi}`} className="absolute" style={{ left: x, bottom: y - 36, zIndex: 1 }}>

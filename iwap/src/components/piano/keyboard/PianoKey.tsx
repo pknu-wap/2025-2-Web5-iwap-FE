@@ -26,11 +26,12 @@ function PianoKey({
     overflow: "visible",
   };
 
+  // [최적화] will-change 속성 추가로 애니메이션 성능 향상
   return (
     <div
       aria-label={`m${midi}`}
       className={`relative group overflow-visible ${type === "black" ? "z-[30]" : "z-[10]"}`}
-      style={wrapStyle}
+      style={{ ...wrapStyle, willChange: "contents" }} 
     >
       {type === "white" ? (
         <>
@@ -42,6 +43,7 @@ function PianoKey({
             fill="none"
             className="absolute bottom-0 left-0"
           >
+            {/* [수정] 전역 Defs 참조 (filter0_f_1207_690) */}
             <g opacity="0.6" filter="url(#filter0_f_1207_690)">
               <circle
                 cx="12.5"
@@ -51,6 +53,7 @@ function PianoKey({
                 fill="url(#paint0_radial_1207_690)"
               />
             </g>
+            {/* [수정] 전역 Defs 참조 (filter1_dd_1207_690) */}
             <g filter="url(#filter1_dd_1207_690)">
               <rect
                 x="30"
@@ -61,34 +64,7 @@ function PianoKey({
                 style={{ transition: "fill 0.06s ease-out" }}
               />
             </g>
-            <defs>
-              <filter id="filter0_f_1207_690" x="22" y="53" width="41" height="41" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
-                <feFlood floodOpacity="0" result="BackgroundImageFix" />
-                <feBlend mode="normal" in="SourceGraphic" in2="BackgroundImageFix" result="shape" />
-                <feGaussianBlur stdDeviation="4" result="effect1_foregroundBlur_1207_690" />
-              </filter>
-              <filter id="filter1_dd_1207_690" x="0" y="0" width="85" height="186" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
-                <feFlood floodOpacity="0" result="BackgroundImageFix" />
-                <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" />
-                <feMorphology radius="1" operator="dilate" in="SourceAlpha" result="effect1_dropShadow_1207_690" />
-                <feOffset />
-                <feGaussianBlur stdDeviation="5" />
-                <feComposite in2="hardAlpha" operator="out" />
-                <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.25 0" />
-                <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1207_690" />
-                <feOffset dy="20" />
-                <feGaussianBlur stdDeviation="15" />
-                <feComposite in2="hardAlpha" operator="out" />
-                <feColorMatrix type="matrix" values="0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 0.25 0" />
-                <feBlend mode="normal" in2="effect1_dropShadow_1207_690" result="effect2_dropShadow_1207_690" />
-                <feBlend mode="normal" in="SourceGraphic" in2="effect2_dropShadow_1207_690" result="shape" />
-              </filter>
-              <radialGradient id="paint0_radial_1207_690" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(12.5 12.5) rotate(90) scale(12.5)">
-                <stop offset="0.65" stopColor="#B0CCF4" stopOpacity="0" />
-                <stop offset="0.9" stopColor="#9D9DC5" />
-                <stop offset="1" stopColor="#A46A91" stopOpacity="0" />
-              </radialGradient>
-            </defs>
+            {/* <defs> 제거됨 - PianoDefs.tsx로 이동 */ }
           </svg>
 
           {/* 좌우 가장자리 글로우 */}
@@ -148,6 +124,7 @@ function PianoKey({
             fill="none"
             className={`absolute left-0 transition-transform duration-75 ease-out ${active ? "translate-y-[1px]" : ""}`}
           >
+            {/* [수정] 전역 Defs 참조 (filter0_d_1273_506) */}
             <g filter="url(#filter0_d_1273_506)">
               <rect
                 x="11"
@@ -158,19 +135,7 @@ function PianoKey({
                 style={{ transition: "fill 0.06s ease-out" }}
               />
             </g>
-            <defs>
-              <filter id="filter0_d_1273_506" x="0" y="0" width="35" height="87" filterUnits="userSpaceOnUse" colorInterpolationFilters="sRGB">
-                <feFlood floodOpacity="0" result="BackgroundImageFix" />
-                <feColorMatrix in="SourceAlpha" type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0" result="hardAlpha" />
-                <feMorphology radius="1" operator="dilate" in="SourceAlpha" result="effect1_dropShadow_1273_506" />
-                <feOffset />
-                <feGaussianBlur stdDeviation="5" />
-                <feComposite in2="hardAlpha" operator="out" />
-                <feColorMatrix type="matrix" values="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4 0" />
-                <feBlend mode="normal" in2="BackgroundImageFix" result="effect1_dropShadow_1273_506" />
-                <feBlend mode="normal" in="SourceGraphic" in2="effect1_dropShadow_1273_506" result="shape" />
-              </filter>
-            </defs>
+            {/* <defs> 제거됨 - PianoDefs.tsx로 이동 */ }
           </svg>
 
           {/* 검은건반 좌우 글로우 */}
