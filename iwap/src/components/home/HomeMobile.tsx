@@ -431,7 +431,7 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
         }`}
         aria-label="Reveal IWAP"
       >
-        <span className="text-xs uppercase tracking-[0.4em]">Explore</span>
+        <span className="text-xs uppercase tracking-[0.4em] mr-[-0.4em]">Explore</span>
         <svg
           width="24"
           height="24"
