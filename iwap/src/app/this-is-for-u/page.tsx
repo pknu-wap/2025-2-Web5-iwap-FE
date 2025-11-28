@@ -1574,12 +1574,12 @@ const { startStop, toggleSide, edit, preview } = getButtons();
           disabled={isMailSending || !isValidEmail(recipientEmail)}
           className="
             flex items-center justify-center
-            w-[28px] h-[28px] md:w-[34px] md:h-[34px]
+            w-[30px] h-[30px] md:w-[34px] md:h-[34px]
             hover:bg-white/20 transition md:translate-x-[40px] -translate-x-[0px]
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
-          <img src="/icons/Send.svg" className="w-[16px] md:w-[20px]" />
+          <img src="/icons/Send.svg" className="w-[28px] h-[29px]" />
         </button>
       </div>
     </div>
