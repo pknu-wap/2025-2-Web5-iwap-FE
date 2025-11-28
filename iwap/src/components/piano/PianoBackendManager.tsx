@@ -1,7 +1,13 @@
 "use client";
 
 import { useEffect } from "react";
-import { Transport, context, start, getContext, getDestination } from "tone";
+import { 
+  Transport, 
+  context, 
+  start as startAudioContext, 
+  getContext, 
+  getDestination 
+} from "tone";
 import { Midi } from "@tonejs/midi";
 
 export type MidiTransportControls = {
@@ -88,22 +94,26 @@ export default function PianoBackendManager({
     };
 
     const disposeTransport = () => {
-      Transport.stop();
-      Transport.cancel();
+      if (Transport.state !== "stopped") {
+        Transport.stop();
+      }
+      Transport.cancel(0);
       Transport.seconds = 0;
       flushActiveNotes();
     };
 
     const pollForFile = async (url: string, timeoutMs = 120000): Promise<Response> => {
-      const start = Date.now();
-      let attempt = 0;
-      while (Date.now() - start < timeoutMs) {
+      const startTime = Date.now();
+      // attempt 변수는 로직 제어용으로만 사용하고 표시는 하지 않음
+      let attempt = 0; 
+
+      while (Date.now() - startTime < timeoutMs) {
         if (isCancelled) throw new Error("Cancelled");
         attempt++;
         
         try {
-          // 디버깅: 상태 메시지 업데이트
-          onStatusChange?.(`분석 중... (${attempt})`);
+          // [수정] attempt 횟수 표시 제거
+          onStatusChange?.("분석 중...");
 
           const res = await fetch(url);
           if (res.status === 200) {
@@ -164,24 +174,24 @@ export default function PianoBackendManager({
 
       const midi = new Midi(midiArray);
 
-      // [Logic from Checkout 1] Simple await for Tone.start()
       if (context.state !== 'running') {
-        await start();
+        await startAudioContext();
       }
       
       const ctx = getContext();
-      ctx.lookAhead = isMobileDevice() ? 0.2 : 0.1; // Slightly increased for mobile safety
-      getDestination().volume.value = -20;
+      ctx.lookAhead = 0.2; 
+      
+      // Tone.js 소리 끄기 (VoiceToPiano에서 MP3 재생하므로 충돌 방지)
+      getDestination().volume.value = -Infinity; 
 
       disposeTransport();
       
-      // [Logic from Checkout 1] Synchronous scheduling (No Chunking)
       onStatusChange?.("노트 생성 준비 중...");
 
       midi.tracks.forEach((track) => {
         track.notes.forEach((note) => {
           const midiNum = note.midi;
-          const start = note.time;
+          const noteStart = note.time;
           const duration = Math.max(note.duration, 0.05);
 
           Transport.schedule(() => {
@@ -194,9 +204,9 @@ export default function PianoBackendManager({
                 if (isCancelled) return;
                 activeMidiNotes.delete(midiNum);
                 onMidiEvent({ type: "off", note: midiNum });
-              }, start + duration);
+              }, noteStart + duration);
             }
-          }, start);
+          }, noteStart);
         });
       });
 
@@ -215,7 +225,7 @@ export default function PianoBackendManager({
         start: async () => {
           if (isCancelled) return;
           if (context.state !== 'running') {
-             await start().catch(() => {});
+             await startAudioContext().catch(() => {});
           }
           if (Transport.state !== "started") {
             Transport.start();

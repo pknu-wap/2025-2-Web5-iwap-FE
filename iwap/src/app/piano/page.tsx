@@ -47,10 +47,9 @@ export default function VoiceToPiano() {
     return window.matchMedia("(max-width: 767px)").matches;
   });
 
-  // [삭제됨] activeNotesRef, noteTimeoutsRef, forceRender는 더 이상 필요하지 않습니다.
-  // 건반 애니메이션은 이제 CustomEvent를 통해 각 건반이 직접 처리합니다.
-
   const [status, setStatus] = useState("");
+  // [추가 1] 녹음 종료 직후 즉시 UI 전환을 위한 임시 상태
+  const [isStopping, setIsStopping] = useState(false);
   
   const [transport, setTransport] = useState<MidiTransportControls | null>(null);
   const [transportDuration, setTransportDuration] = useState(0);
@@ -69,6 +68,11 @@ export default function VoiceToPiano() {
 
   useLayoutEffect(() => {
     audioUrlRef.current = audioUrl;
+    // [추가 4] 오디오 URL이 생성되면(저장 완료 시) Stopping 상태 해제
+    if (audioUrl) {
+        setIsStopping(false);
+    }
+
     if (audioUrl && !isProcessing && !transport) {
       setStatus("분석 준비 중...");
     }
@@ -94,8 +98,6 @@ export default function VoiceToPiano() {
   const router = useRouter();
   const mp3AudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // [핵심 수정] MIDI 이벤트 핸들러 최적화
-  // React 상태를 업데이트하지 않고, 브라우저 이벤트를 발송하여 PianoKey가 직접 반응하게 함
   const handleMidi = useCallback(
     ({ type, note }: { type: "on" | "off"; note: number }) => {
       if (typeof window !== "undefined") {
@@ -128,24 +130,37 @@ export default function VoiceToPiano() {
 
   useEffect(() => {
     if (!transport) return;
+
     const updateTransportState = () => {
       const state = transport.getState();
       const currentPosition = transport.getPosition();
       const hasDuration = transportDuration > 0;
+      
+      if (state === "stopped") {
+        setTransportPosition((prev) => (prev !== 0 ? 0 : prev));
+        setIsTransportPlaying(false);
+        
+        if (mp3AudioRef.current && !mp3AudioRef.current.paused && mp3AudioRef.current.ended) {
+            mp3AudioRef.current.currentTime = 0;
+        }
+        return;
+      }
+
       const nextPosition = hasDuration
         ? Math.min(transportDuration, currentPosition)
         : currentPosition;
+        
       setTransportPosition(nextPosition);
       setIsTransportPlaying(state === "started");
     };
-    const intervalId = window.setInterval(updateTransportState, 100);
+
+    const intervalId = window.setInterval(updateTransportState, 50);
     updateTransportState();
+    
     return () => {
       window.clearInterval(intervalId);
     };
   }, [transport, transportDuration]);
-
-  // [삭제됨] 타임아웃 정리 useEffect도 필요 없음
 
   const headerHiddenRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -184,6 +199,12 @@ export default function VoiceToPiano() {
     },
     [setAudioFromFile, setStatus]
   );
+
+  // [추가 2] 녹음 종료 래퍼 함수
+  const handleStopRecording = useCallback(() => {
+    setIsStopping(true); // 즉시 UI 상태 변경
+    stopRecording();     // 실제 로직 실행
+  }, [stopRecording]);
 
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
@@ -254,7 +275,9 @@ export default function VoiceToPiano() {
         mp3.crossOrigin = "anonymous";
       }
       mp3.volume = 0.2;
-      mp3.onended = () => { mp3.currentTime = 0; };
+      mp3.onended = () => { 
+        controls.pause(); 
+      };
       mp3AudioRef.current = mp3;
 
       setStatus("");
@@ -265,8 +288,6 @@ export default function VoiceToPiano() {
         void (async () => {
           try {
             await mp3.play();
-            // Safari 자동 재생 정책 대응: 
-            // Transport 시작을 약간 지연시킴
             requestAnimationFrame(async () => {
                 await controls.start();
             });
@@ -306,32 +327,37 @@ export default function VoiceToPiano() {
     setStatus("");
     clearMidiDownload();
     disposeMp3Audio();
-    // 타이머 정리 로직 삭제됨 (불필요)
   }, [clearMidiDownload, disposeMp3Audio]);
 
   const handleTogglePlayback = useCallback(() => {
     if (!transport) return;
+    
     if (isTransportPlaying) {
       transport.pause();
       mp3AudioRef.current?.pause();
       setIsTransportPlaying(false);
       return;
     }
+
+    const currentPos = transport.getPosition();
+    const isFinished = currentPos >= transportDuration - 0.1;
+
     setIsTransportPlaying(true);
+    
     void (async () => {
       const audio = mp3AudioRef.current;
-      if (audio) {
-        const currentAudioTime = audio.currentTime;
-        const currentTransportTime = transport.getPosition();
-        if (currentAudioTime < 0.1 && currentTransportTime > 0.1) {
-          audio.currentTime = currentTransportTime;
-          transport.seek(currentTransportTime);
-        } else if (Math.abs(currentAudioTime - audio.duration) < 0.1) {
-          audio.currentTime = 0;
+      
+      if (isFinished) {
           transport.seek(0);
-        } else {
-          transport.seek(currentAudioTime);
-        }
+          if (audio) audio.currentTime = 0;
+      } else if (audio) {
+          const audioTime = audio.currentTime;
+          if (Math.abs(audioTime - currentPos) > 0.2 && currentPos > 0.5) {
+              transport.seek(audioTime);
+          }
+      }
+
+      if (audio) {
         try {
           await audio.play();
           await transport.start();
@@ -343,7 +369,7 @@ export default function VoiceToPiano() {
         await transport.start();
       }
     })();
-  }, [transport, isTransportPlaying]);
+  }, [transport, isTransportPlaying, transportDuration]);
 
   const handleSeek = useCallback((seconds: number, resume: boolean) => {
     if (!transport) return;
@@ -351,6 +377,7 @@ export default function VoiceToPiano() {
     setTransportPosition(clamped);
     const audio = mp3AudioRef.current;
     if (audio) audio.currentTime = clamped;
+    
     if (resume) {
       transport.pause();
       transport.seek(clamped, false);
@@ -360,6 +387,7 @@ export default function VoiceToPiano() {
           catch (err) { await transport.start(); }
         } else { await transport.start(); }
       })();
+      setIsTransportPlaying(true);
     } else {
       transport.seek(clamped, false);
       if (audio) audio.pause();
@@ -390,6 +418,7 @@ export default function VoiceToPiano() {
 
   const handleGoBack = () => {
     if (audioUrl) {
+      setIsStopping(false); // 리셋 시 상태 해제
       reset();
       handleTransportReset();
     } else {
@@ -401,9 +430,8 @@ export default function VoiceToPiano() {
   const isReadyToRenderResult = Boolean(audioUrl);
   const isConversionFinished = Boolean(transport);
 
-  const themeTextClass = "text-white";
+  const themeTextClass = theme === "dark" ? "!text-white" : "!text-black";
   const loadingTextClass = `text-base md:text-lg font-bold text-center break-keep ${themeTextClass}`;
-  const smallLoadingTextClass = `text-sm font-bold whitespace-nowrap ${themeTextClass}`;
 
   return (
     <div className="flex flex-col">
@@ -442,15 +470,13 @@ export default function VoiceToPiano() {
           )}
 
           <div
-            className="absolute inset-0 pointer-events-none"
+            className="absolute inset-0 pointer-events-none z-0"
             style={{
-              background: theme === "dark"
-                ? "linear-gradient(to bottom, rgba(139, 139, 188, 0), rgba(139, 139, 188, 0.8))"
-                : "linear-gradient(to bottom, rgba(139, 139, 188, 0), rgba(139, 139, 188, 0.8))",
+              background: "linear-gradient(to bottom, rgba(139, 139, 188, 0), rgba(139, 139, 188, 0.8))",
             }}
           />
 
-          <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible">
+          <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible relative z-10">
             <>
               <div
                 className={`${
@@ -459,11 +485,20 @@ export default function VoiceToPiano() {
               >
                 {!audioUrl && (
                   <>
-                    {!isProcessing && (
+                    {!isProcessing && !isStopping && ( // [수정] isStopping 체크 추가 (상태 메시지 숨김)
                       <div className="relative flex flex-col items-center justify-center">
                         <h1 className="text-2xl md:text-3xl font-bold text-center">
                           음성을 입력해주세요
                         </h1>
+                        
+                        {isMobile && !isRecording && (
+                          <div className="absolute bottom-full mb-16 w-max max-w-[90vw] z-20">
+                            <p className="text-red-500 font-medium text-xs md:text-sm bg-white/90 px-3 py-1 rounded-full shadow-sm backdrop-blur-sm text-center">
+                              모바일은 작동하지 않을 수 있습니다.
+                            </p>
+                          </div>
+                        )}
+
                         {status && !isRecording && (
                           <div className="absolute bottom-full mb-4 w-max max-w-[90vw] z-20">
                             <p className="text-red-500 font-medium text-xs md:text-sm bg-white/90 px-3 py-1 rounded-full shadow-sm backdrop-blur-sm animate-pulse text-center">
@@ -474,23 +509,24 @@ export default function VoiceToPiano() {
                       </div>
                     )}
 
-                    {isProcessing ? (
-                      <div className="flex flex-col items-center justify-center gap-3 h-[30vh]">
-                         <LoadingIndicator 
+                    {/* [수정] 로딩 상태 표시 조건에 isStopping 포함 */}
+                    {(isProcessing || isStopping) ? (
+                      <div className="relative z-[100] flex flex-col items-center justify-center gap-3 h-[30vh]">
+                          <LoadingIndicator 
                            text="저장 중..." 
                            className={themeTextClass}
                            textClassName={loadingTextClass}
-                         />
+                          />
                       </div>
                     ) : (
                       <RecorderButton
                         isRecording={isRecording}
                         startRecording={startRecording}
-                        stopRecording={stopRecording}
+                        stopRecording={handleStopRecording} // [수정] 래퍼 함수 연결
                       />
                     )}
 
-                    {!isRecording && !isProcessing && (
+                    {!isRecording && !isProcessing && !isStopping && (
                       <>
                         <button
                           type="button"
@@ -505,7 +541,7 @@ export default function VoiceToPiano() {
                       </>
                     )}
                     
-                    {(isRecording || isProcessing) && (
+                    {(isRecording || isProcessing || isStopping) && (
                       <div className="w-[144px] h-[32px] md:w-[180px] md:h-[40px] -translate-y-20" aria-hidden="true" />
                     )}
                   </>
@@ -515,13 +551,13 @@ export default function VoiceToPiano() {
               {isReadyToRenderResult && (
                 <>
                   {(isProcessing || !isConversionFinished) ? (
-                     <div className="flex flex-col items-center justify-center h-[30vh] gap-3">
-                       <LoadingIndicator 
-                         text={status || "분석 중..."}
-                         className={themeTextClass}
-                         textClassName={loadingTextClass}
-                       />
-                     </div>
+                      <div className="relative z-[100] flex flex-col items-center justify-center h-[30vh] gap-3">
+                        <LoadingIndicator 
+                          text={status || "분석 중..."}
+                          className={themeTextClass}
+                          textClassName={loadingTextClass}
+                        />
+                      </div>
                   ) : (
                     <>
                       <div className={`hidden w-full flex-col items-center gap-6 ${audioUrl ? "md:flex" : ""}`}>
@@ -529,13 +565,12 @@ export default function VoiceToPiano() {
                          
                         <div className="relative flex items-center justify-center w-full overflow-visible md:h-[10px] md:py-6 min-h-[30vh] py-10" style={{ height: "120px", paddingTop: "25px", paddingBottom: "30px" }}>
                           <div className="overflow-visible" style={{ transform: "scale(0.8)", transformOrigin: "top center", overflow: "visible" }}>
-                            {/* [수정됨] activeNotes props 제거 */}
                             <Piano />
                           </div>
                         </div>
                       </div>
 
-                      <div className={`${audioUrl ? "" : "hidden"} md:hidden absolute top-1/2 left-1/2 w-dvh h-dvw transform -translate-x-1/2 -translate-y-1/2 rotate-90 flex flex-col items-center justify-center overflow-hidden p-4`}>
+                      <div className={`${audioUrl ? "" : "hidden"} md:hidden absolute top-1/2 left-1/2 w-dvh h-dvw transform -translate-x-1/2 -translate-y-1/2 rotate-90 flex flex-col items-center justify-center overflow-hidden p-4 z-50`}>
                         <div className="absolute inset-0 pointer-events-none z-0" style={{ background: "linear-gradient(to bottom, rgba(139, 139, 188, 0), rgba(139, 139, 188, 0.3))" }} />
                         <header className="w-full flex justify-between items-start px-6 pt-4 z-10">
                           <div className="flex flex-col items-start ">
@@ -546,9 +581,8 @@ export default function VoiceToPiano() {
                         </header>
 
                         <div className="flex-1 flex flex-col items-center justify-center w-full z-10">
-                           <div className="h-3 mb-2"></div>
-                           <div className="transform origin-center scale-[0.5]">
-                            {/* [수정됨] activeNotes props 제거 */}
+                            <div className="h-3 mb-2"></div>
+                            <div className="transform origin-center scale-[0.5]">
                             <Piano />
                           </div>
                         </div>
@@ -582,7 +616,7 @@ export default function VoiceToPiano() {
           </main>
 
           {hasTransport && isConversionFinished ? (
-            <div className="hidden md:flex absolute bottom-6 left-0 right-0 justify-center">
+            <div className="hidden md:flex absolute bottom-6 left-0 right-0 justify-center z-50">
               <MidiPlayerBar
                 isPlaying={isTransportPlaying}
                 duration={transportDuration}
