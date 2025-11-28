@@ -47,6 +47,20 @@ export default function VoiceToPiano() {
     return window.matchMedia("(max-width: 767px)").matches;
   });
 
+  // [추가] Safari 브라우저 감지 상태
+  const [isSafari, setIsSafari] = useState(false);
+
+  useEffect(() => {
+    // Safari 감지 로직 (Client Side에서만 실행)
+    if (typeof window !== "undefined" && navigator.userAgent) {
+      const ua = navigator.userAgent.toLowerCase();
+      // 'safari'가 포함되어 있으면서 'chrome'이나 'android'가 포함되지 않은 경우를 Safari로 간주
+      // (Chrome 브라우저도 userAgent에 Safari 문자열을 포함하기 때문)
+      const isSafariBrowser = ua.indexOf("safari") > -1 && ua.indexOf("chrome") < 0;
+      setIsSafari(isSafariBrowser);
+    }
+  }, []);
+
   const [status, setStatus] = useState("");
   // [추가 1] 녹음 종료 직후 즉시 UI 전환을 위한 임시 상태
   const [isStopping, setIsStopping] = useState(false);
@@ -491,10 +505,27 @@ export default function VoiceToPiano() {
                           음성을 입력해주세요
                         </h1>
                         
-                        {isMobile && !isRecording && (
+                        {/* [추가] Safari 호환성 경고 메시지 (최우선 순위) 
+                            - Safari이면 모바일 여부와 상관없이 이 메시지를 표시
+                            - 위치 및 스타일은 모바일 경고와 동일하게 mb-16 적용
+                        */}
+                        {isSafari && !isRecording && (
                           <div className="absolute bottom-full mb-16 w-max max-w-[90vw] z-20">
-                            <p className="text-red-500 font-medium text-xs md:text-sm bg-white/90 px-3 py-1 rounded-full shadow-sm backdrop-blur-sm text-center">
-                              모바일은 작동하지 않을 수 있습니다.
+                            <p className="text-red-500 font-medium text-xs md:text-sm bg-white/90 px-3 py-1 rounded-full shadow-sm backdrop-blur-sm animate-pulse text-center">
+                              Safari에서는 작동하지 않을 수 있습니다.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* [수정] 모바일 호환성 경고 메시지 
+                           - 기존: isMobile && !isRecording
+                           - 변경: isMobile && !isSafari && !isRecording
+                           - Safari가 아닐 때만 표시 (Safari인 경우 위 메시지가 뜨므로 중복 방지)
+                        */}
+                        {isMobile && !isSafari && !isRecording && (
+                          <div className="absolute bottom-full mb-16 w-max max-w-[90vw] z-20">
+                            <p className="text-red-500 font-medium text-xs md:text-sm bg-white/90 px-3 py-1 rounded-full shadow-sm backdrop-blur-sm animate-pulse text-center">
+                              모바일에서는 작동하지 않을 수 있습니다.
                             </p>
                           </div>
                         )}
