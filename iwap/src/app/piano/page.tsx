@@ -1,4 +1,3 @@
-// page.tsx
 "use client";
 
 import {
@@ -34,9 +33,9 @@ export default function VoiceToPiano() {
 
   const {
     isRecording,
-    isProcessing, // 녹음 후 메모리 정리 및 파일 생성 중 상태
+    isProcessing,
     audioUrl,
-    audioFile,    // File 객체 (직접 전송용)
+    audioFile,
     startRecording,
     stopRecording,
     setAudioFromFile,
@@ -48,11 +47,9 @@ export default function VoiceToPiano() {
     return window.matchMedia("(max-width: 767px)").matches;
   });
 
-  const activeNotesRef = useRef<Set<number>>(new Set());
-  const noteTimeoutsRef = useRef<Map<number, number>>(new Map());
-  const [, forceRender] = useState(0);
-  
-  // BackendManager에서 전달받는 상세 진행 상태 메시지
+  // [삭제됨] activeNotesRef, noteTimeoutsRef, forceRender는 더 이상 필요하지 않습니다.
+  // 건반 애니메이션은 이제 CustomEvent를 통해 각 건반이 직접 처리합니다.
+
   const [status, setStatus] = useState("");
   
   const [transport, setTransport] = useState<MidiTransportControls | null>(null);
@@ -70,16 +67,13 @@ export default function VoiceToPiano() {
   const conversionContextRef = useRef<ConversionContext | null>(null);
   const audioUrlRef = useRef<string | null>(null);
 
-  // 초기 상태 메시지 설정
   useLayoutEffect(() => {
     audioUrlRef.current = audioUrl;
-    // URL은 생겼지만 아직 변환이 안 끝났을 때
     if (audioUrl && !isProcessing && !transport) {
       setStatus("분석 준비 중...");
     }
   }, [audioUrl, isProcessing, transport]);
 
-  // 테마 버튼 제어
   useEffect(() => {
     if (audioUrl && isMobile) {
       window.dispatchEvent(
@@ -100,35 +94,16 @@ export default function VoiceToPiano() {
   const router = useRouter();
   const mp3AudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // MIDI 이벤트 처리
+  // [핵심 수정] MIDI 이벤트 핸들러 최적화
+  // React 상태를 업데이트하지 않고, 브라우저 이벤트를 발송하여 PianoKey가 직접 반응하게 함
   const handleMidi = useCallback(
     ({ type, note }: { type: "on" | "off"; note: number }) => {
-      const activeNotes = activeNotesRef.current;
-      const timeouts = noteTimeoutsRef.current;
-
-      if (type === "on") {
-        activeNotes.add(note);
-        const existingTimeout = timeouts.get(note);
-        if (existingTimeout !== undefined) {
-          clearTimeout(existingTimeout);
-        }
-        const timeoutId = window.setTimeout(() => {
-          activeNotes.delete(note);
-          timeouts.delete(note);
-          forceRender((t) => t ^ 1);
-        }, 600);
-        timeouts.set(note, timeoutId);
-        forceRender((t) => t ^ 1);
-        return;
-      }
-
-      const existingTimeout = timeouts.get(note);
-      if (existingTimeout !== undefined) {
-        clearTimeout(existingTimeout);
-        timeouts.delete(note);
-      }
-      if (activeNotes.delete(note)) {
-        forceRender((t) => t ^ 1);
+      if (typeof window !== "undefined") {
+        window.dispatchEvent(
+          new CustomEvent("piano:event", {
+            detail: { type, note },
+          })
+        );
       }
     },
     []
@@ -170,12 +145,7 @@ export default function VoiceToPiano() {
     };
   }, [transport, transportDuration]);
 
-  useEffect(() => {
-    return () => {
-      noteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
-      noteTimeoutsRef.current.clear();
-    };
-  }, []);
+  // [삭제됨] 타임아웃 정리 useEffect도 필요 없음
 
   const headerHiddenRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -295,7 +265,11 @@ export default function VoiceToPiano() {
         void (async () => {
           try {
             await mp3.play();
-            await controls.start();
+            // Safari 자동 재생 정책 대응: 
+            // Transport 시작을 약간 지연시킴
+            requestAnimationFrame(async () => {
+                await controls.start();
+            });
           } catch (err) {
             console.warn("Auto playback failed", err);
             setIsTransportPlaying(false);
@@ -332,11 +306,8 @@ export default function VoiceToPiano() {
     setStatus("");
     clearMidiDownload();
     disposeMp3Audio();
-    noteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
-    noteTimeoutsRef.current.clear();
-    activeNotesRef.current.clear();
-    forceRender((t) => t ^ 1);
-  }, [clearMidiDownload, disposeMp3Audio, forceRender]);
+    // 타이머 정리 로직 삭제됨 (불필요)
+  }, [clearMidiDownload, disposeMp3Audio]);
 
   const handleTogglePlayback = useCallback(() => {
     if (!transport) return;
@@ -427,16 +398,10 @@ export default function VoiceToPiano() {
   };
 
   const hasTransport = Boolean(transport);
-
-  // [핵심] 렌더링 가드
-  // audioUrl만 있으면 바로 결과 화면 레이아웃으로 전환 (깜빡임 방지)
   const isReadyToRenderResult = Boolean(audioUrl);
-  // 하지만 건반은 transport가 생성된 후에만 그림 (Crash 방지)
   const isConversionFinished = Boolean(transport);
 
-  // [디자인] 테마 적용 및 스타일 클래스
   const themeTextClass = theme === "dark" ? "text-white" : "text-black";
-  // 디버깅 로그는 내용이 길 수 있으므로 whitespace-nowrap 제거 및 중앙 정렬
   const loadingTextClass = `text-base md:text-lg font-bold text-center break-keep ${themeTextClass}`;
   const smallLoadingTextClass = `text-sm font-bold whitespace-nowrap ${themeTextClass}`;
 
@@ -469,7 +434,7 @@ export default function VoiceToPiano() {
               audioUrl={audioUrl}
               audioFile={audioFile}
               onMidiEvent={handleMidi}
-              onStatusChange={setStatus} // 디버그 로그 전달
+              onStatusChange={setStatus}
               onTransportReady={handleTransportReady}
               onTransportReset={handleTransportReset}
               onMidiReady={handleMidiReady}
@@ -487,8 +452,6 @@ export default function VoiceToPiano() {
 
           <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible">
             <>
-              {/* === 녹음 화면 === */}
-              {/* 결과 화면 준비가 되면 바로 숨김 (깜빡임 방지) */}
               <div
                 className={`${
                   isReadyToRenderResult ? "hidden" : "flex"
@@ -496,7 +459,6 @@ export default function VoiceToPiano() {
               >
                 {!audioUrl && (
                   <>
-                    {/* 로딩 중(isProcessing)일 때는 타이틀("음성을 입력해주세요") 숨김 */}
                     {!isProcessing && (
                       <div className="relative flex flex-col items-center justify-center">
                         <h1 className="text-2xl md:text-3xl font-bold text-center">
@@ -512,7 +474,6 @@ export default function VoiceToPiano() {
                       </div>
                     )}
 
-                    {/* 녹음 종료 후 처리 중일 때 UI (버튼 대체) */}
                     {isProcessing ? (
                       <div className="w-[130px] h-[130px] md:w-[170px] md:h-[170px] flex flex-col items-center justify-center gap-3 pb-28">
                          <LoadingIndicator 
@@ -551,30 +512,25 @@ export default function VoiceToPiano() {
                 )}
               </div>
 
-              {/* === 결과 화면 === */}
               {isReadyToRenderResult && (
                 <>
-                  {/* 변환 완료 전 or 처리 중 (로딩 표시) */}
-                  {/* isProcessing 상태와 Conversion 완료 상태 모두 여기서 통합 처리 */}
                   {(isProcessing || !isConversionFinished) ? (
                      <div className="flex flex-row items-center justify-center h-[50vh] gap-3 px-4">
                        <LoadingIndicator 
-                         // 상세 상태 메시지 표시
                          text={status || "분석 중..."}
                          className={`h-auto ${themeTextClass}`}
                          textClassName={loadingTextClass}
                        />
                      </div>
                   ) : (
-                    // 변환 완료 후 (건반 표시)
                     <>
                       <div className={`hidden w-full flex-col items-center gap-6 ${audioUrl ? "md:flex" : ""}`}>
-                         {/* 완료 후에는 상태 메시지 숨기거나 간단하게 표시 */}
                          {status && !status.includes("중...") ? <p className="text-lg text-center whitespace-nowrap">{status}</p> : null}
                          
                         <div className="relative flex items-center justify-center w-full overflow-visible md:h-[10px] md:py-6 min-h-[30vh] py-10" style={{ height: "120px", paddingTop: "25px", paddingBottom: "30px" }}>
                           <div className="overflow-visible" style={{ transform: "scale(0.8)", transformOrigin: "top center", overflow: "visible" }}>
-                            <Piano activeNotes={activeNotesRef.current} />
+                            {/* [수정됨] activeNotes props 제거 */}
+                            <Piano />
                           </div>
                         </div>
                       </div>
@@ -592,7 +548,8 @@ export default function VoiceToPiano() {
                         <div className="flex-1 flex flex-col items-center justify-center w-full z-10">
                            <div className="h-3 mb-2"></div>
                            <div className="transform origin-center scale-[0.5]">
-                            <Piano activeNotes={activeNotesRef.current} />
+                            {/* [수정됨] activeNotes props 제거 */}
+                            <Piano />
                           </div>
                         </div>
 

@@ -1,37 +1,82 @@
-import { memo } from "react";
+"use client"; // [필수]
+
+import { memo, useEffect, useRef } from "react";
 import { WHITE_W, WHITE_H, BLACK_W, BLACK_H } from "./PianoLayout";
 import { shadowOffsets } from "./Shadowoffsets";
 
 function PianoKey({
   midi,
-  active,
   type,
 }: {
   midi: number;
-  active: boolean;
   type: "white" | "black";
+  // [수정] active props 제거 (자체적으로 관리)
 }) {
   const isWhite = type === "white";
   const keyWidth = isWhite ? WHITE_W : BLACK_W;
   const keyHeight = isWhite ? WHITE_H : BLACK_H;
+  
+  // [추가] DOM 요소 직접 제어를 위한 Refs
+  const keyRef = useRef<HTMLDivElement>(null);
+  const fillRef = useRef<SVGRectElement>(null);
+  const glowRef = useRef<HTMLDivElement>(null);
+  const rippleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // [핵심] 커스텀 이벤트 리스너: React 상태 변경 없이 DOM만 직접 조작
+    const handlePianoEvent = (e: CustomEvent) => {
+      if (e.detail.note === midi) {
+        const isActive = e.detail.type === "on";
+        
+        // 1. 건반 색상 변경 (Fill)
+        if (fillRef.current) {
+          fillRef.current.style.fill = isActive 
+            ? (isWhite ? "#B6C9E2" : "#97AED9") 
+            : (isWhite ? "#FFFFFF" : "#000000");
+        }
+
+        // 2. 건반 눌림 효과 (Y축 이동)
+        if (keyRef.current) {
+          const yMove = isWhite ? "2px" : "3px";
+          keyRef.current.style.transform = isActive ? `translateY(${yMove})` : "translateY(0)";
+        }
+
+        // 3. 파문 효과 (Ripple) & 글로우
+        if (rippleRef.current) {
+           if (isActive) rippleRef.current.classList.add("is-active");
+           else rippleRef.current.classList.remove("is-active");
+        }
+        if (glowRef.current) {
+           glowRef.current.style.opacity = isActive ? "0.5" : "1.0";
+        }
+      }
+    };
+
+    window.addEventListener("piano:event", handlePianoEvent as EventListener);
+    return () => {
+      window.removeEventListener("piano:event", handlePianoEvent as EventListener);
+    };
+  }, [midi, isWhite]);
+
+  const wrapStyle = {
+    width: `${keyWidth}px`,
+    height: `${keyHeight}px`,
+    overflow: "visible",
+    transition: "transform 0.1s cubic-bezier(0.4, 0, 0.2, 1)", // 부드러운 움직임
+    willChange: "transform", // GPU 가속 힌트
+  };
 
   const rippleCenter = {
     x: keyWidth / 2,
     y: keyHeight / 2,
   };
 
-  const wrapStyle = {
-    width: `${keyWidth}px`,
-    height: `${keyHeight}px`,
-    overflow: "visible",
-  };
-
-  // [최적화] will-change 속성 추가로 애니메이션 성능 향상
   return (
     <div
+      ref={keyRef}
       aria-label={`m${midi}`}
       className={`relative group overflow-visible ${type === "black" ? "z-[30]" : "z-[10]"}`}
-      style={{ ...wrapStyle, willChange: "contents" }} 
+      style={wrapStyle}
     >
       {type === "white" ? (
         <>
@@ -43,7 +88,6 @@ function PianoKey({
             fill="none"
             className="absolute bottom-0 left-0"
           >
-            {/* [수정] 전역 Defs 참조 (filter0_f_1207_690) */}
             <g opacity="0.6" filter="url(#filter0_f_1207_690)">
               <circle
                 cx="12.5"
@@ -53,43 +97,40 @@ function PianoKey({
                 fill="url(#paint0_radial_1207_690)"
               />
             </g>
-            {/* [수정] 전역 Defs 참조 (filter1_dd_1207_690) */}
             <g filter="url(#filter1_dd_1207_690)">
               <rect
+                ref={fillRef} // [연결]
                 x="30"
                 y="11"
                 width="25"
                 height="125"
-                fill={active ? "#B6C9E2" : "#FFFFFF"}
-                style={{ transition: "fill 0.06s ease-out" }}
+                fill="#FFFFFF" // 초기값
+                style={{ transition: "fill 0.1s ease-out" }}
               />
             </g>
-            {/* <defs> 제거됨 - PianoDefs.tsx로 이동 */ }
           </svg>
 
-          {/* 좌우 가장자리 글로우 */}
-          <div className="absolute inset-0 pointer-events-none">
+          {/* 좌우 글로우 */}
+          <div 
+            ref={glowRef} // [연결]
+            className="absolute inset-0 pointer-events-none transition-opacity duration-150"
+          >
             <div
               className="absolute left-0 top-0 h-full w-[6px]"
               style={{
-                opacity: 1.0,
-                background:
-                  "linear-gradient(90deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,0.20) 30%, #FFF 50%, rgba(255,255,255,0.20) 70%, rgba(255,255,255,0.00) 100%)",
+                background: "linear-gradient(90deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,0.20) 30%, #FFF 50%, rgba(255,255,255,0.20) 70%, rgba(255,255,255,0.00) 100%)",
                 filter: "blur(20px)",
               }}
             />
             <div
               className="absolute right-0 top-0 h-full w-[6px]"
               style={{
-                opacity: 1.0,
-                background:
-                  "linear-gradient(270deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,0.20) 30%, #FFF 50%, rgba(255,255,255,0.20) 70%, rgba(255,255,255,0.00) 100%)",
+                background: "linear-gradient(270deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,0.20) 30%, #FFF 50%, rgba(255,255,255,0.20) 70%, rgba(255,255,255,0.00) 100%)",
                 filter: "blur(20px)",
               }}
             />
           </div>
 
-          {/* 특정 건반 전용 세로 그라디언트 그림자 */}
           {shadowOffsets[midi] && (
             <div
               className="absolute pointer-events-none z-[20]"
@@ -100,16 +141,15 @@ function PianoKey({
                 width: "25px",
                 height: "284px",
                 opacity: 0.2,
-                background:
-                  "linear-gradient(180deg, rgba(255,255,255,0.00) 0%, #FFF 50.96%, rgba(255,255,255,0.00) 100%)",
+                background: "linear-gradient(180deg, rgba(255,255,255,0.00) 0%, #FFF 50.96%, rgba(255,255,255,0.00) 100%)",
               }}
             />
           )}
 
-          {/* 활성화 방사형 파장 */}
           <div className="absolute inset-0 pointer-events-none overflow-visible z-[60]">
             <div
-              className={`piano-key-ripple${active ? " is-active" : ""}`}
+              ref={rippleRef} // [연결]
+              className="piano-key-ripple"
               style={{ left: rippleCenter.x, top: rippleCenter.y }}
             />
           </div>
@@ -122,48 +162,46 @@ function PianoKey({
             height={BLACK_H}
             viewBox="0 0 35 87"
             fill="none"
-            className={`absolute left-0 transition-transform duration-75 ease-out ${active ? "translate-y-[1px]" : ""}`}
+            className="absolute left-0"
           >
-            {/* [수정] 전역 Defs 참조 (filter0_d_1273_506) */}
             <g filter="url(#filter0_d_1273_506)">
               <rect
+                ref={fillRef} // [연결]
                 x="11"
                 y="11"
                 width="13"
                 height="65"
-                fill={active ? "#97AED9" : "#000000"}
-                style={{ transition: "fill 0.06s ease-out" }}
+                fill="#000000" // 초기값
+                style={{ transition: "fill 0.1s ease-out" }}
               />
             </g>
-            {/* <defs> 제거됨 - PianoDefs.tsx로 이동 */ }
           </svg>
 
-          {/* 검은건반 좌우 글로우 */}
-          <div className="absolute inset-0 pointer-events-none">
+          {/* 검은건반 글로우 */}
+          <div 
+             ref={glowRef} // [연결]
+             className="absolute inset-0 pointer-events-none transition-opacity duration-150"
+          >
             <div
               className="absolute left-0 top-0 h-full w-[3px]"
               style={{
-                opacity: 1.0,
-                background:
-                  "linear-gradient(90deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,0.25) 30%, #FFF 50%, rgba(255,255,255,0.25) 70%, rgba(255,255,255,0.00) 100%)",
+                background: "linear-gradient(90deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,0.25) 30%, #FFF 50%, rgba(255,255,255,0.25) 70%, rgba(255,255,255,0.00) 100%)",
                 filter: "blur(15px)",
               }}
             />
             <div
               className="absolute right-0 top-0 h-full w-[3px]"
               style={{
-                opacity: 1.0,
-                background:
-                  "linear-gradient(270deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,0.25) 30%, #FFF 50%, rgba(255,255,255,0.25) 70%, rgba(255,255,255,0.00) 100%)",
+                background: "linear-gradient(270deg, rgba(255,255,255,0.00) 0%, rgba(255,255,255,0.25) 30%, #FFF 50%, rgba(255,255,255,0.25) 70%, rgba(255,255,255,0.00) 100%)",
                 filter: "blur(15px)",
               }}
             />
           </div>
 
-          {/* 활성화 방사형 파장 */}
           <div className="absolute inset-0 pointer-events-none overflow-visible z-[60]">
             <div
-              className={`piano-key-ripple${active ? " is-active" : ""}`}
+              ref={rippleRef} // [연결]
+              className="piano-key-ripple"
               style={{ left: rippleCenter.x, top: rippleCenter.y }}
             />
           </div>
