@@ -166,18 +166,15 @@ export default function PianoBackendManager({
 
       // [핵심 수정] 오디오 엔진 시작 시 무한 대기(멈춤) 방지
       // 비동기 시점에 start 호출 시 iOS에서 Block될 수 있으므로 타임아웃 적용
-      if (Tone.context.state !== 'running') {
+ if (Tone.context.state !== 'running') {
         onStatusChange?.("오디오 엔진 시작 중...");
         try {
           await Promise.race([
             Tone.start(),
             new Promise((_, reject) => setTimeout(() => reject("Timeout"), 500))
           ]);
-          console.log("Tone started via BackendManager");
         } catch (err) {
-          // 이미 RecorderButton에서 켰거나, iOS 정책상 여기서 켜는 게 불가능한 경우
-          // 경고만 남기고 다음 단계로 진행 (멈춤 방지)
-          console.warn("Tone start skipped/timed-out (expected behavior):", err);
+          console.warn("Tone start skipped/timed-out:", err);
         }
       }
       
@@ -187,30 +184,76 @@ export default function PianoBackendManager({
 
       disposeTransport();
       
-      onStatusChange?.("노트 생성 중...");
+      // [핵심 수정] 대량의 노트를 한 번에 처리하지 않고 나눠서 처리 (Chunking)
+      onStatusChange?.("노트 생성 준비 중...");
 
-      // [수정] track.notes 사용 (tracks 속성 오류 수정됨)
+      // 1. 모든 트랙의 노트를 하나의 배열로 평탄화 (Flatten)
+      const allNotes: any[] = [];
       midi.tracks.forEach((track) => {
         track.notes.forEach((note) => {
-          const midiNum = note.midi;
-          const start = note.time;
-          const duration = Math.max(note.duration, 0.05);
-
-          Tone.Transport.schedule(() => {
-            if (isCancelled) return;
-            if (activeMidiNotes.size < MAX_POLY) {
-              activeMidiNotes.add(midiNum);
-              onMidiEvent({ type: "on", note: midiNum });
-              
-              Tone.Transport.scheduleOnce(() => {
-                if (isCancelled) return;
-                activeMidiNotes.delete(midiNum);
-                onMidiEvent({ type: "off", note: midiNum });
-              }, start + duration);
-            }
-          }, start);
+          allNotes.push(note);
         });
       });
+
+      // 2. 청크 단위로 나누어 비동기 스케줄링
+      const CHUNK_SIZE = 100; // 한 번에 처리할 노트 수 (모바일 안정성 고려)
+      let processedCount = 0;
+
+      const scheduleBatch = () => {
+        return new Promise<void>((resolve) => {
+          const process = () => {
+            if (isCancelled) {
+              resolve();
+              return;
+            }
+
+            const end = Math.min(processedCount + CHUNK_SIZE, allNotes.length);
+            
+            // UI 업데이트 (진행률 표시로 사용자가 멈춘 게 아님을 인지하게 함)
+            const progress = Math.round((processedCount / allNotes.length) * 100);
+            if (processedCount % 500 === 0) { // 너무 자주 업데이트하면 느려지므로 500개마다
+               onStatusChange?.(`노트 배치 중... ${progress}%`);
+            }
+
+            for (let i = processedCount; i < end; i++) {
+              const note = allNotes[i];
+              const midiNum = note.midi;
+              const start = note.time;
+              const duration = Math.max(note.duration, 0.05);
+
+              // 노트 스케줄링
+              Tone.Transport.schedule(() => {
+                if (isCancelled) return;
+                if (activeMidiNotes.size < MAX_POLY) {
+                  activeMidiNotes.add(midiNum);
+                  onMidiEvent({ type: "on", note: midiNum });
+                  
+                  Tone.Transport.scheduleOnce(() => {
+                    if (isCancelled) return;
+                    activeMidiNotes.delete(midiNum);
+                    onMidiEvent({ type: "off", note: midiNum });
+                  }, start + duration);
+                }
+              }, start);
+            }
+
+            processedCount = end;
+
+            if (processedCount < allNotes.length) {
+              // 다음 배치를 위해 메인 스레드 양보 (setTimeout 0)
+              setTimeout(process, 0);
+            } else {
+              resolve(); // 완료
+            }
+          };
+          process();
+        });
+      };
+
+      // 배치 작업 시작 및 대기
+      await scheduleBatch();
+
+      if (isCancelled) return;
 
       const duration = midi.duration || midi.tracks.reduce(
         (max, track) => Math.max(max, ...track.notes.map((n) => n.time + n.duration)), 0
@@ -254,7 +297,7 @@ export default function PianoBackendManager({
       onStatusChange?.("분석 완료!");
       onTransportReady?.(controls, conversionContext);
     };
-
+    
     const performConversion = async () => {
       try {
         onStatusChange?.("분석 중...");
