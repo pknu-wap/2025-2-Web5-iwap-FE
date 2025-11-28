@@ -181,7 +181,6 @@ const [phase, setPhase] = useState<Phase>("front-draw");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [sendAnimStage, setSendAnimStage] = useState("idle");
 const [isClosedEnvelope, setIsClosedEnvelope] = useState(false);
-const [earlyFade, setEarlyFade] = useState(false);
 const [showPostSendOptions, setShowPostSendOptions] = useState(false);
 
 const router = useRouter();
@@ -195,13 +194,6 @@ const router = useRouter();
     canSendPostcard ? "" : " opacity-50 cursor-not-allowed" 
     
   }`;
-  
-useEffect(() => {
-  if (isClosedEnvelope) {
-    // 봉투가 닫히는 순간 엽서 사라짐 (0ms 즉시)
-    setEarlyFade(true);
-  }
-}, [isClosedEnvelope]);
 
 
   useEffect(() => {
@@ -793,7 +785,39 @@ const handleTextToFourier = useCallback(async () => {
       setTimeout(() => backController.resize(), 0);
     }
   }, [phase, backController]);
-
+  
+  useEffect(() => {
+    if (phase === 'preview' && backPreviewDivRef.current && !backPreviewPng) {
+      const capture = async () => {
+        const prevEpicycleVisibility = styles.showEpicycles;
+        const prevEpicycleAlpha = styles.epicycleAlpha;
+  
+        // Temporarily hide for capture
+        setStyles((s) => ({ ...s, showEpicycles: false, epicycleAlpha: 0 }));
+        frontController?.updateStyles({ showEpicycles: false, epicycleAlpha: 0 });
+        backController?.updateStyles({ showEpicycles: false, epicycleAlpha: 0 });
+  
+        await new Promise(res => setTimeout(res, 50)); // Repaint
+  
+        try {
+          const canvas = await html2canvas(backPreviewDivRef.current!, {
+            backgroundColor: styles.backgroundColor,
+            useCORS: true,
+          });
+          const dataUrl = canvas.toDataURL('image/png');
+          setBackPreviewPng(dataUrl);
+        } catch (error) {
+          console.error("Error capturing back preview with html2canvas:", error);
+        } finally {
+          // Restore styles
+          setStyles((s) => ({ ...s, showEpicycles: prevEpicycleVisibility, epicycleAlpha: prevEpicycleAlpha }));
+          frontController?.updateStyles({ showEpicycles: prevEpicycleVisibility, epicycleAlpha: prevEpicycleAlpha });
+          backController?.updateStyles({ showEpicycles: prevEpicycleVisibility, epicycleAlpha: prevEpicycleAlpha });
+        }
+      };
+      capture();
+    }
+  }, [phase, backPreviewPng, frontController, backController, styles.backgroundColor, styles.epicycleAlpha, styles.showEpicycles]);
   const handleGoToBackside = useCallback(() => {
     handleConfirmSketches();
     handleStop();
@@ -834,68 +858,19 @@ const handleTextToFourier = useCallback(async () => {
 
 const handleShowPreview = useCallback(async () => {
   storeBackSketches();
+  handleStop();
 
-  const prevEpicycleVisibility = styles.showEpicycles;
-  const prevEpicycleAlpha = styles.epicycleAlpha;
+  // Capture front immediately
+  const frontPng = captureCanvasDataUrl(frontContainerRef.current);
+  setFrontPreviewPng(frontPng);
 
-  setStyles((prev) => ({
-    ...prev,
-    showEpicycles: false,
-    epicycleAlpha: 0,
-  }));
-  frontController?.updateStyles({ showEpicycles: false, epicycleAlpha: 0 });
-  backController?.updateStyles({ showEpicycles: false, epicycleAlpha: 0 });
-
-  requestAnimationFrame(() => {
-    setTimeout(async () => { // Ensure repaint before capturing
-      const frontPng = captureCanvasDataUrl(frontContainerRef.current);
-
-      let backPng: string | null = null;
-      if (backPreviewDivRef.current) {
-        try {
-          const canvas = await html2canvas(backPreviewDivRef.current, {
-            backgroundColor: styles.backgroundColor,
-            useCORS: true, // If any images are loaded from external sources
-          });
-          backPng = canvas.toDataURL("image/png");
-          console.log("Generated backPng (html2canvas):", backPng.substring(0, 100) + "..."); // Log first 100 chars
-        } catch (error) {
-          console.error("Error capturing back preview with html2canvas:", error);
-          // Fallback to canvas capture if html2canvas fails, or set to null
-          backPng = captureCanvasDataUrl(backContainerRef.current);
-        }
-      } else {
-        // Fallback if ref is not available for some reason
-        backPng = captureCanvasDataUrl(backContainerRef.current);
-      }
-
-      setFrontPreviewPng(frontPng);
-      setBackPreviewPng(backPng);
-
-      setShowPngPreview(true);
-      handleStop();
-      setPrevPhase(phase);
-      setPhase("preview");
-
-      // Restore original epicycle settings
-      setStyles((prev) => ({
-        ...prev,
-        showEpicycles: prevEpicycleVisibility,
-        epicycleAlpha: prevEpicycleAlpha,
-      }));
-      frontController?.updateStyles({ showEpicycles: prevEpicycleVisibility, epicycleAlpha: prevEpicycleAlpha });
-      backController?.updateStyles({ showEpicycles: prevEpicycleVisibility, epicycleAlpha: prevEpicycleAlpha });
-    }, 0);
-  });
+  setPrevPhase(phase);
+  setPhase("preview"); // Trigger preview phase, useEffect will capture the back
 }, [
   phase,
   captureCanvasDataUrl,
   handleStop,
   storeBackSketches,
-  frontController,
-  backController,
-  styles.showEpicycles,
-  styles.epicycleAlpha,
 ]);
 
 
@@ -956,8 +931,14 @@ const handleSendPostcard = async () => {
   await new Promise((resolve) => setTimeout(resolve, 50));
 
   // webm으로 캡처 — 브라우저는 mp4 불가능
-  const frontVideoBlob = await canvasToMp4(frontCanvas, 3000);
-  const backVideoBlob = await canvasToMp4(backCanvas, 3000);
+  frontController?.startPlayback();
+  backController?.startPlayback();
+  const [frontVideoBlob, backVideoBlob] = await Promise.all([
+    canvasToMp4(frontCanvas, 3000),
+    canvasToMp4(backCanvas, 3000),
+  ]);
+  frontController?.stopPlayback();
+  backController?.stopPlayback();
 
   // Restore original epicycle settings
   setStyles((prev) => ({
@@ -987,16 +968,8 @@ const handleSendPostcard = async () => {
   }
 
   const formData = new FormData();
-  formData.append("templateId", "this-is-for-u");
-  formData.append("templateName", "Custom Postcard");
-  formData.append("createdAt", new Date().toISOString());
-  formData.append("frontBackground", styles.backgroundColor);
-
   // 이메일 제대로 넣기
   formData.append("recipient", recipientEmail);
-
-  formData.append("sender", senderName);
-  formData.append("message", textCanvasMessage);
 
   // Append PNG files
   formData.append(
@@ -1469,7 +1442,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
       {/* 버튼 영역 */}
   <div
-  className="z-30 flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-[14px] text-slate-200 z-90 translate-y-[20px] md:translate-y-[42px]"
+  className="z-30 flex flex-nowrap items-center justify-center gap-3 text-[10px] md:text-[14px] text-slate-200 z-[90] translate-y-[20px] md:translate-y-[42px]"
 >
 
     <button
@@ -1650,7 +1623,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
         ${sendAnimStage === "insert" ? "md:translate-y-[260px] translate-y-[5px]" : ""}
         ${sendAnimStage === "closed" ? "md:translate-y-[220px]" : ""}
-                ${earlyFade ? "opacity-0 pointer-events-none" : "opacity-100"}
+        ${isClosedEnvelope ? "opacity-0 pointer-events-none" : "opacity-100"}
       `}
     >
       <FrontPreview
@@ -1664,36 +1637,33 @@ const { startStop, toggleSide, edit, preview } = getButtons();
   {/* =========================
         BACK PREVIEW
      ========================= */}
-  {backPreviewPng && (
-    <div
-      className={`
-        border border-white/30
-        md:w-[400px] md:h-[250px]
-        w-[270px] h-[168px]
-        -translate-y-[175px]
-        overflow-hidden
-        bg-white
-        transition-transform duration-[900ms] ease-out
+  <div
+    className={`
+      border border-white/30
+      md:w-[400px] md:h-[250px]
+      w-[270px] h-[168px]
+      -translate-y-[175px]
+      overflow-hidden
+      bg-white
+      transition-transform duration-[900ms] ease-out
 
-        ${sendAnimStage === "insert" ? "md:translate-y-[20px]" : ""}
-        ${sendAnimStage === "closed" ? "md:translate-y-[80px] translate-y-[80px]" : ""}
-        ${earlyFade ? "opacity-0 pointer-events-none" : "opacity-100"}
-
-      `}
-    >
-      <BackPreview
-        ref={backPreviewDivRef}
-        backPreviewPng={backPreviewPng}
-        messageText={textCanvasMessage}
-        recipientName={recipientEmail}
-        senderName={senderName}
-        backgroundColor={styles.backgroundColor}
-        textAlign={textAlign}
-        textColor={styles.pathColor}
-        textAlpha={styles.pathAlpha}
-      />
-    </div>
-  )}
+      ${sendAnimStage === "insert" ? "md:translate-y-[20px]" : ""}
+      ${sendAnimStage === "closed" ? "md:translate-y-[80px] translate-y-[80px]" : ""}
+      ${isClosedEnvelope || !backPreviewPng ? "opacity-0 pointer-events-none" : "opacity-100"}
+    `}
+  >
+    <BackPreview
+      ref={backPreviewDivRef}
+      backPreviewPng={backPreviewPng}
+      messageText={textCanvasMessage}
+      recipientName={recipientEmail}
+      senderName={senderName}
+      backgroundColor={styles.backgroundColor}
+      textAlign={textAlign}
+      textColor={styles.pathColor}
+      textAlpha={styles.pathAlpha}
+    />
+  </div>
 
 </div>
 
@@ -1702,7 +1672,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
       <img
         src="/images/This-is-for-u/open2.svg"
         className={`
-          absolute translate-y-1/2 left-1/2 -translate-x-1/2 z-90
+          absolute translate-y-1/2 left-1/2 -translate-x-1/2 z-[90]
           h-auto md:w-[640px] w-[380px] max-w-[640px]
           transition-transform duration-[700ms] ease-in-out origin-top
           ${isClosedEnvelope ? "opacity-0 pointer-events-none" : ""}

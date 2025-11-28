@@ -73,7 +73,7 @@ export const BackPreview = forwardRef(
 
       <div className="absolute bottom-4 right-4 flex items-end justify-end gap-2 w-full max-w-[200px]">
         {/* <span className="text-white text-xs mr-auto">{new Date().toLocaleDateString()}</span> */}
-        <img src="/icons/PostcardStamp.svg" alt="Stamp" className="md:w-10 w-7 md:translate-x-[120px] md:-translate-y-[170px] translate-x-[110px] -translate-y-[100px]" />
+        <img src="/icons/PostcardStamp.svg" alt="Stamp" className="md:w-10 w-7 md:translate-x-[100px] md:-translate-y-[170px] translate-x-[90px] -translate-y-[100px]" />
         <div className="flex items-center">
           <img
             src={useWhite ? "/icons/From_white.svg" : "/icons/From_black.svg"}
