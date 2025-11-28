@@ -401,7 +401,7 @@ export default function VoiceToPiano() {
   const isReadyToRenderResult = Boolean(audioUrl);
   const isConversionFinished = Boolean(transport);
 
-  const themeTextClass = theme === "dark" ? "text-white" : "text-black";
+  const themeTextClass = "text-white";
   const loadingTextClass = `text-base md:text-lg font-bold text-center break-keep ${themeTextClass}`;
   const smallLoadingTextClass = `text-sm font-bold whitespace-nowrap ${themeTextClass}`;
 
@@ -475,11 +475,11 @@ export default function VoiceToPiano() {
                     )}
 
                     {isProcessing ? (
-                      <div className="w-[130px] h-[130px] md:w-[170px] md:h-[170px] flex flex-col items-center justify-center gap-3 pb-28">
+                      <div className="flex flex-col items-center justify-center gap-3 h-[30vh]">
                          <LoadingIndicator 
                            text="저장 중..." 
                            className={themeTextClass}
-                           textClassName={smallLoadingTextClass}
+                           textClassName={loadingTextClass}
                          />
                       </div>
                     ) : (
@@ -515,10 +515,10 @@ export default function VoiceToPiano() {
               {isReadyToRenderResult && (
                 <>
                   {(isProcessing || !isConversionFinished) ? (
-                     <div className="flex flex-row items-center justify-center h-[50vh] gap-3 px-4">
+                     <div className="flex flex-col items-center justify-center h-[30vh] gap-3">
                        <LoadingIndicator 
                          text={status || "분석 중..."}
-                         className={`h-auto ${themeTextClass}`}
+                         className={themeTextClass}
                          textClassName={loadingTextClass}
                        />
                      </div>
