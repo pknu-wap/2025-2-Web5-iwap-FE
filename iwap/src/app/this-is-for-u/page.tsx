@@ -179,6 +179,7 @@ const [phase, setPhase] = useState<Phase>("front-draw");
   const backCanvas = backContainerRef.current?.querySelector("canvas");
   const [previewSize, setPreviewSize] = useState({ width: 600, height: 375 });
   const [recipientEmail, setRecipientEmail] = useState("");
+
   const [sendAnimStage, setSendAnimStage] = useState("idle");
 const [isClosedEnvelope, setIsClosedEnvelope] = useState(false);
 const [showPostSendOptions, setShowPostSendOptions] = useState(false);
@@ -1323,8 +1324,8 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
         <div className="relative">
           <input
-            value={recipientEmail}
-            onChange={(e) => setRecipientEmail(e.target.value)}
+            value={recipientName}
+            onChange={(e) => setRecipientName(e.target.value)}
             placeholder="받는 사람 이름"
             autoComplete="off"
             className="
@@ -1655,7 +1656,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
       ref={backPreviewDivRef}
       backPreviewPng={backPreviewPng}
       messageText={textCanvasMessage}
-      recipientName={recipientEmail}
+      recipientName={recipientName}
       senderName={senderName}
       backgroundColor={styles.backgroundColor}
       textAlign={textAlign}
