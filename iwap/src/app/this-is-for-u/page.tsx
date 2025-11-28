@@ -798,6 +798,7 @@ const handleShowPreview = useCallback(async () => {
             backgroundColor: styles.backgroundColor,
             useCORS: true, // If any images are loaded from external sources
           });
+          backPng = canvas.toDataURL("image/png");
           console.log("Generated backPng (html2canvas):", backPng.substring(0, 100) + "..."); // Log first 100 chars
         } catch (error) {
           console.error("Error capturing back preview with html2canvas:", error);
@@ -808,9 +809,6 @@ const handleShowPreview = useCallback(async () => {
         // Fallback if ref is not available for some reason
         backPng = captureCanvasDataUrl(backContainerRef.current);
       }
-
-      console.log("Recipient Email (before html2canvas capture):", recipientEmail);
-      console.log("Sender Name (before html2canvas capture):", senderName);
 
       setFrontPreviewPng(frontPng);
       setBackPreviewPng(backPng);
@@ -1661,7 +1659,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
         ref={backPreviewDivRef}
         backPreviewPng={backPreviewPng}
         messageText={textCanvasMessage}
-        recipientName={recipientName}
+        recipientName={recipientEmail}
         senderName={senderName}
         backgroundColor={styles.backgroundColor}
         textAlign={textAlign}

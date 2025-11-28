@@ -50,29 +50,30 @@ export const BackPreview = forwardRef(
   </div>
 </div>
 
-<div className="flex-1 ">
+<div className="flex-1">
   {messageText ? (
     <p
-      style={{
-        color: textColor,
-        opacity: textAlpha / 255,
-        textAlign: textAlign,
-        whiteSpace: "pre-wrap",
-        lineHeight: "1.6",
-        wordBreak: "break-word",
-      }}
-    >
-      {messageText}
-    </p>
+  className="text-[12px] md:text-[16px]"
+  style={{
+    color: textColor,
+    opacity: textAlpha / 255,
+    textAlign,
+    whiteSpace: "pre-wrap",
+    lineHeight: "1.6",
+    wordBreak: "break-word",
+  }}
+>
+  {messageText}
+</p>
   ) : (
-    <span className="text-white/70 md:text-sm text-[5px]">No back preview</span>
+    <span className="text-white/70 md:text-sm text-[3px]">No back preview</span>
   )}
 </div>
 
 
       <div className="absolute bottom-4 right-4 flex items-end justify-end gap-2 w-full max-w-[200px]">
         {/* <span className="text-white text-xs mr-auto">{new Date().toLocaleDateString()}</span> */}
-        <img src="/icons/PostcardStamp.svg" alt="Stamp" className="md:w-10 w-7 md:translate-x-[70px] md:-translate-y-[170px] translate-x-[70px] -translate-y-[100px]" />
+        <img src="/icons/PostcardStamp.svg" alt="Stamp" className="md:w-10 w-7 md:translate-x-[70px] md:-translate-y-[170px] translate-x-[100px] -translate-y-[100px]" />
         <div className="flex items-center">
           <img
             src={useWhite ? "/icons/From_white.svg" : "/icons/From_black.svg"}
