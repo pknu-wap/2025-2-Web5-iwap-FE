@@ -916,17 +916,12 @@ const handleSendPostcard = async () => {
   const frontPngBlob = frontPreviewPng ? dataURLtoBlob(frontPreviewPng) : null;
   const backPngBlob = backPreviewPng ? dataURLtoBlob(backPreviewPng) : null;
 
-  // Temporarily hide epicycles for video capture
-  const prevEpicycleVisibility = styles.showEpicycles;
-  const prevEpicycleAlpha = styles.epicycleAlpha;
+  // webm 캡처 전 epicycle이 보이도록 강제
+  const finalEpicycleVisibility = true;
+  const finalEpicycleAlpha = styles.epicycleAlpha > 0 ? styles.epicycleAlpha : DEFAULT_STYLES.epicycleAlpha;
 
-  setStyles((prev) => ({
-    ...prev,
-    showEpicycles: false,
-    epicycleAlpha: 0,
-  }));
-  frontController?.updateStyles({ showEpicycles: false, epicycleAlpha: 0 });
-  backController?.updateStyles({ showEpicycles: false, epicycleAlpha: 0 });
+  frontController?.updateStyles({ showEpicycles: finalEpicycleVisibility, epicycleAlpha: finalEpicycleAlpha });
+  backController?.updateStyles({ showEpicycles: finalEpicycleVisibility, epicycleAlpha: finalEpicycleAlpha });
 
   // Give a moment for the canvas to repaint
   await new Promise((resolve) => setTimeout(resolve, 50));
@@ -940,15 +935,6 @@ const handleSendPostcard = async () => {
   ]);
   frontController?.stopPlayback();
   backController?.stopPlayback();
-
-  // Restore original epicycle settings
-  setStyles((prev) => ({
-    ...prev,
-    showEpicycles: prevEpicycleVisibility,
-    epicycleAlpha: prevEpicycleAlpha,
-  }));
-  frontController?.updateStyles({ showEpicycles: prevEpicycleVisibility, epicycleAlpha: prevEpicycleAlpha });
-  backController?.updateStyles({ showEpicycles: prevEpicycleVisibility, epicycleAlpha: prevEpicycleAlpha });
 
   const MIN_VIDEO_SIZE = 1024; // 1KB, 비어있는 webm 파일 헤더 크기보다 큰 값
   if (
@@ -965,6 +951,9 @@ const handleSendPostcard = async () => {
     setIsMailSending(false);
     frontController?.stopPlayback();
     backController?.stopPlayback();
+    setSendAnimStage("idle");
+    setIsClosedEnvelope(false);
+    setPhase("front-draw");
     return;
   }
 
