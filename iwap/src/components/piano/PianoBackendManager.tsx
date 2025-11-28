@@ -4,7 +4,6 @@ import { useEffect } from "react";
 import * as Tone from "tone";
 import { Midi } from "@tonejs/midi";
 
-// ... (Type 정의 동일) ...
 export type MidiTransportControls = {
   duration: number;
   start: () => Promise<void>;
@@ -49,8 +48,16 @@ export const getBackendUrl = (path: string) => {
 };
 
 const describeFetchError = (err: unknown) => {
-  const msg = err instanceof Error ? err.message : String(err);
-  return `오류: ${msg.substring(0, 30)}...`; // 화면에 보이도록 짧게 자름
+  if (err instanceof TypeError) {
+    return "네트워크 연결을 확인해주세요.";
+  }
+  if (err instanceof Error) {
+    if (err.message.includes("413")) {
+      return "파일 용량이 너무 큽니다.";
+    }
+    return "일시적인 오류가 발생했습니다.";
+  }
+  return "알 수 없는 오류가 발생했습니다.";
 };
 
 export default function PianoBackendManager({
@@ -69,7 +76,7 @@ export default function PianoBackendManager({
     const activeMidiNotes = new Set<number>();
     const MAX_POLY = isMobileDevice() ? 6 : 12;
 
-    onStatusChange?.("초기화 중..."); // [디버그]
+    onStatusChange?.("분석 준비 중...");
     onTransportReset?.();
 
     const flushActiveNotes = () => {
@@ -87,61 +94,49 @@ export default function PianoBackendManager({
       flushActiveNotes();
     };
 
-    // [디버그] Polling 횟수 표시를 위해 onStatusChange 인자 추가
     const pollForFile = async (url: string, timeoutMs = 120000): Promise<Response> => {
       const start = Date.now();
       let attempt = 0;
-
       while (Date.now() - start < timeoutMs) {
         if (isCancelled) throw new Error("Cancelled");
         attempt++;
         
         try {
-          // [디버그] 현재 시도 횟수 표시
-          onStatusChange?.(`변환 대기 중... (${attempt}회)`);
+          // 디버깅: 상태 메시지 업데이트
+          onStatusChange?.(`분석 중... (${attempt})`);
 
           const res = await fetch(url);
           if (res.status === 200) {
             const contentType = res.headers.get("content-type");
             if (contentType && contentType.includes("application/json")) {
-                // JSON이 오면 아직 처리 안 된 것일 수 있음 (혹은 에러)
-                console.log("JSON received in polling, retrying...");
-            } else {
-                return res; // 파일(Binary) 도착
+                const clone = res.clone();
+                const text = await clone.text();
+                throw new Error(`JSON Retry: ${text.substring(0, 50)}`);
             }
+            return res;
           }
-          
           if (res.status === 202) {
-            // 202 Accepted: 아직 처리 중
             await new Promise((resolve) => setTimeout(resolve, 1000));
             continue;
           }
-          
-          // 4xx, 5xx 에러
-          if (res.status >= 400) {
-             const text = await res.text();
-             throw new Error(`Poll Error ${res.status}: ${text.substring(0, 20)}`);
-          }
-
+          throw new Error(`Status: ${res.status}`);
         } catch (e) {
           if (isCancelled) throw e;
           console.warn("Polling retry...", e);
-          // 네트워크 에러 시에도 잠시 대기 후 재시도
           await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
-      throw new Error("변환 시간 초과 (Timeout)");
+      throw new Error("변환 시간이 초과되었습니다.");
     };
 
     const processMidiData = async (midiArray: ArrayBuffer, taskId: string) => {
-      onStatusChange?.("결과 처리 중..."); // [디버그]
+      onStatusChange?.("데이터 처리 중...");
 
       const downloadBaseName = new Date().toISOString().replace(/[:.]/g, "-");
       let downloadBlob: Blob = new Blob([midiArray], { type: "audio/midi" });
       let downloadFilename = `piano-${downloadBaseName}.mid`;
       const mp3Filename = `piano-${downloadBaseName}.mp3`;
 
-      // MP3 확인 (선택 사항)
       try {
         const mp3Res = await fetch(
           getBackendUrl(`/api/piano/mp3/${encodeURIComponent(taskId)}`)
@@ -167,18 +162,22 @@ export default function PianoBackendManager({
         ...conversionContext,
       });
 
-      onStatusChange?.("MIDI 파싱 중..."); // [디버그]
       const midi = new Midi(midiArray);
 
-      // Tone.js 시작 (iOS 정책 확인)
+      // [핵심 수정] 오디오 엔진 시작 시 무한 대기(멈춤) 방지
+      // 비동기 시점에 start 호출 시 iOS에서 Block될 수 있으므로 타임아웃 적용
       if (Tone.context.state !== 'running') {
-        onStatusChange?.("오디오 엔진 시작 중..."); // [디버그]
+        onStatusChange?.("오디오 엔진 시작 중...");
         try {
-          await Tone.start();
-          console.log("Tone started successfully");
+          await Promise.race([
+            Tone.start(),
+            new Promise((_, reject) => setTimeout(() => reject("Timeout"), 500))
+          ]);
+          console.log("Tone started via BackendManager");
         } catch (err) {
-          console.warn("Tone start failed", err);
-          onStatusChange?.("오디오 권한 실패 (터치 필요)");
+          // 이미 RecorderButton에서 켰거나, iOS 정책상 여기서 켜는 게 불가능한 경우
+          // 경고만 남기고 다음 단계로 진행 (멈춤 방지)
+          console.warn("Tone start skipped/timed-out (expected behavior):", err);
         }
       }
       
@@ -188,11 +187,10 @@ export default function PianoBackendManager({
 
       disposeTransport();
       
-      onStatusChange?.("노트 스케줄링 중..."); // [디버그]
+      onStatusChange?.("노트 생성 중...");
 
-      // MIDI Scheduling
+      // [수정] track.notes 사용 (tracks 속성 오류 수정됨)
       midi.tracks.forEach((track) => {
-        // Tonejs/midi 최신 버전 기준: track.notes
         track.notes.forEach((note) => {
           const midiNum = note.midi;
           const start = note.time;
@@ -253,14 +251,13 @@ export default function PianoBackendManager({
         getState: () => Tone.Transport.state as "started" | "stopped" | "paused",
       };
 
-      onStatusChange?.("준비 완료!"); // [디버그]
+      onStatusChange?.("분석 완료!");
       onTransportReady?.(controls, conversionContext);
     };
 
     const performConversion = async () => {
       try {
-        const sizeMB = (audioFile.size / (1024 * 1024)).toFixed(2);
-        onStatusChange?.(`업로드 중... (${sizeMB}MB)`); // [디버그]
+        onStatusChange?.("분석 중...");
 
         const formData = new FormData();
         formData.append("voice", audioFile);
@@ -271,25 +268,22 @@ export default function PianoBackendManager({
         });
 
         if (!uploadRes.ok) {
-           const errText = await uploadRes.text();
-           throw new Error(`Upload ${uploadRes.status}: ${errText.substring(0, 20)}`);
+           throw new Error(`Upload failed: ${uploadRes.status}`);
         }
 
         const data = await uploadRes.json();
         const taskId = data.task_id || data.request_id;
 
         if (!taskId) {
-          throw new Error("ID 응답 없음");
+          throw new Error("작업 ID 없음");
         }
-
-        onStatusChange?.("서버 처리 대기 중..."); // [디버그]
         
         const midiRes = await pollForFile(
           getBackendUrl(`/api/piano/midi/${encodeURIComponent(taskId)}`)
         );
         
         if (!midiRes.ok) {
-          throw new Error("결과 다운로드 실패");
+          throw new Error("결과 파일 오류");
         }
 
         const midiArray = await midiRes.arrayBuffer();

@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import * as Tone from "tone"; // [필수] Tone.js import
 
 export function useRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -16,18 +17,21 @@ export function useRecorder() {
     }
   }, [audioUrl]);
 
-  // [수정] 확장자 결정 로직 단순화 (녹음된 데이터의 mimeType 기반)
   const getExtension = (mimeType: string) => {
-    // Safari 등은 audio/mp4를 기본으로 쓸 확률이 높음
     if (mimeType.includes("mp4") || mimeType.includes("aac")) return "m4a";
     if (mimeType.includes("ogg")) return "ogg";
     if (mimeType.includes("wav")) return "wav";
-    // 나머지는 안전하게 webm 처리 (혹은 mp3)
     return "webm";
   };
 
   const startRecording = useCallback(async () => {
     try {
+      // [핵심 수정] 녹음 시작(User Interaction) 시점에 오디오 엔진 권한 확보
+      if (Tone.context.state !== 'running') {
+        await Tone.start().catch((err) => console.warn("Tone start warn:", err));
+        console.log("Audio Engine started on user interaction");
+      }
+
       revokeUrl();
       setAudioUrl(null);
       setAudioFile(null);
@@ -35,11 +39,10 @@ export function useRecorder() {
 
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       
-      // 모바일: 오디오 처리 최소화 (Raw에 가깝게)
       const constraints = {
         audio: isMobile
           ? {
-              echoCancellation: false, // 끄는 것이 오히려 안정적일 수 있음 (기기 기본값 사용)
+              echoCancellation: false,
               noiseSuppression: false,
               autoGainControl: false,
             }
@@ -53,8 +56,8 @@ export function useRecorder() {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
-      // [핵심 수정] 옵션 없이 생성 -> 브라우저가 알아서 최적 코덱 선택
-      const recorder = new MediaRecorder(stream); 
+      // 코덱 지정 없이 브라우저 기본값 사용 (안정성 최우선)
+      const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {
@@ -64,16 +67,19 @@ export function useRecorder() {
       };
 
       recorder.onstop = async () => {
+        // 1. 하드웨어 해제
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
         }
 
+        // 2. 처리 상태 진입
         setIsProcessing(true);
+
+        // 3. 메모리 정리 시간 확보 (Safety Break)
         await new Promise((resolve) => setTimeout(resolve, 300));
 
-        // [핵심] 브라우저가 실제로 사용한 mimeType 확인
-        const recordedMimeType = recorder.mimeType || "audio/webm"; // fallback
+        const recordedMimeType = recorder.mimeType || "audio/webm";
         const extension = getExtension(recordedMimeType);
 
         try {
@@ -109,7 +115,10 @@ export function useRecorder() {
   }, [revokeUrl]);
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && mediaRecorderRef.current.state === "recording") {
+    if (
+      mediaRecorderRef.current &&
+      mediaRecorderRef.current.state === "recording"
+    ) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
     }
