@@ -1,3 +1,4 @@
+// page.tsx
 "use client";
 
 import {
@@ -33,9 +34,9 @@ export default function VoiceToPiano() {
 
   const {
     isRecording,
-    isProcessing,
+    isProcessing, // 녹음 후 메모리 정리 및 파일 생성 중 상태
     audioUrl,
-    audioFile,
+    audioFile,    // File 객체 (직접 전송용)
     startRecording,
     stopRecording,
     setAudioFromFile,
@@ -50,6 +51,8 @@ export default function VoiceToPiano() {
   const activeNotesRef = useRef<Set<number>>(new Set());
   const noteTimeoutsRef = useRef<Map<number, number>>(new Map());
   const [, forceRender] = useState(0);
+  
+  // BackendManager에서 전달받는 상세 진행 상태 메시지
   const [status, setStatus] = useState("");
   
   const [transport, setTransport] = useState<MidiTransportControls | null>(null);
@@ -70,13 +73,13 @@ export default function VoiceToPiano() {
   // 초기 상태 메시지 설정
   useLayoutEffect(() => {
     audioUrlRef.current = audioUrl;
-    // URL이 생성되었지만 아직 변환 완료(transport) 전이라면 로딩 상태
-    if (audioUrl && !transport) {
-      setStatus("분석 중...");
+    // URL은 생겼지만 아직 변환이 안 끝났을 때
+    if (audioUrl && !isProcessing && !transport) {
+      setStatus("분석 준비 중...");
     }
-  }, [audioUrl, transport]);
+  }, [audioUrl, isProcessing, transport]);
 
-  // 테마 토글 버튼 제어 (녹음 파일 있을 때 모바일에서 숨김)
+  // 테마 버튼 제어
   useEffect(() => {
     if (audioUrl && isMobile) {
       window.dispatchEvent(
@@ -97,7 +100,7 @@ export default function VoiceToPiano() {
   const router = useRouter();
   const mp3AudioRef = useRef<HTMLAudioElement | null>(null);
 
-  // 건반 이벤트 핸들러
+  // MIDI 이벤트 처리
   const handleMidi = useCallback(
     ({ type, note }: { type: "on" | "off"; note: number }) => {
       const activeNotes = activeNotesRef.current;
@@ -131,7 +134,6 @@ export default function VoiceToPiano() {
     []
   );
 
-  // 모바일 감지
   useEffect(() => {
     const mediaQuery = window.matchMedia("(max-width: 767px)");
     const updateIsMobile = () => setIsMobile(mediaQuery.matches);
@@ -142,7 +144,6 @@ export default function VoiceToPiano() {
     };
   }, []);
 
-  // 외부 MIDI 입력 연결
   useEffect(() => {
     (window as any).pushMidi = handleMidi;
     return () => {
@@ -150,7 +151,6 @@ export default function VoiceToPiano() {
     };
   }, [handleMidi]);
 
-  // 재생 상태 업데이트 (Progress Bar)
   useEffect(() => {
     if (!transport) return;
     const updateTransportState = () => {
@@ -170,7 +170,6 @@ export default function VoiceToPiano() {
     };
   }, [transport, transportDuration]);
 
-  // 언마운트 시 타이머 정리
   useEffect(() => {
     return () => {
       noteTimeoutsRef.current.forEach((timeoutId) => clearTimeout(timeoutId));
@@ -209,14 +208,13 @@ export default function VoiceToPiano() {
         return;
       }
 
-      setStatus("분석 중...");
+      setStatus("파일 분석 준비 중...");
       setAudioFromFile(file);
       event.target.value = "";
     },
     [setAudioFromFile, setStatus]
   );
 
-  // 헤더 숨김 처리
   useLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const hidden = Boolean(audioUrl) && isMobile;
@@ -430,18 +428,17 @@ export default function VoiceToPiano() {
 
   const hasTransport = Boolean(transport);
 
-  // [핵심 변경 1] 렌더링 조건 통합
-  // 기존: audioUrl && !isProcessing
-  // 수정: audioUrl만 있으면 바로 결과 화면으로 진입 (단, 결과 화면 내에서 로딩 표시)
-  // 이렇게 해야 녹음 화면에서의 '잠시만 기다려주세요' UI가 깜빡이지 않고 바로 중앙 로딩으로 넘어감
+  // [핵심] 렌더링 가드
+  // audioUrl만 있으면 바로 결과 화면 레이아웃으로 전환 (깜빡임 방지)
   const isReadyToRenderResult = Boolean(audioUrl);
-
+  // 하지만 건반은 transport가 생성된 후에만 그림 (Crash 방지)
   const isConversionFinished = Boolean(transport);
 
-  // [핵심 변경 2] 스타일 클래스 정의 (색상 + 굵기)
+  // [디자인] 테마 적용 및 스타일 클래스
   const themeTextClass = theme === "dark" ? "text-white" : "text-black";
-  const loadingTextClass = `text-lg font-semibold whitespace-nowrap ${themeTextClass}`;
-  const smallLoadingTextClass = `text-base font-semibold whitespace-nowrap ${themeTextClass}`;
+  // 디버깅 로그는 내용이 길 수 있으므로 whitespace-nowrap 제거 및 중앙 정렬
+  const loadingTextClass = `text-base md:text-lg font-bold text-center break-keep ${themeTextClass}`;
+  const smallLoadingTextClass = `text-sm font-bold whitespace-nowrap ${themeTextClass}`;
 
   return (
     <div className="flex flex-col">
@@ -472,7 +469,7 @@ export default function VoiceToPiano() {
               audioUrl={audioUrl}
               audioFile={audioFile}
               onMidiEvent={handleMidi}
-              onStatusChange={setStatus}
+              onStatusChange={setStatus} // 디버그 로그 전달
               onTransportReady={handleTransportReady}
               onTransportReset={handleTransportReset}
               onMidiReady={handleMidiReady}
@@ -490,20 +487,16 @@ export default function VoiceToPiano() {
 
           <main className="flex flex-col items-center justify-center w-full min-h-[calc(100svh-96px)] gap-4 overflow-visible">
             <>
-              {/* === 녹음 화면 (URL이 없을 때만 표시) === */}
-              {/* [수정] isReadyToRenderResult가 true면 바로 숨김 -> "잠시만 기다려주세요" 깜빡임 삭제 */}
+              {/* === 녹음 화면 === */}
+              {/* 결과 화면 준비가 되면 바로 숨김 (깜빡임 방지) */}
               <div
                 className={`${
                   isReadyToRenderResult ? "hidden" : "flex"
                 } flex-col items-center justify-center gap-8 transform translate-y-[35px]`}
               >
-                {/* [삭제됨] 여기 있던 "isProcessing && audioUrl" 블록을 삭제하여 
-                   녹음이 끝나자마자 결과 화면의 중앙 로딩으로 넘어가게 함 
-                */}
-
-                {/* 녹음 대기/진행 화면 */}
                 {!audioUrl && (
                   <>
+                    {/* 로딩 중(isProcessing)일 때는 타이틀("음성을 입력해주세요") 숨김 */}
                     {!isProcessing && (
                       <div className="relative flex flex-col items-center justify-center">
                         <h1 className="text-2xl md:text-3xl font-bold text-center">
@@ -519,12 +512,11 @@ export default function VoiceToPiano() {
                       </div>
                     )}
 
-                    {/* 녹음 종료 후 처리 중일 때 (버튼 대체 로딩) */}
+                    {/* 녹음 종료 후 처리 중일 때 UI (버튼 대체) */}
                     {isProcessing ? (
                       <div className="w-[130px] h-[130px] md:w-[170px] md:h-[170px] flex flex-col items-center justify-center gap-3 pb-28">
                          <LoadingIndicator 
-                           text="분석 중..." 
-                           // [수정] 색상 및 굵기 적용
+                           text="저장 중..." 
                            className={themeTextClass}
                            textClassName={smallLoadingTextClass}
                          />
@@ -563,12 +555,12 @@ export default function VoiceToPiano() {
               {isReadyToRenderResult && (
                 <>
                   {/* 변환 완료 전 or 처리 중 (로딩 표시) */}
-                  {/* [수정] isProcessing 상태까지 여기서 통합 처리하여 UI 일관성 유지 */}
+                  {/* isProcessing 상태와 Conversion 완료 상태 모두 여기서 통합 처리 */}
                   {(isProcessing || !isConversionFinished) ? (
-                     <div className="flex flex-row items-center justify-center h-[50vh] gap-3">
+                     <div className="flex flex-row items-center justify-center h-[50vh] gap-3 px-4">
                        <LoadingIndicator 
+                         // 상세 상태 메시지 표시
                          text={status || "분석 중..."}
-                         // [수정] 색상 및 굵기 적용
                          className={`h-auto ${themeTextClass}`}
                          textClassName={loadingTextClass}
                        />
@@ -577,7 +569,8 @@ export default function VoiceToPiano() {
                     // 변환 완료 후 (건반 표시)
                     <>
                       <div className={`hidden w-full flex-col items-center gap-6 ${audioUrl ? "md:flex" : ""}`}>
-                         {status ? <p className="text-lg text-center whitespace-nowrap">{status}</p> : null}
+                         {/* 완료 후에는 상태 메시지 숨기거나 간단하게 표시 */}
+                         {status && !status.includes("중...") ? <p className="text-lg text-center whitespace-nowrap">{status}</p> : null}
                          
                         <div className="relative flex items-center justify-center w-full overflow-visible md:h-[10px] md:py-6 min-h-[30vh] py-10" style={{ height: "120px", paddingTop: "25px", paddingBottom: "30px" }}>
                           <div className="overflow-visible" style={{ transform: "scale(0.8)", transformOrigin: "top center", overflow: "visible" }}>
