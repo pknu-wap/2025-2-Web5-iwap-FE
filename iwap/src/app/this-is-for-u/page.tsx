@@ -12,6 +12,7 @@ import { FrontPreview } from "@/components/this-is-for-u/FrontPreview";
 import { BackPreview } from "@/components/this-is-for-u/BackPreview";
 import { textToContours, type TextContour } from "@/components/this-is-for-u/textToContours";
 import html2canvas from "html2canvas";
+import { useRouter } from 'next/navigation';
 
 /* ===========================
    INTERNAL PREVIEW COMPONENTS
@@ -72,6 +73,50 @@ const PREVIEW_SIZE = { width: 600, height: 375 };
 
 const isValidEmail = (email: string) =>
   /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const validatePostcardFields = (
+  recipientEmail: string,
+  textCanvasMessage: string,
+  frontSketches: ReturnType<FourierSketchController["getOriginalSketches"]>,
+  backSketches: ReturnType<FourierSketchController["getOriginalSketches"]>,
+  lastSentTime: number | null,
+  isMailSending: boolean
+): boolean => {
+  const errors: string[] = [];
+
+  if (isMailSending) {
+    alert("메일 전송이 이미 진행 중입니다.");
+    return false;
+  }
+
+  if (lastSentTime && Date.now() - lastSentTime < 30000) {
+    const remaining = Math.ceil((30000 - (Date.now() - lastSentTime)) / 1000);
+    alert(`메일을 다시 보내려면 ${remaining}초 더 기다려주세요.`);
+    return false;
+  }
+
+  if (!isValidEmail(recipientEmail)) {
+    errors.push("올바른 수신자 이메일이 필요합니다.");
+  }
+  if (!textCanvasMessage.trim()) {
+    errors.push("메시지를 입력해야 합니다.");
+  }
+  if (frontSketches.length === 0) {
+    errors.push("엽서 앞면을 변환해주세요.");
+  }
+  if (textCanvasMessage.trim().length > 0 && backSketches.length === 0) {
+    errors.push("뒷면 메시지를 변환해주세요 (변환 시작 버튼 클릭).");
+  }
+  if (backSketches.length === 0 && !textCanvasMessage.trim()) {
+    errors.push("엽서 뒷면을 변환해주세요.");
+  }
+
+  if (errors.length > 0) {
+    alert(`다음 문제를 해결해주세요:\n- ${errors.join("\n- ")}`);
+    return false;
+  }
+  return true;
+};
 
 export default function ThisIsForUPage() {
   const { theme } = useTheme();
@@ -137,6 +182,9 @@ const [phase, setPhase] = useState<Phase>("front-draw");
   const [sendAnimStage, setSendAnimStage] = useState("idle");
 const [isClosedEnvelope, setIsClosedEnvelope] = useState(false);
 const [earlyFade, setEarlyFade] = useState(false);
+const [showPostSendOptions, setShowPostSendOptions] = useState(false);
+
+const router = useRouter();
 
 
 
@@ -434,6 +482,17 @@ useEffect(() => {
   const isDarkBg = styles.backgroundColor === "#0F172A" || styles.backgroundColor === "#000000";
 
 const handleSendClick = async () => {
+  if (!validatePostcardFields(
+    recipientEmail,
+    textCanvasMessage,
+    frontSketches,
+    backSketches,
+    lastSentTime,
+    isMailSending
+  )) {
+    return;
+  }
+
   // 1) 프리뷰 박스 약간 흐려짐
   setSendAnimStage("fadePreview");
 
@@ -842,6 +901,7 @@ const handleShowPreview = useCallback(async () => {
 
 const handleClosePreview = () => {
   setShowPngPreview(false);
+  setShowPostSendOptions(false); // Reset post-send options
   if (prevPhase) {
     setPhase(prevPhase);
   } else {
@@ -849,47 +909,12 @@ const handleClosePreview = () => {
   }
 };
 const handleSendPostcard = async () => {
-  if (isMailSending) {
-    alert("메일 전송이 이미 진행 중입니다.");
-    return;
-  }
-
-  if (lastSentTime && Date.now() - lastSentTime < 30000) {
-    const remaining = Math.ceil((30000 - (Date.now() - lastSentTime)) / 1000);
-    alert(`메일을 다시 보내려면 ${remaining}초 더 기다려주세요.`);
-    return;
-  }
 
   const frontCanvas = frontContainerRef.current?.querySelector("canvas");
   const backCanvas = backContainerRef.current?.querySelector("canvas");
-  const errors: string[] = [];
 
   if (!frontCanvas || !backCanvas) {
     alert("예상치 못한 오류가 발생했습니다: 캔버스를 찾을 수 없습니다.");
-    return;
-  }
-
-  // 필드 유효성 검사
-  if (!isValidEmail(recipientEmail)) {
-    errors.push("올바른 수신자 이메일이 필요합니다.");
-  }
-  if (!textCanvasMessage.trim()) {
-    errors.push("메시지를 입력해야 합니다.");
-  }
-  if (frontSketches.length === 0) {
-    errors.push("엽서 앞면을 변환해주세요.");
-  }
-  // MODIFIED VALIDATION: If text is present but not Fourier transformed,
-  // either warn the user or auto-transform it.
-  if (textCanvasMessage.trim().length > 0 && backSketches.length === 0) {
-    errors.push("뒷면 메시지를 변환해주세요 (변환 시작 버튼 클릭).");
-  }
-  if (backSketches.length === 0 && !textCanvasMessage.trim()) { // Original logic for empty back
-    errors.push("엽서 뒷면을 변환해주세요.");
-  }
-
-  if (errors.length > 0) {
-    alert(`다음 문제를 해결해주세요:\n- ${errors.join("\n- ")}`);
     return;
   }
 
@@ -1011,6 +1036,7 @@ const handleSendPostcard = async () => {
 
     alert("메일 전송 완료!");
     setLastSentTime(Date.now());
+    setShowPostSendOptions(true); // Display post-send options
   } catch (err) {
     console.error(err);
     alert("메일 전송 중 오류");
@@ -1687,6 +1713,18 @@ const { startStop, toggleSide, edit, preview } = getButtons();
       {isMailSending && sendAnimStage === "closed" && (
         <div className="absolute inset-0 flex items-center justify-center z-[100] bg-black/50 backdrop-blur-sm">
           <p className="text-white text-[30px] font-light -translate-y-[30px]">메일 전송중...</p>
+        </div>
+      )}
+
+      {showPostSendOptions && sendAnimStage === "closed" && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center z-[100] bg-black/50 backdrop-blur-sm -translate-y-[30px]">
+          <p className="text-white text-[30px] font-light mb-8">엽서 전송 완료!</p>
+          <button
+            onClick={() => router.push('/slides')}
+            className="px-6 py-3 rounded-full border-white border-[1px] text-white text-lg font-light transition-colors"
+          >
+            다른 프로젝트로 이동하기
+          </button>
         </div>
       )}
 
