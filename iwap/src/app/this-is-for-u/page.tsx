@@ -1525,52 +1525,61 @@ const { startStop, toggleSide, edit, preview } = getButtons();
         메일 주소를 작성하세요
       </p>
 
-      <div className="flex items-center gap-2 text-sm text-white/70 ml-2 mt-[-10px]">
-        <img
-          src="/icons/To_white.svg"
-          alt="To"
-          className="w-[20px] h-[21px] md:w-[30px] md:h-[28px]"
-        />
-        <div className="relative">
-          <input
-            id="recipientEmail"
-            type="email"
-            value={recipientEmail}
-            onChange={(e) => setRecipientEmail(e.target.value)}
-            placeholder="받는 사람 메일"
-            autoComplete="off"
-            className="
-              px-3
-              w-[220px] md:w-[290px]
-              md:text-[16px] text-[14px]
-              font-normal
-              text-white/70 bg-transparent outline-none border-0
-              placeholder:text-white/70
-            "
-          />
-          <div
-            className="
-              absolute left-0 bg-white
-              w-[220px] md:w-[380px]
-              h-[1px]
-              opacity-100
-              md:top-[34px] top-[22px]
-            "
-          />
-        </div>
-        <button
-          onClick={handleSendClick}
-          disabled={isMailSending || !isValidEmail(recipientEmail)}
-          className="
-            flex items-center justify-center
-            w-[30px] h-[30px] md:w-[34px] md:h-[34px]
-            hover:bg-white/20 transition md:translate-x-[40px] -translate-x-[0px]
-            disabled:opacity-50 disabled:cursor-not-allowed
-          "
-        >
-          <img src="/icons/Send.svg" className="w-[28px] h-[29px]" />
-        </button>
-      </div>
+<div className="flex items-center gap-2 text-sm text-white/70 ml-2 mt-[-10px] pointer-events-none">
+
+  <img
+    src="/icons/To_white.svg"
+    alt="To"
+    className="w-[20px] h-[21px] md:w-[30px] md:h-[28px] pointer-events-none"
+  />
+
+  <div className="relative pointer-events-auto">
+    <input
+      id="recipientEmail"
+      type="email"
+      value={recipientEmail}
+      onChange={(e) => setRecipientEmail(e.target.value)}
+      placeholder="받는 사람 메일"
+      autoComplete="off"
+      className="
+        px-3
+        w-[220px] md:w-[290px]
+        md:text-[16px] text-[14px]
+        font-normal
+        text-white/70 bg-transparent outline-none border-0
+        placeholder:text-white/70
+      "
+    />
+
+    <div
+      className="
+        absolute left-0 bg-white
+        w-[230px] md:w-[380px]
+        h-[1px]
+        opacity-100
+        md:top-[34px] top-[22px]
+      "
+    />
+  </div>
+
+  <button
+    onClick={handleSendClick}
+    disabled={isMailSending || !isValidEmail(recipientEmail)}
+    className="
+      pointer-events-auto              /* 꼭 넣기 */
+      flex items-center justify-center
+      w-[40px] h-[40px] md:w-[48px] md:h-[48px]
+      bg-white/10 hover:bg-white/20
+      rounded-full
+      transition
+      md:translate-x-[40px] -translate-x-[0px]
+      disabled:opacity-50 disabled:cursor-not-allowed
+    "
+  >
+    <img src="/icons/Send.svg" className="w-[30px] h-[30px] md:translate-x-0 -translate-x-[20px]" />
+  </button>
+</div>
+
     </div>
 
 
