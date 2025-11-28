@@ -1565,7 +1565,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
               w-[220px] md:w-[380px]
               h-[1px]
               opacity-100
-              md:top-[34px] top-[28px]
+              md:top-[34px] top-[22px]
             "
           />
         </div>
@@ -1683,6 +1683,12 @@ const { startStop, toggleSide, edit, preview } = getButtons();
         `}
         alt="open2"
       />
+
+      {isMailSending && sendAnimStage === "closed" && (
+        <div className="absolute inset-0 flex items-center justify-center z-[100] bg-black/50 backdrop-blur-sm">
+          <p className="text-white text-[30px] font-light -translate-y-[30px]">메일 전송중...</p>
+        </div>
+      )}
 
       <button
         onClick={handleClosePreview}

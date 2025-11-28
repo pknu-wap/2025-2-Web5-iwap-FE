@@ -43,9 +43,9 @@ export const BackPreview = forwardRef(
   <img
     src={useWhite ? "/icons/To_white.svg" : "/icons/To_black.svg"}
     alt="To"
-    className="md:w-6 w-4 md:translate-y-0 translate-y-3"
+    className="md:w-6 w-4 md:translate-y-2 translate-y-3 md:translate-x-0 -translate-x-2"
   />
-  <div className={`${useWhite ? "text-white" : "text-black"} flex-1 text-left text-sm whitespace-pre-wrap md:translate-y-0 translate-y-2`}>
+  <div className={`${useWhite ? "text-white" : "text-black"} flex-1 text-left text-sm whitespace-pre-wrap md:translate-y-3 translate-y-2.5 md:translate-x-0 -translate-x-2`}>
     {recipientName || "받는 사람"}
   </div>
 </div>
@@ -53,7 +53,7 @@ export const BackPreview = forwardRef(
 <div className="flex-1">
   {messageText ? (
     <p
-  className="text-[12px] md:text-[16px]"
+  className="text-[12px] md:text-[16px] translate-y-1 md:translate-y-2 md:translate-x-8 translate-x-4"
   style={{
     color: textColor,
     opacity: textAlpha / 255,
@@ -73,7 +73,7 @@ export const BackPreview = forwardRef(
 
       <div className="absolute bottom-4 right-4 flex items-end justify-end gap-2 w-full max-w-[200px]">
         {/* <span className="text-white text-xs mr-auto">{new Date().toLocaleDateString()}</span> */}
-        <img src="/icons/PostcardStamp.svg" alt="Stamp" className="md:w-10 w-7 md:translate-x-[70px] md:-translate-y-[170px] translate-x-[100px] -translate-y-[100px]" />
+        <img src="/icons/PostcardStamp.svg" alt="Stamp" className="md:w-10 w-7 md:translate-x-[70px] md:-translate-y-[170px] md:translate-x-[120px] translate-x-[100px] -translate-y-[100px]" />
         <div className="flex items-center">
           <img
             src={useWhite ? "/icons/From_white.svg" : "/icons/From_black.svg"}
