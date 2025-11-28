@@ -1183,14 +1183,18 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
     <button
       onClick={startStop.onClick}
-      className="rounded-full border border-white/30 px-3 py-1.5 font-light text-white transition hover:border-white/60"
+      className={`rounded-full border border-white/30 px-3 py-1.5 font-light text-white transition hover:border-white/60 ${
+        phase === "front-draw" && !isPlaying ? "animate-shadow-pulse" : ""
+      }`}
     >
       {startStop.label}
     </button>
 
     <button
       onClick={toggleSide.onClick}
-      className="rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60"
+      className={`rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60 ${
+        phase === "front-fourier" && !isPlaying ? "animate-shadow-pulse" : ""
+      }`}
     >
       {toggleSide.label}
     </button>
@@ -1207,7 +1211,9 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
     <button
       onClick={preview.onClick}
-      className="rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60"
+      className={`rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60 ${
+        phase === "back-fourier" && canSendPostcard ? "animate-shadow-pulse" : ""
+      }`}
     >
       엽서 전송하기
     </button>
@@ -1379,7 +1385,9 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
     <button
       onClick={startStop.onClick}
-      className="rounded-full border border-white px-3 py-1.5 font-light text-white transition  hover:border-white/60"
+      className={`rounded-full border border-white px-3 py-1.5 font-light text-white transition  hover:border-white/60 ${
+        phase === "back-write" && textCanvasMessage.trim().length > 0 && !isPlaying ? "animate-shadow-pulse" : ""
+      }`}
     >
       {startStop.label}
     </button>
@@ -1403,7 +1411,9 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
     <button
       onClick={preview.onClick}
-      className="rounded-full border border-white px-3 py-1.5 font-light text-white hover:border-white/60"
+      className={`rounded-full border border-white px-3 py-1.5 font-light text-white hover:border-white/60 ${
+        phase === "back-fourier" && canSendPostcard ? "animate-shadow-pulse" : ""
+      }`}
     >
       엽서 전송하기
     </button>
