@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import * as Tone from "tone";
+import { Transport, context, start, getContext, getDestination } from "tone";
 import { Midi } from "@tonejs/midi";
 
 export type MidiTransportControls = {
@@ -88,9 +88,9 @@ export default function PianoBackendManager({
     };
 
     const disposeTransport = () => {
-      Tone.Transport.stop();
-      Tone.Transport.cancel();
-      Tone.Transport.seconds = 0;
+      Transport.stop();
+      Transport.cancel();
+      Transport.seconds = 0;
       flushActiveNotes();
     };
 
@@ -164,104 +164,49 @@ export default function PianoBackendManager({
 
       const midi = new Midi(midiArray);
 
-      // [핵심 수정] 오디오 엔진 시작 시 무한 대기(멈춤) 방지
-      // 비동기 시점에 start 호출 시 iOS에서 Block될 수 있으므로 타임아웃 적용
- if (Tone.context.state !== 'running') {
-        onStatusChange?.("오디오 엔진 시작 중...");
-        try {
-          await Promise.race([
-            Tone.start(),
-            new Promise((_, reject) => setTimeout(() => reject("Timeout"), 500))
-          ]);
-        } catch (err) {
-          console.warn("Tone start skipped/timed-out:", err);
-        }
+      // [Logic from Checkout 1] Simple await for Tone.start()
+      if (context.state !== 'running') {
+        await start();
       }
       
-      const ctx = Tone.getContext();
-      ctx.lookAhead = 0.2; 
-      Tone.getDestination().volume.value = -20;
+      const ctx = getContext();
+      ctx.lookAhead = isMobileDevice() ? 0.2 : 0.1; // Slightly increased for mobile safety
+      getDestination().volume.value = -20;
 
       disposeTransport();
       
-      // [핵심 수정] 대량의 노트를 한 번에 처리하지 않고 나눠서 처리 (Chunking)
+      // [Logic from Checkout 1] Synchronous scheduling (No Chunking)
       onStatusChange?.("노트 생성 준비 중...");
 
-      // 1. 모든 트랙의 노트를 하나의 배열로 평탄화 (Flatten)
-      const allNotes: any[] = [];
       midi.tracks.forEach((track) => {
         track.notes.forEach((note) => {
-          allNotes.push(note);
+          const midiNum = note.midi;
+          const start = note.time;
+          const duration = Math.max(note.duration, 0.05);
+
+          Transport.schedule(() => {
+            if (isCancelled) return;
+            if (activeMidiNotes.size < MAX_POLY) {
+              activeMidiNotes.add(midiNum);
+              onMidiEvent({ type: "on", note: midiNum });
+              
+              Transport.scheduleOnce(() => {
+                if (isCancelled) return;
+                activeMidiNotes.delete(midiNum);
+                onMidiEvent({ type: "off", note: midiNum });
+              }, start + duration);
+            }
+          }, start);
         });
       });
-
-      // 2. 청크 단위로 나누어 비동기 스케줄링
-      const CHUNK_SIZE = 100; // 한 번에 처리할 노트 수 (모바일 안정성 고려)
-      let processedCount = 0;
-
-      const scheduleBatch = () => {
-        return new Promise<void>((resolve) => {
-          const process = () => {
-            if (isCancelled) {
-              resolve();
-              return;
-            }
-
-            const end = Math.min(processedCount + CHUNK_SIZE, allNotes.length);
-            
-            // UI 업데이트 (진행률 표시로 사용자가 멈춘 게 아님을 인지하게 함)
-            const progress = Math.round((processedCount / allNotes.length) * 100);
-            if (processedCount % 500 === 0) { // 너무 자주 업데이트하면 느려지므로 500개마다
-               onStatusChange?.(`노트 배치 중... ${progress}%`);
-            }
-
-            for (let i = processedCount; i < end; i++) {
-              const note = allNotes[i];
-              const midiNum = note.midi;
-              const start = note.time;
-              const duration = Math.max(note.duration, 0.05);
-
-              // 노트 스케줄링
-              Tone.Transport.schedule(() => {
-                if (isCancelled) return;
-                if (activeMidiNotes.size < MAX_POLY) {
-                  activeMidiNotes.add(midiNum);
-                  onMidiEvent({ type: "on", note: midiNum });
-                  
-                  Tone.Transport.scheduleOnce(() => {
-                    if (isCancelled) return;
-                    activeMidiNotes.delete(midiNum);
-                    onMidiEvent({ type: "off", note: midiNum });
-                  }, start + duration);
-                }
-              }, start);
-            }
-
-            processedCount = end;
-
-            if (processedCount < allNotes.length) {
-              // 다음 배치를 위해 메인 스레드 양보 (setTimeout 0)
-              setTimeout(process, 0);
-            } else {
-              resolve(); // 완료
-            }
-          };
-          process();
-        });
-      };
-
-      // 배치 작업 시작 및 대기
-      await scheduleBatch();
-
-      if (isCancelled) return;
 
       const duration = midi.duration || midi.tracks.reduce(
         (max, track) => Math.max(max, ...track.notes.map((n) => n.time + n.duration)), 0
       );
 
-      Tone.Transport.schedule(() => {
-        Tone.Transport.stop();
-        Tone.Transport.seconds = 0;
+      Transport.schedule(() => {
+        Transport.stop();
+        Transport.seconds = 0;
         flushActiveNotes();
       }, duration);
 
@@ -269,29 +214,29 @@ export default function PianoBackendManager({
         duration,
         start: async () => {
           if (isCancelled) return;
-          if (Tone.context.state !== 'running') {
-             await Tone.start().catch(() => {});
+          if (context.state !== 'running') {
+             await start().catch(() => {});
           }
-          if (Tone.Transport.state !== "started") {
-            Tone.Transport.start();
+          if (Transport.state !== "started") {
+            Transport.start();
           }
         },
         pause: () => {
-          Tone.Transport.pause();
+          Transport.pause();
           flushActiveNotes();
         },
         stop: () => {
-          Tone.Transport.stop();
-          Tone.Transport.seconds = 0;
+          Transport.stop();
+          Transport.seconds = 0;
           flushActiveNotes();
         },
         seek: (seconds: number, resume = false) => {
           const clamped = Math.max(0, Math.min(duration, seconds));
-          Tone.Transport.seconds = clamped;
-          if (resume) Tone.Transport.start();
+          Transport.seconds = clamped;
+          if (resume) Transport.start();
         },
-        getPosition: () => Tone.Transport.seconds,
-        getState: () => Tone.Transport.state as "started" | "stopped" | "paused",
+        getPosition: () => Transport.seconds,
+        getState: () => Transport.state as "started" | "stopped" | "paused",
       };
 
       onStatusChange?.("분석 완료!");

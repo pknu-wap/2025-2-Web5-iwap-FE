@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import * as Tone from "tone"; // [필수] Tone.js import
+import { context, start } from "tone"; // [최적화] 필요한 모듈만 import
 
 export function useRecorder() {
   const [isRecording, setIsRecording] = useState(false);
@@ -27,8 +27,8 @@ export function useRecorder() {
   const startRecording = useCallback(async () => {
     try {
       // [핵심 수정] 녹음 시작(User Interaction) 시점에 오디오 엔진 권한 확보
-      if (Tone.context.state !== 'running') {
-        await Tone.start().catch((err) => console.warn("Tone start warn:", err));
+      if (context.state !== 'running') {
+        await start().catch((err) => console.warn("Tone start warn:", err));
         console.log("Audio Engine started on user interaction");
       }
 
