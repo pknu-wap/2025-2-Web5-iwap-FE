@@ -1,30 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Writable } from "stream";
-import formidable from "formidable";
+// import { Writable } from "stream"; // No longer needed
+// import formidable from "formidable"; // No longer needed
 
-// Disable the default body parser
-export const config = {
-  api: {
-    bodyParser: false,
-  },
-};
+// Disable the default body parser - no longer needed with NextRequest/NextResponse and req.formData()
+// export const config = {
+//   api: {
+//     bodyParser: false,
+//   },
+// };
 
-// Helper to write file to a temporary path (in-memory or on disk)
-const writeFile = async (
-  stream: Writable,
-  file: formidable.File
-): Promise<string> => {
-  const chunks = [];
-  for await (const chunk of file) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
-  }
-  const buffer = Buffer.concat(chunks);
-  // For now, we don't save the file, just confirm we received it.
-  // In a real scenario, you'd save it like this:
-  // const filePath = `/tmp/${file.newFilename}`;
-  // await fs.promises.writeFile(filePath, buffer);
-  // return filePath;
-  return `Received ${file.originalFilename} (${buffer.length} bytes)`;
+// Helper to convert a Web API File object to a Buffer
+const fileToBuffer = async (file: File): Promise<Buffer> => {
+  const arrayBuffer = await file.arrayBuffer();
+  return Buffer.from(arrayBuffer);
 };
 
 export async function POST(req: NextRequest) {
@@ -34,10 +22,13 @@ export async function POST(req: NextRequest) {
 
     for (const [key, value] of formData.entries()) {
       if (value instanceof File) {
+        // If you need to process the file content, you can convert it to a Buffer
+        // const fileBuffer = await fileToBuffer(value);
         data[key] = {
           name: value.name,
           type: value.type,
           size: value.size,
+          // bufferLength: fileBuffer.length // Example of using the buffer
         };
       } else {
         data[key] = value;
@@ -48,22 +39,26 @@ export async function POST(req: NextRequest) {
     console.log(JSON.stringify(data, null, 2));
 
     // You can access files like this:
-    const frontPng = formData.get("frontPng");
-    const backPng = formData.get("backPng");
-    const frontMp4 = formData.get("frontMp4");
-    const backMp4 = formData.get("backMp4");
+    const frontPng = formData.get("frontCard"); // Changed from frontPng to frontCard as per form data append in page.tsx
+    const backPng = formData.get("backCard"); // Changed from backPng to backCard
+    const frontVideo = formData.get("frontVideo"); // Changed from frontMp4 to frontVideo
+    const backVideo = formData.get("backVideo"); // Changed from backMp4 to backVideo
 
     if (frontPng instanceof File) {
-      console.log(`Received front PNG: ${frontPng.name} (${frontPng.size} bytes)`);
+      const frontPngBuffer = await fileToBuffer(frontPng);
+      console.log(`Received front PNG: ${frontPng.name} (${frontPngBuffer.length} bytes)`);
     }
      if (backPng instanceof File) {
-      console.log(`Received back PNG: ${backPng.name} (${backPng.size} bytes)`);
+      const backPngBuffer = await fileToBuffer(backPng);
+      console.log(`Received back PNG: ${backPng.name} (${backPngBuffer.length} bytes)`);
     }
-    if (frontMp4 instanceof File) {
-        console.log(`Received front MP4: ${frontMp4.name} (${frontMp4.size} bytes)`);
+    if (frontVideo instanceof File) {
+        const frontVideoBuffer = await fileToBuffer(frontVideo);
+        console.log(`Received front Video: ${frontVideo.name} (${frontVideoBuffer.length} bytes)`);
     }
-    if (backMp4 instanceof File) {
-        console.log(`Received back MP4: ${backMp4.name} (${backMp4.size} bytes)`);
+    if (backVideo instanceof File) {
+        const backVideoBuffer = await fileToBuffer(backVideo);
+        console.log(`Received back Video: ${backVideo.name} (${backVideoBuffer.length} bytes)`);
     }
 
 
