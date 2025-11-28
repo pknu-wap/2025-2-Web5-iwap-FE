@@ -1412,7 +1412,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
     <button
       onClick={preview.onClick}
       className={`rounded-full border border-white px-3 py-1.5 font-light text-white hover:border-white/60 ${
-        phase === "back-fourier" && canSendPostcard ? "animate-shadow-pulse" : ""
+        canSendPostcard ? "animate-shadow-pulse" : ""
       }`}
     >
       엽서 전송하기
