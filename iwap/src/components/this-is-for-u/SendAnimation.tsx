@@ -5,7 +5,7 @@ type Props = {
   isSending: boolean;
   sendStage: "idle" | "insert" | "closing" | "closed";
   frontSketches: ReturnType<FourierSketchController["getOriginalSketches"]>;
-  recipientName: string;
+  recipientEmail: string;
   senderName: string;
   textCanvasMessage: string;
   tokenWords: string[];
@@ -15,7 +15,7 @@ export function SendAnimation({
   isSending,
   sendStage,
   frontSketches,
-  recipientName,
+  recipientEmail, // Changed from recipientName to recipientEmail
   senderName,
   textCanvasMessage,
   tokenWords,
@@ -61,7 +61,7 @@ export function SendAnimation({
           </div>
           <div className="relative w-full h-[45%] p-2 text-[10px] text-slate-700">
             <div className="flex justify-between mb-1">
-              <span className="font-semibold">To: {recipientName || "______"}</span>
+              <span className="font-semibold">To: {recipientEmail || "______"}</span>
               <span className="font-semibold">From: {senderName || "______"}</span>
             </div>
             <div className="h-[70%] overflow-hidden text-[10px] leading-4 text-slate-600">
