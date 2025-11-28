@@ -133,6 +133,7 @@ const [phase, setPhase] = useState<Phase>("front-draw");
   const [previewSize, setPreviewSize] = useState({ width: 600, height: 375 });
   const [recipientEmail, setRecipientEmail] = useState("");
   const [sendAnimStage, setSendAnimStage] = useState("idle");
+const [isClosedEnvelope, setIsClosedEnvelope] = useState(false);
 
 
 
@@ -213,6 +214,8 @@ const [phase, setPhase] = useState<Phase>("front-draw");
     if (!originals.length) return;
     setBackSketches(originals);
   }, [backController, setBackSketches]);
+
+  
 
   const handleConfirmSketches = useCallback(() => {
     frontController?.confirmSketches();
@@ -420,12 +423,23 @@ const [phase, setPhase] = useState<Phase>("front-draw");
 
   const isDarkBg = styles.backgroundColor === "#0F172A" || styles.backgroundColor === "#000000";
 
-const handleSendClick = () => {
+const handleSendClick = async () => {
+  // 1) 프리뷰 박스 약간 흐려짐
   setSendAnimStage("fadePreview");
+
+  // 2) 아래로 들어가는 애니메이션 시작 (0.6초 뒤)
   setTimeout(() => setSendAnimStage("insert"), 600);
-  setTimeout(() => setSendAnimStage("closed"), 1500);
+
+  // 3) 봉투 닫힘(open → close) — insert 시작 후 2초 뒤
+  setTimeout(() => {
+    setIsClosedEnvelope(true);
+    setSendAnimStage("closed");
+  }, 2600);
+
+  // 4) 엽서 보내기
   handleSendPostcard();
 };
+
 
 
 
@@ -778,6 +792,7 @@ const handleShowPreview = useCallback(() => {
   handleStop,
   storeBackSketches
 ]);
+
 
 const handleClosePreview = () => {
   setShowPngPreview(false);
@@ -1391,55 +1406,51 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 )}
 
 {isPreview && (
-  <div className="relative w-full md:scale-70 scale-80">
-
-    {/* open.svg — 맨 아래 */}
+        <div className="relative w-full md:scale-90 scale-80">
+    {/* 바닥 봉투 (open → close 자동 전환) */}
     <img
-      src="/images/This-is-for-u/open.svg"
-      className="absolute translate-y-[15px] left-1/2 -translate-x-1/2 z-10
-                 w-[200px] md:w-[600px]"
-      alt="open"
-    />
+  src={
+    isClosedEnvelope
+      ? "/images/This-is-for-u/close.svg"
+      : "/images/This-is-for-u/open.svg"
+  }
+  className={`
+    absolute left-1/2 -translate-x-1/2 z-10
+    md:w-[600px] w-[360px] h-auto max-w-[600px]
+  
+    transition-all duration-700
 
-    {/* Preview 박스 (Fade Out 애니메이션 포함) */}
-    <div
-      className={`
-        absolute top-0
-        md:left-1/2 md:-translate-x-1/2
-        md:-translate-y-[360px] -translate-y-[300px]
-        w-[80vw]
-        md:w-[500px] md:h-[820px]
-        z-20
+    ${isClosedEnvelope ? "translate-y-[230px]" : "translate-y-[15px]"}
+  `}
+  alt="envelope-base"
+/>
 
-        flex flex-col items-start gap-6 p-6
-        transition-all duration-[600ms] ease-out
 
-        ${
-          sendAnimStage === "fadePreview"
-            ? "opacity-70"
-            : ""
-        }
-        ${
-          sendAnimStage === "insert"
-            ? "opacity-30"
-            : ""
-        }
-        ${
-          sendAnimStage === "closed"
-            ? "opacity-0"
-            : ""
-        }
-      `}
-      style={{
-        background: "rgba(255, 255, 255, 0.40)",
-        border: "1px solid #FFF",
-        backdropFilter: "blur(2px)",
-        WebkitBackdropFilter: "blur(2px)",
-      }}
-    >
-
-      {/* 제목 */}
-      <p className="text-white text-[18px] md:text-[20px] font-normal ml-2">
+    {/* Preview 박스 */}
+          <div
+          className={`
+            absolute top-0
+            left-1/2 -translate-x-1/2 /* Added for mobile centering */
+            md:left-1/2 md:-translate-x-1/2
+            md:-translate-y-[360px] -translate-y-[300px]
+            w-[80vw] /* Keep this for fluid width */
+            md:w-[500px] md:h-[820px]
+            w-[320px]
+            z-20
+    
+            flex flex-col items-start gap-6 p-6
+            transition-all duration-[600ms] ease-out
+    
+            ${sendAnimStage === "fadePreview" ? "opacity-70" : ""}
+            ${sendAnimStage === "closed" ? "opacity-0" : ""}
+          `}
+          style={{
+            background: "rgba(255, 255, 255, 0.40)",
+            border: "1px solid #FFF",
+            backdropFilter: "blur(2px)",
+            WebkitBackdropFilter: "blur(2px)",
+          }}
+        >      <p className="text-white text-[18px] md:text-[20px] font-normal ml-2">
         메일 주소를 작성하세요
       </p>
 
@@ -1472,7 +1483,7 @@ const { startStop, toggleSide, edit, preview } = getButtons();
           <div
             className="
               absolute left-0 bg-white
-              w-[220px] md:w-[290px]
+              w-[220px] md:w-[380px]
               h-[1px]
               opacity-100
               md:top-[34px] top-[28px]
@@ -1486,84 +1497,112 @@ const { startStop, toggleSide, edit, preview } = getButtons();
           className="
             flex items-center justify-center
             w-[28px] h-[28px] md:w-[34px] md:h-[34px]
-            hover:bg-white/20 transition
-            disabled:opacity-40 disabled:cursor-not-allowed
+            hover:bg-white/20 transition translate-x-[40px]
+            disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
           <img src="/icons/Send.svg" className="w-[16px] md:w-[20px]" />
         </button>
       </div>
 
-      {/* 엽서 프리뷰 (open.svg 안으로 들어가는 애니메이션 포함) */}
+      {/* 엽서 박스 */}
       <div
         className={`
           flex flex-col gap-6 items-center w-full -mt-4
           transition-all duration-[900ms] ease-out
 
-          ${
-            sendAnimStage === "insert"
-              ? "translate-y-[250px]"
-              : ""
-          }
-          ${
-            sendAnimStage === "closed"
-              ? "translate-y-[300px]"
-              : ""
-          }
+          ${sendAnimStage === "insert" ? "translate-y-[250px]" : ""}
+          ${sendAnimStage === "closed" ? "translate-y-[300px]" : ""}
         `}
       >
         {frontSketches && (
-          <div className="border border-white/30 w-[400px] h-[250px]">
+          <div className="border border-white/30 md:w-[400px] md:h-[250px] w-[270px] h-[168px] translate-y-[15px]">
             <FrontPreview
               frontSketches={frontSketches}
-              frontPreviewPng={null}
+              frontPreviewPng={frontPreviewPng}
               backgroundColor={styles.backgroundColor}
             />
           </div>
         )}
 
         {backPreviewPng && (
-          <img
-            src={backPreviewPng}
-            alt="Postcard Back Preview"
-            className="w-[400px] h-[250px] border border-white/30 object-contain"
-          />
+          <div className="md:w-[400px] md:h-[250px] w-[270px] h-[168px] border border-white/30">
+            <BackPreview
+              backPreviewPng={backPreviewPng}
+              messageText={textCanvasMessage}
+              recipientName={recipientName}
+              backgroundColor={styles.backgroundColor}
+              textAlign={textAlign}
+              textColor={styles.pathColor}
+              textAlpha={styles.pathAlpha}
+            />
+          </div>
         )}
       </div>
+    </div>
 
-      {/* 수정하러 가기 */}
+    {/* 봉투 덮개(open2 → close 자동 전환) */}
+    <div className="relative w-full h-full">
+      <img
+  src="/images/This-is-for-u/open2.svg"
+  className={`
+    absolute translate-y-1/2 left-1/2 -translate-x-1/2 z-30
+    h-auto md:w-[640px] w-[380px] max-w-[640px]
+    transition-transform duration-[700ms] ease-in-out origin-top
+    ${isClosedEnvelope ? "opacity-0 pointer-events-none" : ""}
+  `}
+  alt="open2"
+/>
+
+
+      {/* 수정하러 가기 버튼 */}
       <button
         onClick={handleClosePreview}
-        className="
-          mt-2 px-5 py-2 mx-auto
+        className={`
+          absolute z-40
+          left-1/2 -translate-x-1/2
+          bottom-10
+          px-5 py-2
           rounded-full
-          bg-white/10 border border-white/30
-          text-white text-sm hover:bg-white/20 transition
-        "
+          bg-white/10 border border-black/90
+          text-black/90 text-sm hover:bg-white/20 transition translate-y-[400px]
+          ${sendAnimStage !== "idle" ? "opacity-0 pointer-events-none" : ""}
+        `}
       >
         수정하러 가기
       </button>
     </div>
-
-    {/* open2.svg — flap (닫히는 애니메이션 포함) */}
-    <img
-      src="/images/This-is-for-u/open2.svg"
-      className={`
-        absolute translate-y-1/2 left-1/2 -translate-x-1/2 z-30
-        w-[200px] md:w-[630px]
-        transition-transform duration-[700ms] ease-in-out origin-top
-
-        ${sendAnimStage === "insert" ? "rotate-x-[-45deg]" : ""}
-        ${sendAnimStage === "closed" ? "rotate-x-0" : ""}
-      `}
-      alt="open2"
-    />
   </div>
 )}
 
 
+
         </div>
       </FullScreenView>
+      {isPreview && (
+        <div
+          className={`
+            absolute bottom-10 left-1/2 -translate-x-1/2 z-50 w-full flex justify-center
+            transition-opacity duration-[600ms] ease-out
+            ${
+              sendAnimStage === "fadePreview"
+                ? "opacity-70"
+                : ""
+            }
+            ${
+              sendAnimStage === "insert"
+                ? "opacity-30"
+                : ""
+            }
+            ${
+              sendAnimStage === "closed"
+                ? "opacity-0 pointer-events-none"
+                : ""
+            }
+          `}
+        >
+        </div>
+      )}
       {showOriginalPreview && (
         <div className="fixed inset-0 z-[1200] bg-black/70 backdrop-blur-sm flex items-center justify-center px-4">
           <div className="relative w-full max-w-6xl bg-slate-900/85 border border-white/10 rounded-xl shadow-2xl p-6 flex flex-col gap-4">

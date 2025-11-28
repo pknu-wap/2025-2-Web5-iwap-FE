@@ -23,7 +23,7 @@ textAlpha: number;
 
   return (
     <div
-      className="w-full h-full border p-6 relative flex flex-col gap-2"
+      className="w-full h-full relative flex flex-col gap-2 p-6"
       style={{ backgroundColor: cardBackground }}
     >
       <img
@@ -57,16 +57,14 @@ textAlpha: number;
     >
       {messageText}
     </p>
-  ) : backPreviewPng ? (
-    <img src={backPreviewPng} alt="Back Preview" className="w-full object-contain" />
   ) : (
     <span className="text-white/70 text-sm">No back preview</span>
   )}
 </div>
 
 
-      <div className="flex items-center justify-between text-white text-xs tracking-[0.2em] -translate-y-[230px] translate-x-[250px]">
-        <span className="-translate-y-[70px] translate-x-[220px]">{new Date().toLocaleDateString()}</span>
+      <div className="absolute bottom-4 right-4 flex items-end justify-end gap-2 w-full max-w-[200px]">
+        <span className="text-white text-xs mr-auto">{new Date().toLocaleDateString()}</span>
         <img src="/icons/PostcardStamp.svg" alt="Stamp" className="w-10" />
         <img
           src={useWhite ? "/icons/From_white.svg" : "/icons/From_black.svg"}
