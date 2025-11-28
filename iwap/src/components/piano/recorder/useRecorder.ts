@@ -56,8 +56,26 @@ export function useRecorder() {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
 
-      // 코덱 지정 없이 브라우저 기본값 사용 (안정성 최우선)
-      const recorder = new MediaRecorder(stream);
+      // [최적화] 브라우저별 최적의 MimeType 탐색
+      let options: MediaRecorderOptions = {};
+      const mimeTypes = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/aac",
+        "audio/ogg;codecs=opus",
+      ];
+
+      for (const type of mimeTypes) {
+        if (MediaRecorder.isTypeSupported(type)) {
+          options = { mimeType: type };
+          console.log(`Using mimeType: ${type}`);
+          break;
+        }
+      }
+
+      // 코덱 지정 (지원되는 경우)
+      const recorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = recorder;
 
       recorder.ondataavailable = (e) => {

@@ -80,15 +80,29 @@ function PianoKey({
     >
       {type === "white" ? (
         <>
+          {/* [최적화] CSS Shadow로 대체된 배경 (SVG 필터 제거) */}
+          <div
+            className="absolute rounded-[1px]"
+            style={{
+              left: "30px",
+              top: "11px",
+              width: "25px",
+              height: "125px",
+              boxShadow: "0px 0px 10px 1px rgba(0,0,0,0.4), 0px 20px 30px 1px rgba(255,255,255,0.25)",
+              backgroundColor: "#FFFFFF",
+              zIndex: 0,
+            }}
+          />
+
           {/* 흰건반 */}
           <svg
             width={WHITE_W}
             height={WHITE_H}
             viewBox="0 0 85 186"
             fill="none"
-            className="absolute bottom-0 left-0"
+            className="absolute bottom-0 left-0 z-[1]"
           >
-            <g opacity="0.6" filter="url(#filter0_f_1207_690)">
+            <g opacity="0.6" style={{ filter: "blur(4px)" }}>
               <circle
                 cx="12.5"
                 cy="12.5"
@@ -97,7 +111,7 @@ function PianoKey({
                 fill="url(#paint0_radial_1207_690)"
               />
             </g>
-            <g filter="url(#filter1_dd_1207_690)">
+            <g>
               <rect
                 ref={fillRef} // [연결]
                 x="30"
@@ -156,15 +170,29 @@ function PianoKey({
         </>
       ) : (
         <>
+          {/* [최적화] CSS Shadow로 대체 */}
+          <div
+            className="absolute rounded-[1px]"
+            style={{
+              left: "11px",
+              top: "11px",
+              width: "13px",
+              height: "65px",
+              boxShadow: "0px 0px 10px 1px rgba(0,0,0,0.4)",
+              backgroundColor: "#000000",
+              zIndex: 0,
+            }}
+          />
+
           {/* 검은건반 */}
           <svg
             width={BLACK_W}
             height={BLACK_H}
             viewBox="0 0 35 87"
             fill="none"
-            className="absolute left-0"
+            className="absolute left-0 z-[1]"
           >
-            <g filter="url(#filter0_d_1273_506)">
+            <g>
               <rect
                 ref={fillRef} // [연결]
                 x="11"
