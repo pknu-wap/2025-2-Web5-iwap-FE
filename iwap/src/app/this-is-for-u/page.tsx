@@ -803,6 +803,7 @@ const handleTextToFourier = useCallback(async () => {
           const canvas = await html2canvas(backPreviewDivRef.current!, {
             backgroundColor: styles.backgroundColor,
             useCORS: true,
+            scale: 2, // 캡처 해상도를 2배로 높여 화질 개선
           });
           const dataUrl = canvas.toDataURL('image/png');
           setBackPreviewPng(dataUrl);
