@@ -134,6 +134,7 @@ const [phase, setPhase] = useState<Phase>("front-draw");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [sendAnimStage, setSendAnimStage] = useState("idle");
 const [isClosedEnvelope, setIsClosedEnvelope] = useState(false);
+const [earlyFade, setEarlyFade] = useState(false);
 
 
 
@@ -145,6 +146,13 @@ const [isClosedEnvelope, setIsClosedEnvelope] = useState(false);
     
   }`;
   
+useEffect(() => {
+  if (isClosedEnvelope) {
+    // 봉투가 닫히는 순간 엽서 사라짐 (0ms 즉시)
+    setEarlyFade(true);
+  }
+}, [isClosedEnvelope]);
+
 
   useEffect(() => {
     if (!frontContainerRef.current || frontInitRef.current) return;
@@ -1175,14 +1183,18 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
     <button
       onClick={startStop.onClick}
-      className="rounded-full border border-white/30 px-3 py-1.5 font-light text-white transition hover:border-white/60"
+      className={`rounded-full border border-white/30 px-3 py-1.5 font-light text-white transition hover:border-white/60 ${
+        phase === "front-draw" && !isPlaying ? "animate-shadow-pulse" : ""
+      }`}
     >
       {startStop.label}
     </button>
 
     <button
       onClick={toggleSide.onClick}
-      className="rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60"
+      className={`rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60 ${
+        phase === "front-fourier" && !isPlaying ? "animate-shadow-pulse" : ""
+      }`}
     >
       {toggleSide.label}
     </button>
@@ -1199,7 +1211,9 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
     <button
       onClick={preview.onClick}
-      className="rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60"
+      className={`rounded-full border border-white/30 px-3 py-1.5 font-light text-white hover:border-white/60 ${
+        phase === "back-fourier" && canSendPostcard ? "animate-shadow-pulse" : ""
+      }`}
     >
       엽서 전송하기
     </button>
@@ -1371,7 +1385,9 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
     <button
       onClick={startStop.onClick}
-      className="rounded-full border border-white px-3 py-1.5 font-light text-white transition  hover:border-white/60"
+      className={`rounded-full border border-white px-3 py-1.5 font-light text-white transition  hover:border-white/60 ${
+        phase === "back-write" && textCanvasMessage.trim().length > 0 && !isPlaying ? "animate-shadow-pulse" : ""
+      }`}
     >
       {startStop.label}
     </button>
@@ -1395,7 +1411,9 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 
     <button
       onClick={preview.onClick}
-      className="rounded-full border border-white px-3 py-1.5 font-light text-white hover:border-white/60"
+      className={`rounded-full border border-white px-3 py-1.5 font-light text-white hover:border-white/60 ${
+        phase === "back-fourier" && canSendPostcard ? "animate-shadow-pulse" : ""
+      }`}
     >
       엽서 전송하기
     </button>
@@ -1406,62 +1424,61 @@ const { startStop, toggleSide, edit, preview } = getButtons();
 )}
 
 {isPreview && (
-        <div className="relative w-full md:scale-90 scale-80">
+  <div className="relative w-full md:scale-90 scale-80">
+
     {/* 바닥 봉투 (open → close 자동 전환) */}
     <img
-  src={
-    isClosedEnvelope
-      ? "/images/This-is-for-u/close.svg"
-      : "/images/This-is-for-u/open.svg"
-  }
-  className={`
-    absolute left-1/2 -translate-x-1/2 z-10
-    md:w-[600px] w-[360px] h-auto max-w-[600px]
-  
-    transition-all duration-700
-
-    ${isClosedEnvelope ? "translate-y-[230px]" : "translate-y-[15px]"}
-  `}
-  alt="envelope-base"
-/>
+      src={
+        isClosedEnvelope
+          ? "/images/This-is-for-u/close.svg"
+          : "/images/This-is-for-u/open.svg"
+      }
+      className={`
+        absolute left-1/2 -translate-x-1/2 z-10
+        md:w-[600px] w-[360px] h-auto max-w-[600px]
+        transition-all duration-700
+        ${isClosedEnvelope ? "translate-y-[230px]" : "translate-y-[15px]"}
+      `}
+      alt="envelope-base"
+    />
 
 
-    {/* Preview 박스 */}
-          <div
-          className={`
-            absolute top-0
-            left-1/2 -translate-x-1/2 /* Added for mobile centering */
-            md:left-1/2 md:-translate-x-1/2
-            md:-translate-y-[360px] -translate-y-[300px]
-            w-[80vw] /* Keep this for fluid width */
-            md:w-[500px] md:h-[820px]
-            w-[320px]
-            z-20
-    
-            flex flex-col items-start gap-6 p-6
-            transition-all duration-[600ms] ease-out
-    
-            ${sendAnimStage === "fadePreview" ? "opacity-70" : ""}
-            ${sendAnimStage === "closed" ? "opacity-0" : ""}
-          `}
-          style={{
-            background: "rgba(255, 255, 255, 0.40)",
-            border: "1px solid #FFF",
-            backdropFilter: "blur(2px)",
-            WebkitBackdropFilter: "blur(2px)",
-          }}
-        >      <p className="text-white text-[18px] md:text-[20px] font-normal ml-2">
+    {/* =============================
+        Preview 박스 (fade-out)
+       ============================= */}
+    <div
+      className={`
+        absolute top-0
+        left-1/2 -translate-x-1/2
+        md:-translate-y-[360px] -translate-y-[300px]
+        w-[80vw]
+        md:w-[500px] md:h-[820px]
+        w-[320px] h-[600px]
+        z-20
+
+        flex flex-col items-start gap-6 p-6
+        transition-all duration-[600ms] ease-out
+
+        ${sendAnimStage !== "idle" ? "opacity-0 pointer-events-none" : "opacity-100"}
+      `}
+      style={{
+        background: "rgba(255, 255, 255, 0.40)",
+        border: "1px solid #FFF",
+        backdropFilter: "blur(2px)",
+        WebkitBackdropFilter: "blur(2px)",
+      }}
+    >
+      {/* 메일 UI */}
+      <p className="text-white text-[18px] md:text-[20px] font-normal ml-2">
         메일 주소를 작성하세요
       </p>
 
-      {/* To + Send 버튼 */}
       <div className="flex items-center gap-2 text-sm text-white/70 ml-2 mt-[-10px]">
         <img
           src="/icons/To_white.svg"
           alt="To"
           className="w-[20px] h-[21px] md:w-[30px] md:h-[28px]"
         />
-
         <div className="relative">
           <input
             id="recipientEmail"
@@ -1479,7 +1496,6 @@ const { startStop, toggleSide, edit, preview } = getButtons();
               placeholder:text-white/70
             "
           />
-
           <div
             className="
               absolute left-0 bg-white
@@ -1490,76 +1506,123 @@ const { startStop, toggleSide, edit, preview } = getButtons();
             "
           />
         </div>
-
         <button
           onClick={handleSendClick}
           disabled={isMailSending || !isValidEmail(recipientEmail)}
           className="
             flex items-center justify-center
             w-[28px] h-[28px] md:w-[34px] md:h-[34px]
-            hover:bg-white/20 transition translate-x-[40px]
+            hover:bg-white/20 transition md:translate-x-[40px] -translate-x-[0px]
             disabled:opacity-50 disabled:cursor-not-allowed
           "
         >
           <img src="/icons/Send.svg" className="w-[16px] md:w-[20px]" />
         </button>
       </div>
-
-      {/* 엽서 박스 */}
-      <div
-        className={`
-          flex flex-col gap-6 items-center w-full -mt-4
-          transition-all duration-[900ms] ease-out
-
-          ${sendAnimStage === "insert" ? "translate-y-[250px]" : ""}
-          ${sendAnimStage === "closed" ? "translate-y-[300px]" : ""}
-        `}
-      >
-        {frontSketches && (
-          <div className="border border-white/30 md:w-[400px] md:h-[250px] w-[270px] h-[168px] translate-y-[15px]">
-            <FrontPreview
-              frontSketches={frontSketches}
-              frontPreviewPng={frontPreviewPng}
-              backgroundColor={styles.backgroundColor}
-            />
-          </div>
-        )}
-
-        {backPreviewPng && (
-          <div className="md:w-[400px] md:h-[250px] w-[270px] h-[168px] border border-white/30">
-            <BackPreview
-              backPreviewPng={backPreviewPng}
-              messageText={textCanvasMessage}
-              recipientName={recipientName}
-              backgroundColor={styles.backgroundColor}
-              textAlign={textAlign}
-              textColor={styles.pathColor}
-              textAlpha={styles.pathAlpha}
-            />
-          </div>
-        )}
-      </div>
     </div>
 
-    {/* 봉투 덮개(open2 → close 자동 전환) */}
+
+    {/* ==============================================
+        ✔ 엽서 박스를 Preview 박스 아래로 분리 (SIBLING)
+        ✔ z-index를 올려서 봉투 위로 오게 변경 (z-30)
+       ============================================== */}
+{/* ==============================================
+    ✔ 엽서 박스 (Front / Back PNG 미리보기)
+    ✔ Preview 박스와 같은 depth가 아닌 SIBLING
+    ✔ front/back 각각 투명도, 이동 애니메이션 포함
+   ============================================== */}
+<div
+  className={`
+    absolute left-1/2 -translate-x-1/2
+    md:-translate-y-[40px] -translate-y-[20px]
+    flex flex-col gap-6 items-center w-full
+    transition-all duration-[900ms] ease-out
+    z-30
+
+    ${sendAnimStage === "insert" ? "translate-y-[250px]" : ""}
+    ${sendAnimStage === "closed" ? "translate-y-[300px]" : ""}
+
+  `}
+>
+
+  {/* =========================
+        FRONT PREVIEW
+     ========================= */}
+  {frontPreviewPng && (
+    <div
+      className={`
+        border border-white/30
+        md:w-[400px] md:h-[250px]
+        w-[270px] h-[168px]
+        -translate-y-[175px]
+        overflow-hidden
+        bg-white
+        transition-transform duration-[900ms] ease-out
+
+        ${sendAnimStage === "insert" ? "md:translate-y-[260px] translate-y-[5px]" : ""}
+        ${sendAnimStage === "closed" ? "md:translate-y-[220px]" : ""}
+                ${earlyFade ? "opacity-0 pointer-events-none" : "opacity-100"}
+      `}
+    >
+      <FrontPreview
+        frontSketches={frontSketches}
+        frontPreviewPng={frontPreviewPng}
+        backgroundColor={styles.backgroundColor}
+      />
+    </div>
+  )}
+
+  {/* =========================
+        BACK PREVIEW
+     ========================= */}
+  {backPreviewPng && (
+    <div
+      className={`
+        border border-white/30
+        md:w-[400px] md:h-[250px]
+        w-[270px] h-[168px]
+        -translate-y-[175px]
+        overflow-hidden
+        bg-white
+        transition-transform duration-[900ms] ease-out
+
+        ${sendAnimStage === "insert" ? "md:translate-y-[20px]" : ""}
+        ${sendAnimStage === "closed" ? "md:translate-y-[80px] translate-y-[80px]" : ""}
+        ${earlyFade ? "opacity-0 pointer-events-none" : "opacity-100"}
+
+      `}
+    >
+      <BackPreview
+        backPreviewPng={backPreviewPng}
+        messageText={textCanvasMessage}
+        recipientName={recipientName}
+        backgroundColor={styles.backgroundColor}
+        textAlign={textAlign}
+        textColor={styles.pathColor}
+        textAlpha={styles.pathAlpha}
+      />
+    </div>
+  )}
+
+</div>
+
+    {/* 봉투 덮개 */}
     <div className="relative w-full h-full">
       <img
-  src="/images/This-is-for-u/open2.svg"
-  className={`
-    absolute translate-y-1/2 left-1/2 -translate-x-1/2 z-30
-    h-auto md:w-[640px] w-[380px] max-w-[640px]
-    transition-transform duration-[700ms] ease-in-out origin-top
-    ${isClosedEnvelope ? "opacity-0 pointer-events-none" : ""}
-  `}
-  alt="open2"
-/>
+        src="/images/This-is-for-u/open2.svg"
+        className={`
+          absolute translate-y-1/2 left-1/2 -translate-x-1/2 z-90
+          h-auto md:w-[640px] w-[380px] max-w-[640px]
+          transition-transform duration-[700ms] ease-in-out origin-top
+          ${isClosedEnvelope ? "opacity-0 pointer-events-none" : ""}
+        `}
+        alt="open2"
+      />
 
-
-      {/* 수정하러 가기 버튼 */}
       <button
         onClick={handleClosePreview}
         className={`
-          absolute z-40
+          absolute z-50
           left-1/2 -translate-x-1/2
           bottom-10
           px-5 py-2
@@ -1572,9 +1635,9 @@ const { startStop, toggleSide, edit, preview } = getButtons();
         수정하러 가기
       </button>
     </div>
+
   </div>
 )}
-
 
 
         </div>
