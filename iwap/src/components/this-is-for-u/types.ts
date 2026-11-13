@@ -1,53 +1,39 @@
-export type Tool = "brush" | "eraser" | "stroke-eraser";
-
-export type StrokeMode = "draw" | "erase";
-
-export type PostcardTemplate = {
-  id: string;
-  name: string;
-  description: string;
-  frontColor: string;
-  backColor: string;
-  textColor: string;
-  lineColor: string;
-  accentColor: string;
-  stampColor: string;
-};
-
-export type FontOption = {
-  id: string;
-  label: string;
-  css: string;
-};
-
-export type StrokePoint = {
-  x: number;
-  y: number;
-};
-
-export type Stroke = {
-  id: number;
-  mode: StrokeMode;
-  color: string;
-  sizeRatio: number;
-  points: StrokePoint[];
-};
-
 export type FourierCoefficient = {
   amp: number;
   freq: number;
   phase: number;
 };
 
-export type FourierMetadata = {
-  version: number;
-  templateId: string;
-  templateName: string;
-  background: string;
-  drawingFourier: FourierCoefficient[];
-  textFourier: FourierCoefficient[][];
-  createdAt: string;
-  recipient?: string;
-  signature?: string;
-  messagePreview?: string;
+export type SketchPoint = { x: number; y: number };
+
+/** Fourier 변환 전 원본 스트로크 (미리보기/전송용 스냅샷) */
+export type SketchSnapshot = {
+  points: SketchPoint[];
+  pathColor: string;
+  pathAlpha: number;
+  pathWidth: number;
+  startDelay: number;
 };
+
+export type SketchStyles = {
+  backgroundColor: string;
+  epicycleColor: string;
+  epicycleAlpha: number;
+  showEpicycles: boolean;
+  pathColor: string;
+  pathAlpha: number;
+  pathWidth: number;
+};
+
+export type EpicycleVisibility = Pick<SketchStyles, "showEpicycles" | "epicycleAlpha">;
+
+/**
+ * 엽서 제작 단계
+ * front-draw → front-fourier → back-write → back-fourier → preview
+ */
+export type Phase = "front-draw" | "front-fourier" | "back-write" | "back-fourier" | "preview";
+
+export type TextAlign = "left" | "center" | "right";
+
+/** 전송 시 봉투 애니메이션 단계 */
+export type SendAnimStage = "idle" | "fadePreview" | "insert" | "closed";

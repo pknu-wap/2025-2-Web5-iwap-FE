@@ -1,5 +1,5 @@
 import type p5 from "p5";
-import type { FourierCoefficient } from "./types";
+import type { FourierCoefficient, SketchSnapshot } from "./types";
 
 type FourierSketchStyles = {
   backgroundColor?: string;
@@ -28,13 +28,7 @@ export type FourierSketchController = {
     },
   ) => void;
   getFourierCoefficients: () => FourierCoefficient[][];
-  getOriginalSketches: () => {
-    points: { x: number; y: number }[];
-    pathColor: string;
-    pathAlpha: number;
-    pathWidth: number;
-    startDelay: number;
-  }[];
+  getOriginalSketches: () => SketchSnapshot[];
   undo: () => void;
   redo: () => void;
   resize: () => void;
