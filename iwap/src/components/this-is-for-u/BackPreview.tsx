@@ -1,29 +1,23 @@
 /* eslint-disable @next/next/no-img-element */
 import React, { forwardRef } from "react";
+import type { TextAlign } from "./types";
 
-export const BackPreview = forwardRef(
-  (
-    {
-      backPreviewPng,
-      messageText, // 본문
-      recipientName,
-      backgroundColor,
-      textAlign,
-      textColor,
-      textAlpha,
-      senderName, // Add senderName to props
-    }: {
-      backPreviewPng: string | null;
-      messageText?: string; // 본문
-      recipientName?: string;
-      backgroundColor?: string;
-      textAlign: "left" | "center" | "right";
-      textColor: string;
-      textAlpha: number;
-      senderName?: string; // Add senderName to props type
-    },
-    ref: React.Ref<HTMLDivElement>
-  ) => {
+type BackPreviewProps = {
+  messageText?: string;
+  recipientName?: string;
+  senderName?: string;
+  backgroundColor?: string;
+  textAlign: TextAlign;
+  textColor: string;
+  textAlpha: number;
+};
+
+/** 엽서 뒷면 미리보기. 전송용 PNG는 이 DOM을 html2canvas로 캡처해 만든다. */
+export const BackPreview = forwardRef<HTMLDivElement, BackPreviewProps>(
+  function BackPreview(
+    { messageText, recipientName, senderName, backgroundColor, textAlign, textColor, textAlpha },
+    ref,
+  ) {
     const cardBackground = backgroundColor ?? "#000000";
     const useWhite = cardBackground === "#0F172A" || cardBackground === "#000000";
 

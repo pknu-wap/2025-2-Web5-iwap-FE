@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "engines": {
-    "node": "20.x"
+    "node": "26.x"
   },
   "packageManager": "npm@10",
   "scripts": {
@@ -34,7 +34,7 @@
     "lightningcss": "^1.30.1",
     "lightswind": "^3.1.15",
     "lucide-react": "^0.552.0",
-    "next": "15.5.9",
+    "next": "^15.5.29",
     "opentype.js": "^1.3.4",
     "p5": "^2.1.1",
     "plotly.js": "^3.1.1",
