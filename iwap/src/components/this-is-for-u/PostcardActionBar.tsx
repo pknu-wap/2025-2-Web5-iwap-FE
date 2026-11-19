@@ -17,68 +17,43 @@ const VARIANTS: Record<Variant, { container: string; border: string }> = {
 
 const PULSE = "animate-shadow-pulse";
 
-export type PostcardActionBarProps = {
-  variant: Variant;
-  isPlaying: boolean;
-  isBackside: boolean;
-  editDisabled: boolean;
+export type PostcardAction = {
+  key: string;
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
   /** 다음에 누를 버튼을 강조하는 pulse 효과 */
-  pulse: { startStop?: boolean; toggleSide?: boolean; send?: boolean };
-  onStartStop: () => void;
-  onToggleSide: () => void;
-  onEdit: () => void;
-  onSend: () => void;
+  pulse?: boolean;
+  /** 비활성 사유 등을 알려주는 툴팁 */
+  title?: string;
 };
 
-/** 변환 시작/정지 · 앞뒷면 전환 · 수정 · 엽서 전송하기 버튼 묶음 */
-export function PostcardActionBar({
-  variant,
-  isPlaying,
-  isBackside,
-  editDisabled,
-  pulse,
-  onStartStop,
-  onToggleSide,
-  onEdit,
-  onSend,
-}: PostcardActionBarProps) {
+export type PostcardActionBarProps = {
+  variant: Variant;
+  actions: PostcardAction[];
+};
+
+/** 현재 단계에서 할 수 있는 동작만 보여주는 버튼 묶음 */
+export function PostcardActionBar({ variant, actions }: PostcardActionBarProps) {
   const { container, border } = VARIANTS[variant];
-  const base = `rounded-full border ${border} px-3 py-1.5 font-light text-white`;
+  const base = `rounded-full border ${border} px-3 py-1.5 font-light text-white whitespace-nowrap transition`;
 
   return (
     <div className={container}>
-      <button
-        type="button"
-        onClick={onStartStop}
-        className={`${base} transition hover:border-white/60 ${pulse.startStop ? PULSE : ""}`}
-      >
-        {isPlaying ? "정지" : "변환 시작"}
-      </button>
-
-      <button
-        type="button"
-        onClick={onToggleSide}
-        className={`${base} hover:border-white/60 ${pulse.toggleSide ? PULSE : ""}`}
-      >
-        {isBackside ? "앞면 전환" : "뒷면 전환"}
-      </button>
-
-      <button
-        type="button"
-        onClick={onEdit}
-        disabled={editDisabled}
-        className={`${base} ${editDisabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/60"}`}
-      >
-        수정
-      </button>
-
-      <button
-        type="button"
-        onClick={onSend}
-        className={`${base} hover:border-white/60 ${pulse.send ? PULSE : ""}`}
-      >
-        엽서 전송하기
-      </button>
+      {actions.map(({ key, label, onClick, disabled, pulse, title }) => (
+        <button
+          key={key}
+          type="button"
+          onClick={onClick}
+          disabled={disabled}
+          title={title}
+          className={`${base} ${
+            disabled ? "opacity-40 cursor-not-allowed" : "hover:border-white/60"
+          } ${pulse && !disabled ? PULSE : ""}`}
+        >
+          {label}
+        </button>
+      ))}
     </div>
   );
 }
