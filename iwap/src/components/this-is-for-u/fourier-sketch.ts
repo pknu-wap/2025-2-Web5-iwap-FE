@@ -32,6 +32,10 @@ export type FourierSketchController = {
   undo: () => void;
   redo: () => void;
   resize: () => void;
+  /** 사용자가 캔버스에 직접 그릴 수 있는지 여부 (p5는 window 이벤트를 받으므로 숨겨진 캔버스도 막아야 한다) */
+  setInputEnabled: (enabled: boolean) => void;
+  /** 스케치 목록이 바뀔 때(그리기/undo/redo/clear 등) 호출될 리스너 등록. 해제 함수를 반환한다. */
+  onChange: (listener: () => void) => () => void;
   cleanup: () => void;
 };
 
@@ -49,6 +53,9 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
     pathWidth: 1,
   };
   let isRunning = false;
+  let inputEnabled = true;
+  const changeListeners = new Set<() => void>();
+  const notifyChange = () => changeListeners.forEach((listener) => listener());
 
   const updateStyles = (nextStyles: FourierSketchStyles) => {
     styles = { ...styles, ...nextStyles };
@@ -99,7 +106,17 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
     resize: () => {
       resizeFn();
     },
+    setInputEnabled: (enabled) => {
+      inputEnabled = enabled;
+    },
+    onChange: (listener) => {
+      changeListeners.add(listener);
+      return () => {
+        changeListeners.delete(listener);
+      };
+    },
     cleanup() {
+      changeListeners.clear();
       isCleanedUp = true;
       if (instance) {
         instance.remove();
@@ -275,6 +292,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
             redoStack.push(undone);
           }
         }
+        notifyChange();
       };
 
       const redo = () => {
@@ -285,6 +303,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
             pendingSketches.push(redone);
           }
         }
+        notifyChange();
       };
 
       const clearSketches = () => {
@@ -295,6 +314,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         sharedTime = 0;
         maxStartDelay = 0;
         state = "idle";
+        notifyChange();
       };
 
       const confirmSketches = () => {
@@ -371,6 +391,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
         });
         maxStartDelay = Math.max(maxStartDelay, Math.max(0, options?.startDelay ?? 0));
         state = "pending";
+        notifyChange();
       };
       getFourierCoefficientsFn = getFourierCoefficients;
       getOriginalSketchesFn = () =>
@@ -456,6 +477,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
       resizeFn = handleResize;
 
       p.mousePressed = () => {
+        if (!inputEnabled) return;
         if (!isMouseInsideCanvas(p)) return;
         drawing = [];
         state = "drawing";
@@ -498,6 +520,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
 
         drawing = [];
         state = pendingSketches.length > 0 ? "pending" : "idle";
+        notifyChange();
       };
 
       const EPICYCLE_SCALE = 1.0;
