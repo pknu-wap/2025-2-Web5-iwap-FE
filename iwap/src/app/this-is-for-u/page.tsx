@@ -26,10 +26,12 @@ import {
 } from "@/components/this-is-for-u/constants";
 import type { FourierSketchController } from "@/components/this-is-for-u/fourier-sketch";
 import {
+  DEFAULT_CANVAS_SIZE,
   downloadUrl,
-  getCanvas,
   layoutMessageStrokes,
+  renderSketchesToPng,
   wait,
+  type CanvasSize,
 } from "@/components/this-is-for-u/postcardUtils";
 import type {
   EpicycleVisibility,
@@ -76,6 +78,8 @@ export default function ThisIsForUPage() {
   const [backSketches, setBackSketches] = useState<SketchSnapshot[]>([]);
   const [frontPreviewPng, setFrontPreviewPng] = useState<string | null>(null);
   const [backPreviewPng, setBackPreviewPng] = useState<string | null>(null);
+  /** 앞면 스케치 좌표계 크기 (모바일/데스크톱 캔버스 크기가 다름) */
+  const [frontCanvasSize, setFrontCanvasSize] = useState<CanvasSize>(DEFAULT_CANVAS_SIZE);
 
   /** 앞면 캔버스에 그려진 획 수 (변환 버튼 활성화 판단용) */
   const [frontStrokeCount, setFrontStrokeCount] = useState(0);
@@ -109,8 +113,22 @@ export default function ThisIsForUPage() {
      =========================== */
 
   const storeFrontSketches = useCallback(() => {
-    setFrontSketches(frontController?.getOriginalSketches() ?? []);
+    const sketches = frontController?.getOriginalSketches() ?? [];
+    setFrontSketches(sketches);
+    return sketches;
   }, [frontController]);
+
+  const getFrontCanvasSize = useCallback((): CanvasSize => {
+    const size = frontController?.getSize();
+    return size && size.width > 0 && size.height > 0 ? size : DEFAULT_CANVAS_SIZE;
+  }, [frontController]);
+
+  /** 원본 스트로크로 앞면 PNG 생성 (epicycle / 재생 중인 미완성 경로 없이) */
+  const renderFrontPng = useCallback(
+    (sketches: SketchSnapshot[]) =>
+      renderSketchesToPng(sketches, getFrontCanvasSize(), styles.backgroundColor),
+    [getFrontCanvasSize, styles.backgroundColor],
+  );
 
   /** epicycle 표시 여부를 state와 컨트롤러에 동시에 반영 (PNG 캡처 시 숨기는 용도) */
   const applyEpicycleVisibility = useCallback(
@@ -259,18 +277,11 @@ export default function ThisIsForUPage() {
     setPhase("front-draw");
   }, [frontController]);
 
-  /** 앞면 캔버스를 epicycle 없이 PNG로 저장 */
+  /** 앞면 그림을 PNG로 저장 */
   const handleSavePng = useCallback(() => {
-    const canvas = getCanvas(frontContainerRef.current);
-    if (!canvas) return;
-    const restore = { showEpicycles: styles.showEpicycles, epicycleAlpha: styles.epicycleAlpha };
-
-    applyEpicycleVisibility(HIDDEN_EPICYCLES, [frontController]);
-    requestAnimationFrame(() => {
-      downloadUrl(canvas.toDataURL("image/png"), "postcard-front.png");
-      requestAnimationFrame(() => applyEpicycleVisibility(restore, [frontController]));
-    });
-  }, [applyEpicycleVisibility, frontController, styles.epicycleAlpha, styles.showEpicycles]);
+    const png = renderFrontPng(frontController?.getOriginalSketches() ?? []);
+    if (png) downloadUrl(png, "postcard-front.png");
+  }, [frontController, renderFrontPng]);
 
   const toolbarProps = useMemo(
     () => ({
@@ -311,19 +322,22 @@ export default function ThisIsForUPage() {
     // 메시지를 아직 변환하지 않았거나 변환 후 수정했다면 자동으로 다시 변환
     if (!isMessageConverted && !(await convertMessage())) return;
 
-    storeFrontSketches();
-    // 앞면은 캔버스를 바로 캡처, 뒷면은 preview 진입 후 effect에서 다시 캡처
-    setFrontPreviewPng(getCanvas(frontContainerRef.current)?.toDataURL("image/png") ?? null);
+    // 앞면은 원본 스트로크로 바로 렌더링, 뒷면은 preview 진입 후 effect에서 다시 캡처
+    const sketches = storeFrontSketches();
+    setFrontCanvasSize(getFrontCanvasSize());
+    setFrontPreviewPng(renderFrontPng(sketches));
     setBackPreviewPng(null);
     setPrevPhase(phase);
     setPhase("preview");
   }, [
     convertMessage,
+    getFrontCanvasSize,
     handleStop,
     hasFrontStrokes,
     hasMessage,
     isMessageConverted,
     phase,
+    renderFrontPng,
     storeFrontSketches,
   ]);
 
@@ -601,6 +615,7 @@ export default function ThisIsForUPage() {
                       frontSketches={frontSketches}
                       frontPreviewPng={frontPreviewPng}
                       backgroundColor={styles.backgroundColor}
+                      canvasSize={frontCanvasSize}
                     />
                   ) : null
                 }

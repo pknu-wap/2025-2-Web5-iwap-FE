@@ -18,6 +18,55 @@ export function downloadUrl(url: string, filename: string) {
   anchor.click();
 }
 
+/** 스케치 좌표계 크기 (원점은 캔버스 중앙) */
+export type CanvasSize = { width: number; height: number };
+
+/** p5 캔버스가 아직 준비되지 않았을 때 쓰는 기본 크기 (데스크톱 캔버스) */
+export const DEFAULT_CANVAS_SIZE: CanvasSize = { width: 600, height: 375 };
+
+/** 앞면 PNG 출력 가로 픽셀 (데스크톱 캔버스의 2배) */
+const FRONT_PNG_WIDTH = 1200;
+
+/**
+ * 원본 스트로크를 오프스크린 캔버스에 다시 그려 PNG로 만든다.
+ * 화면 캔버스를 그대로 캡처하면 Fourier 재생 중의 원/미완성 경로가 찍히므로 대신 사용한다.
+ */
+export function renderSketchesToPng(
+  sketches: SketchSnapshot[],
+  size: CanvasSize,
+  backgroundColor: string,
+): string | null {
+  if (!size.width || !size.height) return null;
+  const scale = FRONT_PNG_WIDTH / size.width;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(size.width * scale);
+  canvas.height = Math.round(size.height * scale);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
+
+  ctx.fillStyle = backgroundColor;
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  ctx.translate(canvas.width / 2, canvas.height / 2);
+  ctx.scale(scale, scale);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  sketches.forEach(({ points, pathColor, pathAlpha, pathWidth }) => {
+    if (points.length < 2) return;
+    ctx.globalAlpha = Math.max(0, Math.min(1, pathAlpha / 255));
+    ctx.strokeStyle = pathColor;
+    ctx.lineWidth = pathWidth;
+    ctx.beginPath();
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) ctx.lineTo(points[i].x, points[i].y);
+    ctx.stroke();
+  });
+
+  return canvas.toDataURL("image/png");
+}
+
 export function dataUrlToBlob(dataUrl: string): Blob | null {
   const [header, base64] = dataUrl.split(",");
   if (!base64) return null;

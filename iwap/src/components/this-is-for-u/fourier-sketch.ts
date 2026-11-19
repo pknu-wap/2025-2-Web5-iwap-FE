@@ -32,6 +32,8 @@ export type FourierSketchController = {
   undo: () => void;
   redo: () => void;
   resize: () => void;
+  /** 스케치 좌표계 기준 캔버스 크기 (원점은 캔버스 중앙) */
+  getSize: () => { width: number; height: number };
   /** 사용자가 캔버스에 직접 그릴 수 있는지 여부 (p5는 window 이벤트를 받으므로 숨겨진 캔버스도 막아야 한다) */
   setInputEnabled: (enabled: boolean) => void;
   /** 스케치 목록이 바뀔 때(그리기/undo/redo/clear 등) 호출될 리스너 등록. 해제 함수를 반환한다. */
@@ -80,6 +82,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
   let undoFn: () => void = () => {};
   let redoFn: () => void = () => {};
   let resizeFn: () => void = () => {};
+  let getSizeFn: FourierSketchController["getSize"] = () => ({ width: 0, height: 0 });
 
   const controller: FourierSketchController = {
     updateStyles,
@@ -106,6 +109,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
     resize: () => {
       resizeFn();
     },
+    getSize: () => getSizeFn(),
     setInputEnabled: (enabled) => {
       inputEnabled = enabled;
     },
@@ -475,6 +479,7 @@ export function initFourierSketch(container: HTMLElement): FourierSketchControll
 
       p.windowResized = handleResize;
       resizeFn = handleResize;
+      getSizeFn = () => ({ width: p.width, height: p.height });
 
       p.mousePressed = () => {
         if (!inputEnabled) return;
