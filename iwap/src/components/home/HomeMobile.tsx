@@ -31,6 +31,9 @@ const baseLetterClasses =
 const headlineTextClasses =
   "text-4xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-[128px]";
 
+/** 변신하는 i 박스("!" 2개 폭)에서 실제 i 폭을 뺀 나머지의 절반. 글자 크기에 비례하도록 em 사용 */
+const TRANSFORMING_I_SIDE_TRIM = "-0.168em";
+
 const initialLines: MobileHeadlineLine[] = [
   {
     leadingFade: "iiii",
@@ -247,6 +250,12 @@ export default function HomeMobile({ isDarkTheme }: HomeMobileProps) {
           transition:
             "transform 1200ms ease, top 1200ms ease, left 1200ms ease, opacity 600ms ease",
         };
+
+        if (!shouldFloat) {
+          // 회전용 박스가 "!" 두 개 폭이라 가운데 놓인 i 양옆이 비어 보인다.
+          // 문장 안에 있을 때만 여백을 당겨 iiii / i / n 사이를 다른 글자 간격과 맞춘다.
+          style.marginInline = TRANSFORMING_I_SIDE_TRIM;
+        }
 
         if (shouldFloat) {
           style.position = "absolute";
