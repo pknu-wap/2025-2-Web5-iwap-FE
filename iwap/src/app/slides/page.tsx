@@ -155,7 +155,8 @@ export default function SlidesPage() {
     >
       <div className="absolute top-0 left-0 right-0 flex flex-col items-center pt-10 z-30 pointer-events-none" />
 
-      <div className="relative w-full flex justify-center">
+      {/* 폰 화면에서는 상단 헤더 때문에 정중앙이 아래로 처져 보여 위로 올린다 */}
+      <div className="relative w-full flex justify-center -translate-y-[8dvh] md:translate-y-0">
         <div className="relative w-[90vw] max-w-[2000px] min-w-[320px]">
           <div
             className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-[38%] w-[110%] h-[33%] z-20 pointer-events-none [--mask-rx:50%] [--mask-ry:32%] md:-translate-y-[46%] md:w-[120%] md:h-[55%] md:[--mask-ry:40%]"
